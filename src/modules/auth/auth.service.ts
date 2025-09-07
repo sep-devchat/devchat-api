@@ -1,11 +1,21 @@
 import { UserRepository } from "@db/repositories";
 import { Injectable } from "@nestjs/common";
-import { UserExistedError, WrongUsernameOrPasswordError } from "./errors";
+import {
+	InvalidGoogleCredentialsError,
+	UserExistedError,
+	WrongUsernameOrPasswordError,
+} from "./errors";
 import * as bcrypt from "bcryptjs";
 import * as jwt from "jsonwebtoken";
-import { LoginRequest, RegisterRequest, TokenResponse } from "./dto";
+import {
+	LoginGoogleRequest,
+	LoginRequest,
+	RegisterRequest,
+	TokenResponse,
+} from "./dto";
 import { DevChatCls, Env } from "@utils";
 import { ClsService } from "nestjs-cls";
+import { OAuth2Client } from "google-auth-library";
 
 @Injectable()
 export class AuthService {
@@ -45,7 +55,19 @@ export class AuthService {
 			timezone: dto.timezone ?? null,
 		});
 
-		await this.userRepo.insert(user);
+		return await this.userRepo.insert(user);
+	}
+
+	issueTokenPair(userId: string): TokenResponse {
+		const accessToken = jwt.sign({}, Env.JWT_SECRET, {
+			subject: userId,
+			expiresIn: Env.JWT_EXPIRES_IN,
+			issuer: Env.JWT_ISSUER,
+		});
+
+		return {
+			accessToken,
+		};
 	}
 
 	async login(dto: LoginRequest) {
@@ -65,17 +87,7 @@ export class AuthService {
 		const isPassValid = bcrypt.compareSync(dto.password, user.password);
 		if (!isPassValid) throw new WrongUsernameOrPasswordError();
 
-		const accessToken = jwt.sign({}, Env.JWT_SECRET, {
-			subject: user.id,
-			expiresIn: Env.JWT_EXPIRES_IN,
-			issuer: Env.JWT_ISSUER,
-		});
-
-		const tokenResponse: TokenResponse = {
-			accessToken,
-		};
-
-		return tokenResponse;
+		return this.issueTokenPair(user.id);
 	}
 
 	async getUserByAccessToken(token: string) {
@@ -98,5 +110,43 @@ export class AuthService {
 
 	getProfileCls() {
 		return this.cls.get("profile");
+	}
+
+	async loginGoogle(dto: LoginGoogleRequest) {
+		const client = new OAuth2Client();
+
+		const ticket = await client.verifyIdToken({
+			idToken: dto.credential,
+			audience: Env.GOOGLE_CLIENT_ID,
+		});
+		const payload = ticket.getPayload();
+		const email = payload.email;
+
+		if (!email) throw new InvalidGoogleCredentialsError();
+
+		let user = await this.userRepo.findOne({
+			where: {
+				email,
+			},
+		});
+
+		if (!user) {
+			const data = await this.register({
+				email: email,
+				username: email.split("@")[0],
+				password: Math.random().toString(36).slice(-8),
+				firstName: payload.given_name ?? "",
+				lastName: payload.family_name ?? "",
+				avatarUrl: payload.picture ?? null,
+			});
+
+			user = await this.userRepo.findOne({
+				where: {
+					id: data.identifiers[0].id,
+				},
+			});
+		}
+
+		return this.issueTokenPair(user.id);
 	}
 }

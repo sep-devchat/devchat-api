@@ -6,7 +6,13 @@ import {
 	SwaggerApiMessageResponse,
 	SwaggerApiResponse,
 } from "@utils";
-import { LoginRequest, Profile, RegisterRequest, TokenResponse } from "./dto";
+import {
+	LoginGoogleRequest,
+	LoginRequest,
+	Profile,
+	RegisterRequest,
+	TokenResponse,
+} from "./dto";
 import { SkipAuth } from "./skip-auth.decorator";
 import { ApiBearerAuth } from "@nestjs/swagger";
 
@@ -28,6 +34,14 @@ export class AuthController {
 	async login(@Body() dto: LoginRequest) {
 		const data = await this.authService.login(dto);
 		return new ApiResponseDto(data, null, "Login successful");
+	}
+
+	@Post("login-google")
+	@SwaggerApiResponse(TokenResponse)
+	@SkipAuth()
+	async loginGoogle(@Body() dto: LoginGoogleRequest) {
+		const data = await this.authService.loginGoogle(dto);
+		return new ApiResponseDto(data, null, "Login with Google successful");
 	}
 
 	@Get("profile")

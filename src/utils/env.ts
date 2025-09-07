@@ -13,6 +13,7 @@ export const Env = {
 	JWT_SECRET: process.env.JWT_SECRET || "",
 	JWT_EXPIRES_IN: Number(process.env.JWT_EXPIRES_IN || "0"),
 	JWT_ISSUER: process.env.JWT_ISSUER || "",
+	GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || "",
 } as const;
 
 console.log(Env);
