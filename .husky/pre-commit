@@ -1,0 +1,8 @@
+echo "✨ Running Lint Staged..."
+yarn lint-staged
+
+echo "✨ Running Prettier..."
+yarn prettier:fix
+
+echo "✅ Adding formatted files to commit..."
+git add .
