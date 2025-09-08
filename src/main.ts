@@ -4,11 +4,13 @@ import { Env } from "@utils";
 import helmet from "helmet";
 import { initializeTransactionalContext } from "typeorm-transactional";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import * as cookieParser from "cookie-parser";
 
 async function bootstrap() {
 	initializeTransactionalContext();
 
 	const app = await NestFactory.create(AppModule);
+	app.use(cookieParser());
 	app.setGlobalPrefix("/api");
 	app.enableCors({ origin: "*" });
 

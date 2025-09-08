@@ -1,9 +1,10 @@
 import { Module } from "@nestjs/common";
 import { APP_FILTER, APP_GUARD, APP_PIPE } from "@nestjs/core";
-import { MyExceptionFilter, ValidationPipe } from "@utils";
+import { Env, MyExceptionFilter, ValidationPipe } from "@utils";
 import { DbModule } from "@db";
 import { AuthGuard, AuthModule } from "@modules/auth";
 import { ClsModule } from "nestjs-cls";
+import { GitHubModule } from "@providers/github";
 
 @Module({
 	imports: [
@@ -13,6 +14,10 @@ import { ClsModule } from "nestjs-cls";
 			middleware: {
 				mount: true,
 			},
+		}),
+		GitHubModule.register({
+			clientId: Env.GITHUB_CLIENT_ID,
+			clientSecret: Env.GITHUB_CLIENT_SECRET,
 		}),
 		AuthModule,
 	],

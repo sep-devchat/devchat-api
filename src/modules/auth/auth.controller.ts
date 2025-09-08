@@ -7,11 +7,13 @@ import {
 	SwaggerApiResponse,
 } from "@utils";
 import {
+	LoginGitHubRequest,
 	LoginGoogleRequest,
 	LoginRequest,
 	Profile,
 	RegisterRequest,
 	TokenResponse,
+	TokenRefreshRequest,
 } from "./dto";
 import { SkipAuth } from "./skip-auth.decorator";
 import { ApiBearerAuth } from "@nestjs/swagger";
@@ -42,6 +44,22 @@ export class AuthController {
 	async loginGoogle(@Body() dto: LoginGoogleRequest) {
 		const data = await this.authService.loginGoogle(dto);
 		return new ApiResponseDto(data, null, "Login with Google successful");
+	}
+
+	@Post("login-github")
+	@SwaggerApiResponse(TokenResponse)
+	@SkipAuth()
+	async loginGitHub(@Body() dto: LoginGitHubRequest) {
+		const data = await this.authService.loginGitHub(dto);
+		return new ApiResponseDto(data, null, "Login with GitHub successful");
+	}
+
+	@Post("refresh")
+	@SwaggerApiResponse(TokenResponse)
+	@SkipAuth()
+	async refresh(@Body() dto: TokenRefreshRequest) {
+		const data = await this.authService.refresh(dto);
+		return new ApiResponseDto(data, null, "Refresh token successful");
 	}
 
 	@Get("profile")

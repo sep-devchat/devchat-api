@@ -24,7 +24,9 @@ export class AuthGuard implements CanActivate {
 		if (skip) return true;
 
 		const request = context.switchToHttp().getRequest<Request>();
-		const token = this.getAccessTokenFromHeader(request);
+		const token =
+			this.getAccessTokenFromCookie(request) ||
+			this.getAccessTokenFromHeader(request);
 		if (!token) throw new InvalidTokenError();
 
 		const user = await this.authService.getUserByAccessToken(token);
@@ -46,5 +48,10 @@ export class AuthGuard implements CanActivate {
 			return null;
 		}
 		return parts[1];
+	}
+
+	getAccessTokenFromCookie(req: Request) {
+		const accessToken = req.cookies.accessToken;
+		return accessToken;
 	}
 }
