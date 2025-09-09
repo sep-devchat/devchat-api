@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post } from "@nestjs/common";
+import { Body, Controller, Get, Post, Res } from "@nestjs/common";
 import { AuthService } from "./auth.service";
 import {
 	ApiMessageResponseDto,
@@ -17,10 +17,22 @@ import {
 } from "./dto";
 import { SkipAuth } from "./skip-auth.decorator";
 import { ApiBearerAuth } from "@nestjs/swagger";
+import { Response } from "express";
 
 @Controller("auth")
 export class AuthController {
 	constructor(private readonly authService: AuthService) {}
+
+	setCookieAccessToken(data: TokenResponse, res: Response) {
+		res.cookie("accessToken", data.accessToken, {
+			path: "/api",
+			httpOnly: true,
+		});
+		res.cookie("refreshToken", data.refreshToken, {
+			path: "/api/auth/refresh",
+			httpOnly: true,
+		});
+	}
 
 	@Post("register")
 	@SwaggerApiMessageResponse()
@@ -33,33 +45,43 @@ export class AuthController {
 	@Post("login")
 	@SwaggerApiResponse(TokenResponse)
 	@SkipAuth()
-	async login(@Body() dto: LoginRequest) {
+	async login(@Body() dto: LoginRequest, @Res() res: Response) {
 		const data = await this.authService.login(dto);
-		return new ApiResponseDto(data, null, "Login successful");
+		this.setCookieAccessToken(data, res);
+		res.status(200).send(new ApiResponseDto(data, null, "Login successful"));
 	}
 
 	@Post("login-google")
 	@SwaggerApiResponse(TokenResponse)
 	@SkipAuth()
-	async loginGoogle(@Body() dto: LoginGoogleRequest) {
+	async loginGoogle(@Body() dto: LoginGoogleRequest, @Res() res: Response) {
 		const data = await this.authService.loginGoogle(dto);
-		return new ApiResponseDto(data, null, "Login with Google successful");
+		this.setCookieAccessToken(data, res);
+		res
+			.status(200)
+			.send(new ApiResponseDto(data, null, "Login with Google successful"));
 	}
 
 	@Post("login-github")
 	@SwaggerApiResponse(TokenResponse)
 	@SkipAuth()
-	async loginGitHub(@Body() dto: LoginGitHubRequest) {
+	async loginGitHub(@Body() dto: LoginGitHubRequest, @Res() res: Response) {
 		const data = await this.authService.loginGitHub(dto);
-		return new ApiResponseDto(data, null, "Login with GitHub successful");
+		this.setCookieAccessToken(data, res);
+		res
+			.status(200)
+			.send(new ApiResponseDto(data, null, "Login with GitHub successful"));
 	}
 
 	@Post("refresh")
 	@SwaggerApiResponse(TokenResponse)
 	@SkipAuth()
-	async refresh(@Body() dto: TokenRefreshRequest) {
-		const data = await this.authService.refresh(dto);
-		return new ApiResponseDto(data, null, "Refresh token successful");
+	refresh(@Body() dto: TokenRefreshRequest, @Res() res: Response) {
+		const data = this.authService.refresh(dto);
+		this.setCookieAccessToken(data, res);
+		res
+			.status(200)
+			.send(new ApiResponseDto(data, null, "Refresh token successful"));
 	}
 
 	@Get("profile")
@@ -68,5 +90,14 @@ export class AuthController {
 	getProfile() {
 		const data = this.authService.getProfileCls();
 		return new ApiResponseDto(data, null, "Get profile successful");
+	}
+
+	@Get("logout")
+	@SwaggerApiMessageResponse()
+	@ApiBearerAuth()
+	logout(@Res() res: Response) {
+		res.clearCookie("accessToken", { path: "/api" });
+		res.clearCookie("refreshToken", { path: "/api/auth/refresh" });
+		res.status(200).send(new ApiMessageResponseDto("Logout successful"));
 	}
 }
