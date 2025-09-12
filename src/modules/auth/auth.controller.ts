@@ -15,6 +15,7 @@ import {
 	RegisterRequest,
 	TokenResponse,
 	TokenRefreshRequest,
+	PkceRequest,
 } from "./dto";
 import { SkipAuth } from "./skip-auth.decorator";
 import { ApiBearerAuth } from "@nestjs/swagger";
@@ -87,6 +88,11 @@ export class AuthController {
 			.send(new ApiResponseDto(data, null, "Refresh token successful"));
 	}
 
+	@Post("pkce")
+	@SwaggerApiResponse(TokenResponse)
+	@SkipAuth()
+	async(@Body() dto: PkceRequest) {}
+
 	@Get("profile")
 	@SwaggerApiResponse(Profile)
 	@ApiBearerAuth()
@@ -103,7 +109,4 @@ export class AuthController {
 		res.clearCookie("refreshToken", { path: "/api/auth/refresh" });
 		res.status(200).send(new ApiMessageResponseDto("Logout successful"));
 	}
-
-	@Get("pkce")
-	async() {}
 }
