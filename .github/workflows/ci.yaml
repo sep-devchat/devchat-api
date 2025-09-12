@@ -36,5 +36,5 @@ jobs:
       - name: Deploy to Server
         run: |
           cd ~/devchat &&
-          docker compose pull &&
-          docker compose up -d
+          docker compose pull api &&
+          docker compose up -d api
