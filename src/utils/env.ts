@@ -13,12 +13,9 @@ export const Env = {
 	JWT_SECRET: process.env.JWT_SECRET || "",
 	JWT_EXPIRES_IN: Number(process.env.JWT_EXPIRES_IN || "0"),
 	JWT_ISSUER: process.env.JWT_ISSUER || "",
-	JWT_REFRESH_SECRET:
-		process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || "",
-	JWT_REFRESH_EXPIRES_IN: Number(
-		process.env.JWT_REFRESH_EXPIRES_IN ||
-			String(Number(process.env.JWT_EXPIRES_IN || 0) * 24 || "0"),
-	),
+	JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || "",
+	JWT_REFRESH_EXPIRES_IN: Number(process.env.JWT_REFRESH_EXPIRES_IN || "0"),
+	APP_DOMAIN: process.env.APP_DOMAIN || "",
 	GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || "",
 	GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID || "",
 	GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET || "",

@@ -3,6 +3,7 @@ import { AuthService } from "./auth.service";
 import {
 	ApiMessageResponseDto,
 	ApiResponseDto,
+	Env,
 	SwaggerApiMessageResponse,
 	SwaggerApiResponse,
 } from "@utils";
@@ -27,10 +28,12 @@ export class AuthController {
 		res.cookie("accessToken", data.accessToken, {
 			path: "/api",
 			httpOnly: true,
+			domain: Env.APP_DOMAIN,
 		});
 		res.cookie("refreshToken", data.refreshToken, {
 			path: "/api/auth/refresh",
 			httpOnly: true,
+			domain: Env.APP_DOMAIN,
 		});
 	}
 
