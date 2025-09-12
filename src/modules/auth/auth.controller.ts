@@ -100,4 +100,7 @@ export class AuthController {
 		res.clearCookie("refreshToken", { path: "/api/auth/refresh" });
 		res.status(200).send(new ApiMessageResponseDto("Logout successful"));
 	}
+
+	@Get("pkce")
+	async() {}
 }
