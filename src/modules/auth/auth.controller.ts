@@ -8,14 +8,14 @@ import {
 	SwaggerApiResponse,
 } from "@utils";
 import {
-	LoginGitHubRequest,
-	LoginGoogleRequest,
 	LoginRequest,
 	Profile,
 	RegisterRequest,
 	TokenResponse,
 	TokenRefreshRequest,
-	PkceRequest,
+	LoginPkceRequest,
+	LoginPkceResponse,
+	PkceIssueTokenRequest,
 } from "./dto";
 import { SkipAuth } from "./skip-auth.decorator";
 import { ApiBearerAuth } from "@nestjs/swagger";
@@ -55,28 +55,6 @@ export class AuthController {
 		res.status(200).send(new ApiResponseDto(data, null, "Login successful"));
 	}
 
-	@Post("login-google")
-	@SwaggerApiResponse(TokenResponse)
-	@SkipAuth()
-	async loginGoogle(@Body() dto: LoginGoogleRequest, @Res() res: Response) {
-		const data = await this.authService.loginGoogle(dto);
-		this.setCookieAccessToken(data, res);
-		res
-			.status(200)
-			.send(new ApiResponseDto(data, null, "Login with Google successful"));
-	}
-
-	@Post("login-github")
-	@SwaggerApiResponse(TokenResponse)
-	@SkipAuth()
-	async loginGitHub(@Body() dto: LoginGitHubRequest, @Res() res: Response) {
-		const data = await this.authService.loginGitHub(dto);
-		this.setCookieAccessToken(data, res);
-		res
-			.status(200)
-			.send(new ApiResponseDto(data, null, "Login with GitHub successful"));
-	}
-
 	@Post("refresh")
 	@SwaggerApiResponse(TokenResponse)
 	@SkipAuth()
@@ -88,10 +66,18 @@ export class AuthController {
 			.send(new ApiResponseDto(data, null, "Refresh token successful"));
 	}
 
-	@Post("pkce")
+	@Post("login-pkce")
+	@SwaggerApiResponse(LoginPkceResponse)
+	@SkipAuth()
+	async async(@Body() dto: LoginPkceRequest) {
+		const data = await this.authService.loginPkce(dto);
+		return new ApiResponseDto(data, null, "Login PKCE successful");
+	}
+
+	@Post("pkce-issue-token")
 	@SwaggerApiResponse(TokenResponse)
 	@SkipAuth()
-	async(@Body() dto: PkceRequest) {}
+	async pkceIssueToken(@Body() dto: PkceIssueTokenRequest) {}
 
 	@Get("profile")
 	@SwaggerApiResponse(Profile)

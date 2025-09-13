@@ -5,21 +5,25 @@ import {
 	UserExistedError,
 	WrongUsernameOrPasswordError,
 	RefreshTokenError,
+	LoginMethodNotSupportedError,
+	InvalidPkceAuthCodeError,
 } from "./errors";
 import * as bcrypt from "bcryptjs";
 import * as jwt from "jsonwebtoken";
 import {
-	LoginGitHubRequest,
-	LoginGoogleRequest,
 	LoginRequest,
 	RegisterRequest,
 	TokenResponse,
 	TokenRefreshRequest,
+	LoginPkceRequest,
+	LoginPkceResponse,
+	PkceIssueTokenRequest,
 } from "./dto";
-import { DevChatCls, Env } from "@utils";
+import { DevChatCls, Env, LoginMethodEnum } from "@utils";
 import { ClsService } from "nestjs-cls";
 import { OAuth2Client } from "google-auth-library";
 import { GitHubService } from "@providers/github";
+import { UserEntity } from "@db/entities";
 
 @Injectable()
 export class AuthService {
@@ -87,23 +91,73 @@ export class AuthService {
 	}
 
 	async login(dto: LoginRequest) {
-		const user = await this.userRepo.findOne({
-			where: [
-				{
-					username: dto.usernameOrEmail,
-				},
-				{
-					email: dto.usernameOrEmail,
-				},
-			],
+		let user: UserEntity;
+		switch (dto.method) {
+			case LoginMethodEnum.BASIC:
+				user = await this.loginBasic(dto);
+				break;
+			case LoginMethodEnum.GOOGLE:
+				user = await this.loginGoogle(dto);
+				break;
+			case LoginMethodEnum.GITHUB:
+				user = await this.loginGitHub(dto);
+				break;
+			default:
+				throw new LoginMethodNotSupportedError();
+		}
+		return this.issueTokenPair(user.id);
+	}
+
+	async loginPkce(dto: LoginPkceRequest): Promise<LoginPkceResponse> {
+		let user: UserEntity;
+		switch (dto.method) {
+			case LoginMethodEnum.BASIC:
+				user = await this.loginBasic(dto);
+				break;
+			case LoginMethodEnum.GOOGLE:
+				user = await this.loginGoogle(dto);
+				break;
+			case LoginMethodEnum.GITHUB:
+				user = await this.loginGitHub(dto);
+				break;
+			default:
+				throw new LoginMethodNotSupportedError();
+		}
+
+		// support plain code_challenge_method only
+		const authCode = jwt.sign(
+			{
+				codeChallengeMethod: dto.codeChallengeMethod,
+			},
+			Env.PKCE_AUTH_CODE_JWT_SECRET,
+			{
+				subject: user.id,
+				expiresIn: Env.PKCE_AUTH_CODE_JWT_EXPIRES_IN,
+				issuer: Env.JWT_ISSUER,
+				audience: dto.codeChallenge,
+			},
+		);
+
+		return { authCode };
+	}
+
+	async pkceIssueToken(dto: PkceIssueTokenRequest) {
+		const decoded = jwt.verify(dto.authCode, Env.PKCE_AUTH_CODE_JWT_SECRET, {
+			issuer: Env.JWT_ISSUER,
 		});
 
-		if (!user) throw new WrongUsernameOrPasswordError();
+		if (
+			typeof decoded === "string" ||
+			!decoded.sub ||
+			!decoded.aud ||
+			!decoded.codeChallengeMethod ||
+			decoded["codeChallengeMethod"] != dto.codeChallengeMethod ||
+			decoded.aud != dto.codeVerifier
+		) {
+			throw new InvalidPkceAuthCodeError();
+		}
 
-		const isPassValid = bcrypt.compareSync(dto.password, user.password);
-		if (!isPassValid) throw new WrongUsernameOrPasswordError();
-
-		return this.issueTokenPair(user.id);
+		return this.issueTokenPair(decoded.sub);
 	}
 
 	async getUserByAccessToken(token: string) {
@@ -143,11 +197,35 @@ export class AuthService {
 		return this.cls.get("profile");
 	}
 
-	async loginGoogle(dto: LoginGoogleRequest) {
+	async loginBasic(dto: LoginRequest) {
+		const [usernameOrEmail, password] = Buffer.from(dto.code, "base64")
+			.toString("utf-8")
+			.split(":");
+
+		const user = await this.userRepo.findOne({
+			where: [
+				{
+					username: usernameOrEmail,
+				},
+				{
+					email: usernameOrEmail,
+				},
+			],
+		});
+
+		if (!user) throw new WrongUsernameOrPasswordError();
+
+		const isPassValid = bcrypt.compareSync(password, user.password);
+		if (!isPassValid) throw new WrongUsernameOrPasswordError();
+
+		return user;
+	}
+
+	async loginGoogle(dto: LoginRequest) {
 		const client = new OAuth2Client();
 
 		const ticket = await client.verifyIdToken({
-			idToken: dto.credential,
+			idToken: dto.code,
 			audience: Env.GOOGLE_CLIENT_ID,
 		});
 		const payload = ticket.getPayload();
@@ -179,10 +257,10 @@ export class AuthService {
 			});
 		}
 
-		return this.issueTokenPair(user.id);
+		return user;
 	}
 
-	async loginGitHub(dto: LoginGitHubRequest) {
+	async loginGitHub(dto: LoginRequest) {
 		const { access_token } = await this.githubService.getAccessToken(dto.code);
 		const [userInfoRes, emailsRes] = await Promise.all([
 			this.githubService.getUserInfo(access_token),
@@ -216,6 +294,6 @@ export class AuthService {
 			});
 		}
 
-		return this.issueTokenPair(user.id);
+		return user;
 	}
 }

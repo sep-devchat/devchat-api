@@ -1,13 +1,12 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsString } from "class-validator";
-import { PkceAuthRequest } from "./pkce-auth.request";
+import { IsEnum } from "class-validator";
+import { LoginMethodEnum } from "@utils";
 
-export class LoginRequest extends PkceAuthRequest {
-	@ApiProperty({ example: "jane.doe" /* or "jane@example.com" */ })
-	@IsString()
-	usernameOrEmail: string;
+export class LoginRequest {
+	@ApiProperty({ type: String, enum: LoginMethodEnum })
+	@IsEnum(LoginMethodEnum)
+	method: LoginMethodEnum;
 
-	@ApiProperty({ example: "P@ssw0rd!" })
-	@IsString()
-	password: string;
+	@ApiProperty({ type: String })
+	code: string;
 }

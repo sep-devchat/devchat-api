@@ -19,6 +19,10 @@ export const Env = {
 	GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || "",
 	GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID || "",
 	GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET || "",
+	PKCE_AUTH_CODE_JWT_SECRET: process.env.PKCE_AUTH_CODE_JWT_SECRET || "",
+	PKCE_AUTH_CODE_JWT_EXPIRES_IN: Number(
+		process.env.PKCE_AUTH_CODE_JWT_EXPIRES_IN || "0",
+	),
 } as const;
 
 console.log(Env);

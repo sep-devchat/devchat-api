@@ -1,16 +1,13 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsString } from "class-validator";
+import { LoginRequest } from "./login.request";
 
-export class PkceRequest {
+export class LoginPkceRequest extends LoginRequest {
 	@ApiProperty({ type: String })
 	@IsString()
-	codeVerifier: string;
+	codeChallenge: string;
 
 	@ApiProperty({ type: String })
 	@IsString()
 	codeChallengeMethod: string;
-
-	@ApiProperty({ type: String })
-	@IsString()
-	authCode: string;
 }
