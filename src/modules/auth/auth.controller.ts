@@ -77,7 +77,10 @@ export class AuthController {
 	@Post("pkce-issue-token")
 	@SwaggerApiResponse(TokenResponse)
 	@SkipAuth()
-	async pkceIssueToken(@Body() dto: PkceIssueTokenRequest) {}
+	async pkceIssueToken(@Body() dto: PkceIssueTokenRequest) {
+		const data = await this.authService.pkceIssueToken(dto);
+		return new ApiResponseDto(data, null, "PKCE issue token successful");
+	}
 
 	@Get("profile")
 	@SwaggerApiResponse(Profile)
