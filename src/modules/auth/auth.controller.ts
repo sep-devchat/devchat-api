@@ -39,7 +39,7 @@ export class AuthController {
 	}
 
 	@Post("register")
-	@SwaggerApiMessageResponse()
+	@SwaggerApiResponse(TokenResponse)
 	@SkipAuth()
 	async register(@Body() dto: RegisterRequest) {
 		await this.authService.register(dto);
