@@ -17,7 +17,7 @@ export class Profile {
 	@ApiProperty()
 	lastName: string;
 
-	@ApiProperty()
+	@ApiProperty({ required: false })
 	avatarUrl?: string;
 
 	@ApiProperty()
@@ -32,10 +32,10 @@ export class Profile {
 	@ApiProperty()
 	updatedAt: Date;
 
-	@ApiProperty()
+	@ApiProperty({ required: false })
 	lastLogin?: Date;
 
-	@ApiProperty()
+	@ApiProperty({ required: false })
 	timezone?: string;
 
 	static fromEntity(entity: UserEntity): Profile {
