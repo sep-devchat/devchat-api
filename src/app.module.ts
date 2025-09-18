@@ -3,6 +3,7 @@ import { APP_FILTER, APP_GUARD, APP_PIPE } from "@nestjs/core";
 import { Env, MyExceptionFilter, ValidationPipe } from "@utils";
 import { DbModule } from "@db";
 import { AuthGuard, AuthModule } from "@modules/auth";
+import { UserModule } from "@modules/user";
 import { ClsModule } from "nestjs-cls";
 import { GitHubModule } from "@providers/github";
 
@@ -20,6 +21,7 @@ import { GitHubModule } from "@providers/github";
 			clientSecret: Env.GITHUB_CLIENT_SECRET,
 		}),
 		AuthModule,
+		UserModule,
 	],
 	controllers: [],
 	providers: [
