@@ -42,8 +42,8 @@ export class AuthController {
 	@SwaggerApiResponse(TokenResponse)
 	@SkipAuth()
 	async register(@Body() dto: RegisterRequest) {
-		await this.authService.register(dto);
-		return new ApiMessageResponseDto("Registration successful");
+		const data = await this.authService.register(dto);
+		return new ApiResponseDto(data, null, "Registration successful");
 	}
 
 	@Post("login")
