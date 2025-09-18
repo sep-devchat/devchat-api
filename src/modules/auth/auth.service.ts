@@ -50,7 +50,7 @@ export class AuthService {
 		}
 	}
 
-	async register(dto: RegisterRequest) {
+	async register(dto: RegisterRequest): Promise<TokenResponse> {
 		await this.validateBeforeRegister(dto);
 
 		const hashedPass = bcrypt.hashSync(dto.password, 10);
@@ -64,7 +64,8 @@ export class AuthService {
 			timezone: dto.timezone ?? null,
 		});
 
-		return await this.userRepo.insert(user);
+		const result = await this.userRepo.insert(user);
+		return this.issueTokenPair(result.identifiers[0].id);
 	}
 
 	private signAccessToken(userId: string) {
