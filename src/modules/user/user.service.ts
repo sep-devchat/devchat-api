@@ -1,17 +1,27 @@
 import { UserEntity } from "@db/entities";
 import { UserRepository } from "@db/repositories";
-import { Injectable } from "@nestjs/common"; // Add this import
+import { Injectable, NotFoundException } from "@nestjs/common"; // Add this import
 
 @Injectable() // Add this decorator
 export class UserService {
 	constructor(private readonly userRepo: UserRepository) {}
-
 	async findById(id: string) {
-		return this.userRepo.findOne({ where: { id } });
+		const user = await this.userRepo.findOne({ where: { id } });
+		if (!user) {
+			throw new NotFoundException(`User with ID ${id} not found`);
+		}
+		return user;
 	}
 
-	async findByUsername(username: string) {
-		return this.userRepo.findOne({ where: { username } });
+	// Find by id OR username OR email
+	async findByUniqueKey(uniqueKey: string) {
+		const user = await this.userRepo.findOne({
+			where: [{ id: uniqueKey }, { email: uniqueKey }, { username: uniqueKey }],
+		});
+		if (!user) {
+			throw new NotFoundException(`User with key ${uniqueKey} not found`);
+		}
+		return user;
 	}
 
 	async getAll() {

@@ -15,19 +15,20 @@ import { ApiBody, ApiOperation, ApiParam, ApiTags } from "@nestjs/swagger";
 import { UserEntity } from "@db/entities";
 import { SkipAuth } from "@modules/auth";
 import { UpdateUserRequest } from "./dto";
+import { UserResponse } from "./dto/user.response";
 
 @ApiTags("Users") // Add API tag
 @Controller("user")
 export class UserController {
 	constructor(private readonly userService: UserService) {}
 
-	@Get(":id")
-	@ApiOperation({ summary: "Get user by ID" })
-	@ApiParam({ name: "id", description: "User ID" })
-	async getUser(@Param("id") id: string) {
-		const response = await this.userService.findById(id);
-		return new ApiResponseDto<UserEntity>(
-			response,
+	@Get(":uniqueKey")
+	@ApiOperation({ summary: "Get user by unique key (ID, username, or email)" })
+	@ApiParam({ name: "uniqueKey", description: "User ID, username, or email" })
+	async getUserByUniqueKey(@Param("uniqueKey") uniqueKey: string) {
+		const response = await this.userService.findByUniqueKey(uniqueKey);
+		return new ApiResponseDto<UserResponse>(
+			UserResponse.fromEntity(response),
 			null,
 			"User retrieved successfully",
 		);
@@ -38,8 +39,8 @@ export class UserController {
 	@ApiBody({ type: CreateUserRequest }) // Add this line
 	async createUser(@Body() dto: CreateUserRequest) {
 		const response = await this.userService.create(dto);
-		return new ApiResponseDto<UserEntity>(
-			response,
+		return new ApiResponseDto<UserResponse>(
+			UserResponse.fromEntity(response),
 			null,
 			"User created successfully",
 		);
@@ -54,8 +55,8 @@ export class UserController {
 	) {
 		const response = await this.userService.update(id, updateData);
 
-		return new ApiResponseDto<UserEntity>(
-			response,
+		return new ApiResponseDto<UserResponse>(
+			UserResponse.fromEntity(response),
 			null,
 			"User updated successfully",
 		);
@@ -73,8 +74,8 @@ export class UserController {
 	@ApiOperation({ summary: "Get all users" })
 	async getUsers() {
 		const response = await this.userService.getAll();
-		return new ApiResponseDto<UserEntity[]>(
-			response,
+		return new ApiResponseDto<UserResponse[]>(
+			UserResponse.fromEntities(response),
 			null,
 			"Users retrieved successfully",
 		);

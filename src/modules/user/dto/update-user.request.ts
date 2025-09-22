@@ -1,4 +1,4 @@
 import { PartialType } from "@nestjs/swagger";
-import { CreateUserRequest } from "./create-user.request";
+import { UserRequest } from "./user.request";
 
-export class UpdateUserRequest extends PartialType(CreateUserRequest) {}
+export class UpdateUserRequest extends PartialType(UserRequest) {}
