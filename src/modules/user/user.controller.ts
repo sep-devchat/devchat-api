@@ -2,7 +2,6 @@ import {
 	Controller,
 	Delete,
 	Get,
-	Patch,
 	Post,
 	Param,
 	Body,
@@ -17,15 +16,11 @@ import {
 	SwaggerApiResponse,
 } from "@utils";
 import { CreateUserRequest } from "./dto/create-user.request";
-import { ApiBody, ApiOperation, ApiParam, ApiTags } from "@nestjs/swagger";
-import { UserEntity } from "@db/entities";
+import { ApiOperation, ApiParam } from "@nestjs/swagger";
 import { SkipAuth } from "@modules/auth";
 import { UpdateUserRequest } from "./dto";
 import { UserResponse } from "./dto/user.response";
-import { TokenResponse } from "@modules/auth/dto";
-import { RegisterRequest } from "./dto/register.request";
 
-@ApiTags("Users") // Add API tag
 @Controller("user")
 export class UserController {
 	constructor(private readonly userService: UserService) {}
@@ -43,16 +38,15 @@ export class UserController {
 		);
 	}
 
-	@Post("register")
-	@ApiOperation({ summary: "Register a new user" })
-	@SwaggerApiResponse(TokenResponse)
+	@Post()
+	@ApiOperation({ summary: "Create a new user" })
+	@SwaggerApiMessageResponse()
 	@SkipAuth()
-	async register(@Body() dto: RegisterRequest) {
-		const data = await this.userService.register(dto);
-		return new ApiResponseDto(data, null, "Registration successful");
+	async register(@Body() dto: CreateUserRequest) {
+		await this.userService.create(dto);
+		return new ApiMessageResponseDto("User created successfully");
 	}
 
-	@SkipAuth()
 	@Put(":id")
 	@ApiOperation({ summary: "Update user" })
 	@ApiParam({ name: "id", description: "User ID" })
@@ -78,7 +72,6 @@ export class UserController {
 	@Get()
 	@ApiOperation({ summary: "Get all users" })
 	@SwaggerApiResponse(UserResponse, { isArray: true, withPagination: true })
-	@SkipAuth()
 	async getUsers(
 		@Query("page") page: number = 1,
 		@Query("limit") limit: number = 10,

@@ -1,75 +1,75 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsBoolean, IsEmail, IsOptional, IsString } from "class-validator";
+import {
+	IsBoolean,
+	IsEmail,
+	IsNotEmpty,
+	IsOptional,
+	IsString,
+	IsStrongPassword,
+	IsUrl,
+	Length,
+	MaxLength,
+} from "class-validator";
 
 export class CreateUserRequest {
-	@ApiProperty({
-		example: "john_doe",
-		description: "Unique username",
-	})
+	@ApiProperty({ maxLength: 50 })
 	@IsString()
+	@Length(3, 50)
+	@IsNotEmpty()
+	@ApiProperty({ maxLength: 50, example: "jane.doe" })
 	username: string;
 
-	@ApiProperty({
-		example: "john@example.com",
-		description: "Email address",
-	})
+	@ApiProperty({ maxLength: 255 })
 	@IsEmail()
+	@MaxLength(255)
+	@IsNotEmpty()
+	@ApiProperty({ maxLength: 255, example: "jane@example.com" })
 	email: string;
 
-	@ApiProperty({
-		example: "Password123!",
-		description: "User password",
+	@ApiProperty({ minLength: 8, maxLength: 128 })
+	@MaxLength(128)
+	@IsStrongPassword({
+		minLength: 8,
+		minLowercase: 1,
+		minUppercase: 1,
+		minNumbers: 1,
+		minSymbols: 1,
 	})
-	@IsString()
+	@ApiProperty({ minLength: 8, maxLength: 128, example: "P@ssw0rd!" })
 	password: string;
 
-	// Make these REQUIRED to match UserEntity
-	@ApiProperty({
-		example: "John",
-		description: "First name",
-	})
+	@ApiProperty({ maxLength: 100 })
 	@IsString()
+	@MaxLength(100)
+	@IsNotEmpty()
 	firstName: string;
 
-	@ApiProperty({
-		example: "Doe",
-		description: "Last name",
-	})
+	@ApiProperty({ maxLength: 100 })
 	@IsString()
+	@MaxLength(100)
+	@IsNotEmpty()
 	lastName: string;
 
-	@ApiPropertyOptional({
-		example: "https://example.com/avatar.jpg",
-		description: "Avatar URL",
-	})
+	@ApiProperty({ required: false })
 	@IsOptional()
-	@IsString()
+	@IsUrl(
+		{ require_protocol: true },
+		{ message: "avatarUrl must be a valid URL" },
+	)
+	@ApiProperty({
+		required: false,
+		example: "https://cdn.example.com/avatars/jane.png",
+	})
 	avatarUrl?: string;
 
-	@ApiPropertyOptional({
-		example: true,
-		description: "Is user active",
-		default: true,
-	})
-	@IsOptional()
-	@IsBoolean()
-	isActive?: boolean;
-
-	@ApiPropertyOptional({
-		example: false,
-		description: "Is email verified",
-		default: false,
-	})
-	@IsOptional()
-	@IsBoolean()
-	emailVerified?: boolean;
-
-	@ApiPropertyOptional({
-		example: "UTC",
-		description: "User timezone",
-		default: "UTC",
-	})
+	@ApiProperty({ required: false, maxLength: 50 })
 	@IsOptional()
 	@IsString()
+	@MaxLength(50)
+	@ApiProperty({
+		required: false,
+		maxLength: 50,
+		example: "America/Los_Angeles",
+	})
 	timezone?: string;
 }
