@@ -1,7 +1,6 @@
 import { Env } from "../utils";
 import { DataSource } from "typeorm";
 
-// Edit this
 export const datasource = new DataSource({
 	type: "mysql",
 	host: Env.DB_HOST,

@@ -20,8 +20,8 @@ export class ValidationPipe implements PipeTransform {
 	async transform(value: any, { metatype }: ArgumentMetadata) {
 		// Transform the plain object to a DTO instance.
 		const object = plainToInstance(metatype, value, {
-			enableImplicitConversion: true,
-			enableCircularCheck: true,
+			// enableImplicitConversion: true,
+			// enableCircularCheck: true,
 		});
 
 		// Skip validation if no metatype is provided or if it's a primitive type.

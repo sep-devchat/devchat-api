@@ -7,27 +7,23 @@ import {
 	IsStrongPassword,
 	IsUrl,
 	Length,
-	Max,
 	MaxLength,
-	MinLength,
 } from "class-validator";
 
-export class RegisterRequest {
-	@ApiProperty({ maxLength: 50 })
+export class CreateUserRequest {
+	@ApiProperty({ maxLength: 50, example: "jane.doe" })
 	@IsString()
 	@Length(3, 50)
 	@IsNotEmpty()
-	@ApiProperty({ maxLength: 50, example: "jane.doe" })
 	username: string;
 
-	@ApiProperty({ maxLength: 255 })
+	@ApiProperty({ maxLength: 255, example: "jane@example.com" })
 	@IsEmail()
 	@MaxLength(255)
 	@IsNotEmpty()
-	@ApiProperty({ maxLength: 255, example: "jane@example.com" })
 	email: string;
 
-	@ApiProperty({ minLength: 8, maxLength: 128 })
+	@ApiProperty({ minLength: 8, maxLength: 128, example: "P@ssw0rd!" })
 	@MaxLength(128)
 	@IsStrongPassword({
 		minLength: 8,
@@ -36,7 +32,6 @@ export class RegisterRequest {
 		minNumbers: 1,
 		minSymbols: 1,
 	})
-	@ApiProperty({ minLength: 8, maxLength: 128, example: "P@ssw0rd!" })
 	password: string;
 
 	@ApiProperty({ maxLength: 100 })
@@ -51,26 +46,24 @@ export class RegisterRequest {
 	@IsNotEmpty()
 	lastName: string;
 
-	@ApiProperty({ required: false })
+	@ApiProperty({
+		required: false,
+		example: "https://cdn.example.com/avatars/jane.png",
+	})
 	@IsOptional()
 	@IsUrl(
 		{ require_protocol: true },
 		{ message: "avatarUrl must be a valid URL" },
 	)
-	@ApiProperty({
-		required: false,
-		example: "https://cdn.example.com/avatars/jane.png",
-	})
 	avatarUrl?: string;
 
-	@ApiProperty({ required: false, maxLength: 50 })
-	@IsOptional()
-	@IsString()
-	@MaxLength(50)
 	@ApiProperty({
 		required: false,
 		maxLength: 50,
 		example: "America/Los_Angeles",
 	})
+	@IsOptional()
+	@IsString()
+	@MaxLength(50)
 	timezone?: string;
 }

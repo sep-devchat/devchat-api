@@ -12,7 +12,6 @@ import * as bcrypt from "bcryptjs";
 import * as jwt from "jsonwebtoken";
 import {
 	LoginRequest,
-	RegisterRequest,
 	TokenResponse,
 	TokenRefreshRequest,
 	LoginPkceRequest,
@@ -33,41 +32,6 @@ export class AuthService {
 		private readonly githubService: GitHubService,
 	) {}
 
-	async validateBeforeRegister(dto: RegisterRequest) {
-		const user = await this.userRepo.findOne({
-			where: [
-				{
-					username: dto.username,
-				},
-				{
-					email: dto.email,
-				},
-			],
-		});
-
-		if (user) {
-			throw new UserExistedError();
-		}
-	}
-
-	async register(dto: RegisterRequest): Promise<TokenResponse> {
-		await this.validateBeforeRegister(dto);
-
-		const hashedPass = bcrypt.hashSync(dto.password, 10);
-		const user = this.userRepo.create({
-			username: dto.username,
-			email: dto.email,
-			password: hashedPass,
-			firstName: dto.firstName ?? null,
-			lastName: dto.lastName ?? null,
-			avatarUrl: dto.avatarUrl ?? null,
-			timezone: dto.timezone ?? null,
-		});
-
-		const result = await this.userRepo.insert(user);
-		return this.issueTokenPair(result.identifiers[0].id);
-	}
-
 	private signAccessToken(userId: string) {
 		return jwt.sign({ type: "access" }, Env.JWT_SECRET, {
 			subject: userId,
@@ -84,7 +48,7 @@ export class AuthService {
 		});
 	}
 
-	issueTokenPair(userId: string): TokenResponse {
+	private issueTokenPair(userId: string): TokenResponse {
 		return {
 			accessToken: this.signAccessToken(userId),
 			refreshToken: this.signRefreshToken(userId),
