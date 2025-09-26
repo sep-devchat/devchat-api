@@ -6,7 +6,6 @@ export class UserExistedError extends ApiError {
 			code: "user_existed_err",
 			message: "User already exists",
 			detail: null,
-			status: 401,
 		});
 	}
 }

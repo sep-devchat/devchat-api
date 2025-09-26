@@ -16,9 +16,9 @@ import {
 	SwaggerApiResponse,
 } from "@utils";
 import { CreateUserRequest } from "./dto/create-user.request";
-import { ApiOperation, ApiParam } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiOperation, ApiParam } from "@nestjs/swagger";
 import { SkipAuth } from "@modules/auth";
-import { UpdateUserRequest } from "./dto";
+import { UpdateUserRequest, UserQuery } from "./dto";
 import { UserResponse } from "./dto/user.response";
 
 @Controller("user")
@@ -26,6 +26,7 @@ export class UserController {
 	constructor(private readonly userService: UserService) {}
 
 	@Get(":uniqueKey")
+	@ApiBearerAuth()
 	@ApiOperation({ summary: "Get user by unique key (ID, username, or email)" })
 	@ApiParam({ name: "uniqueKey", description: "User ID, username, or email" })
 	@SwaggerApiResponse(UserResponse, { isArray: true, withPagination: true })
@@ -48,6 +49,7 @@ export class UserController {
 	}
 
 	@Put(":id")
+	@ApiBearerAuth()
 	@ApiOperation({ summary: "Update user" })
 	@ApiParam({ name: "id", description: "User ID" })
 	@SwaggerApiMessageResponse()
@@ -55,12 +57,13 @@ export class UserController {
 		@Param("id") id: string,
 		@Body() updateData: UpdateUserRequest,
 	) {
-		this.userService.update(id, updateData);
+		await this.userService.update(id, updateData);
 
 		return new ApiMessageResponseDto("User updated successfully");
 	}
 
 	@Delete(":id")
+	@ApiBearerAuth()
 	@ApiOperation({ summary: "Delete user" })
 	@ApiParam({ name: "id", description: "User ID" })
 	@SwaggerApiMessageResponse()
@@ -70,13 +73,11 @@ export class UserController {
 	}
 
 	@Get()
+	@ApiBearerAuth()
 	@ApiOperation({ summary: "Get all users" })
 	@SwaggerApiResponse(UserResponse, { isArray: true, withPagination: true })
-	async getUsers(
-		@Query("page") page: number = 1,
-		@Query("limit") limit: number = 10,
-	) {
-		const response = await this.userService.getAll(page, limit);
+	async getUsers(@Query() query: UserQuery) {
+		const response = await this.userService.getAll(query);
 		return new ApiResponseDto<UserResponse[]>(
 			UserResponse.fromEntities(response.data),
 			response.pagination,

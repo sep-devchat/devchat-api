@@ -10,7 +10,6 @@ import {
 import {
 	LoginRequest,
 	Profile,
-	RegisterRequest,
 	TokenResponse,
 	TokenRefreshRequest,
 	LoginPkceRequest,
@@ -36,14 +35,6 @@ export class AuthController {
 			httpOnly: true,
 			domain: Env.APP_DOMAIN,
 		});
-	}
-
-	@Post("register")
-	@SwaggerApiResponse(TokenResponse)
-	@SkipAuth()
-	async register(@Body() dto: RegisterRequest) {
-		const data = await this.authService.register(dto);
-		return new ApiResponseDto(data, null, "Registration successful");
 	}
 
 	@Post("login")

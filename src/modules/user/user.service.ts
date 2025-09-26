@@ -4,7 +4,8 @@ import { Injectable, NotFoundException } from "@nestjs/common"; // Add this impo
 import { UserExistedError } from "./errors/user-existed.error";
 import * as bcrypt from "bcryptjs";
 import { PaginationDto } from "@utils";
-import { CreateUserRequest } from "./dto";
+import { CreateUserRequest, UpdateUserRequest, UserQuery } from "./dto";
+import { UserNotFoundError } from "./errors";
 
 @Injectable() // Add this decorator
 export class UserService {
@@ -63,7 +64,8 @@ export class UserService {
 		return user;
 	}
 
-	async getAll(page = 1, limit = 10) {
+	async getAll(query: UserQuery) {
+		const { page, limit } = query;
 		const [data, total] = await this.userRepo.findAndCount({
 			skip: (page - 1) * limit,
 			take: limit,
@@ -78,11 +80,11 @@ export class UserService {
 		};
 	}
 
-	async update(id: string, updateData: Partial<UserEntity>) {
+	async update(id: string, updateData: UpdateUserRequest) {
 		const user = await this.findByUniqueKey(id);
 
 		if (!user) {
-			throw new UserExistedError();
+			throw new UserNotFoundError();
 		}
 
 		await this.userRepo.update(id, updateData);
