@@ -6,6 +6,8 @@ import { AuthGuard, AuthModule } from "@modules/auth";
 import { UserModule } from "@modules/user";
 import { ClsModule } from "nestjs-cls";
 import { GitHubModule } from "@providers/github";
+import { MessageModule } from "@modules/message";
+import { SocketModule } from "@modules/socket";
 
 @Module({
 	imports: [
@@ -22,6 +24,8 @@ import { GitHubModule } from "@providers/github";
 		}),
 		AuthModule,
 		UserModule,
+		MessageModule,
+		SocketModule,
 	],
 	controllers: [],
 	providers: [
