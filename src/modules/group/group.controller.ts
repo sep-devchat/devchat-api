@@ -22,7 +22,6 @@ import {
 	SwaggerApiResponse,
 } from "@utils";
 import { ApiBearerAuth, ApiOperation, ApiParam } from "@nestjs/swagger";
-import { SkipAuth } from "@modules/auth";
 
 @Controller("group")
 @ApiBearerAuth()

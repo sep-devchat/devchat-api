@@ -16,7 +16,7 @@ import {
 	LoginPkceResponse,
 	PkceIssueTokenRequest,
 } from "./dto";
-import { SkipAuth } from "./skip-auth.decorator";
+import { SkipAuth } from "../../utils/skip-auth.decorator";
 import { ApiBearerAuth } from "@nestjs/swagger";
 import { Response } from "express";
 

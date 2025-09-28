@@ -1,6 +1,7 @@
 export const DbConstants = {
 	TableName: {
 		User: "user",
+		Message: "message",
 		Group: "group",
 	},
 	ColumnName: {
@@ -18,6 +19,19 @@ export const DbConstants = {
 			updatedAt: "updated_at",
 			lastLogin: "last_login",
 			timezone: "timezone",
+		},
+		Message: {
+			id: "message_id",
+			channelId: "channel_id",
+			threadId: "thread_id",
+			senderId: "sender_id",
+			content: "content",
+			parentMessageId: "parent_message_id",
+		},
+		Audit: {
+			createdAt: "created_at",
+			updatedAt: "updated_at",
+			deletedAt: "deleted_at",
 		},
 		Group: {
 			id: "group_id",

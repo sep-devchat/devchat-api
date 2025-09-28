@@ -12,12 +12,12 @@ import { UserService } from "./user.service";
 import {
 	ApiMessageResponseDto,
 	ApiResponseDto,
+	SkipAuth,
 	SwaggerApiMessageResponse,
 	SwaggerApiResponse,
 } from "@utils";
 import { CreateUserRequest } from "./dto/create-user.request";
 import { ApiBearerAuth, ApiOperation, ApiParam } from "@nestjs/swagger";
-import { SkipAuth } from "@modules/auth";
 import { UpdateUserRequest, UserQuery } from "./dto";
 import { UserResponse } from "./dto/user.response";
 
