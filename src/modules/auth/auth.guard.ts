@@ -6,12 +6,14 @@ import { Request } from "express";
 import { InvalidTokenError } from "./errors";
 import { Profile } from "./dto";
 import { Reflector } from "@nestjs/core";
-import { SKIP_AUTH_KEY } from "./skip-auth.decorator";
+import { SKIP_AUTH_KEY } from "../../utils/skip-auth.decorator";
+import { UserService } from "@modules/user";
 
 @Injectable()
 export class AuthGuard implements CanActivate {
 	constructor(
 		private readonly authService: AuthService,
+		private readonly userService: UserService,
 		private readonly cls: ClsService<DevChatCls>,
 		private readonly reflector: Reflector,
 	) {}
@@ -30,9 +32,8 @@ export class AuthGuard implements CanActivate {
 
 		if (!token) throw new InvalidTokenError();
 
-		const user = await this.authService.getUserByAccessToken(token);
-		if (!user) throw new InvalidTokenError();
-
+		const decoded = this.authService.verifyAccessToken(token);
+		const user = await this.userService.findById(decoded.sub);
 		const profile = Profile.fromEntity(user);
 		this.cls.set("profile", profile);
 

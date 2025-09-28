@@ -3,9 +3,12 @@ import {
 	Column,
 	CreateDateColumn,
 	Entity,
+	JoinColumn,
+	ManyToOne,
 	PrimaryGeneratedColumn,
 	UpdateDateColumn,
 } from "typeorm";
+import { UserEntity } from "./user.entity";
 
 const { TableName, ColumnName, IndexName } = DbConstants;
 
@@ -19,9 +22,6 @@ export class MessageEntity {
 
 	@Column({ name: ColumnName.Message.threadId, type: "uuid", nullable: true })
 	threadId: string | null;
-
-	@Column({ name: ColumnName.Message.senderId, type: "uuid" })
-	senderId: string;
 
 	@Column({
 		name: ColumnName.Message.parentMessageId,
@@ -45,4 +45,11 @@ export class MessageEntity {
 		nullable: true,
 	})
 	deletedAt: Date | null;
+
+	@Column({ name: ColumnName.Message.senderId, type: "uuid" })
+	senderId: string;
+
+	@ManyToOne(() => UserEntity)
+	@JoinColumn({ name: ColumnName.Message.senderId })
+	sender: UserEntity;
 }

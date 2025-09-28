@@ -13,38 +13,58 @@ import {
 	CreateMessageRequest,
 	UpdateMessageRequest,
 	MessageQuery,
+	MessageResponse,
 } from "./dto";
-import { ApiResponseDto } from "@utils";
+import {
+	ApiResponseDto,
+	SwaggerApiMessageResponse,
+	SwaggerApiResponse,
+} from "@utils";
+import { ApiBearerAuth } from "@nestjs/swagger";
 
 @Controller("message")
+@ApiBearerAuth()
 export class MessageController {
 	constructor(private readonly messageService: MessageService) {}
 
 	@Post()
+	@SwaggerApiMessageResponse()
 	async createOne(@Body() dto: CreateMessageRequest) {
 		await this.messageService.createOne(dto);
 		return new ApiResponseDto(null, null, "Created successfully");
 	}
 
 	@Put(":id")
+	@SwaggerApiMessageResponse()
 	async updateOne(@Param("id") id: string, @Body() dto: UpdateMessageRequest) {
 		await this.messageService.updateOne(id, dto);
 		return new ApiResponseDto(null, null, "Updated successfully");
 	}
 
 	@Get()
-	async findMany(@Query() query: MessageQuery) {
-		const data = await this.messageService.findMany(query);
-		return new ApiResponseDto(data);
+	@SwaggerApiResponse(MessageResponse, { isArray: true })
+	async findMany() {
+		const data = await this.messageService.findMany();
+		return new ApiResponseDto(
+			MessageResponse.fromEntities(data),
+			null,
+			"Fetched successfully",
+		);
 	}
 
 	@Get(":id")
+	@SwaggerApiResponse(MessageResponse)
 	async findOne(@Param("id") id: string) {
 		const data = await this.messageService.findOne(id);
-		return new ApiResponseDto(data);
+		return new ApiResponseDto(
+			MessageResponse.fromEntity(data),
+			null,
+			"Fetched successfully",
+		);
 	}
 
 	@Delete(":id")
+	@SwaggerApiMessageResponse()
 	async deleteOne(@Param("id") id: string) {
 		await this.messageService.deleteOne(id);
 		return new ApiResponseDto(null, null, "Deleted successfully");

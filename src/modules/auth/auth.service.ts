@@ -7,6 +7,7 @@ import {
 	RefreshTokenError,
 	LoginMethodNotSupportedError,
 	InvalidPkceAuthCodeError,
+	InvalidTokenError,
 } from "./errors";
 import * as bcrypt from "bcryptjs";
 import * as jwt from "jsonwebtoken";
@@ -23,11 +24,12 @@ import { ClsService } from "nestjs-cls";
 import { OAuth2Client } from "google-auth-library";
 import { GitHubService } from "@providers/github";
 import { UserEntity } from "@db/entities";
+import { UserService } from "@modules/user";
 
 @Injectable()
 export class AuthService {
 	constructor(
-		private readonly userRepo: UserRepository,
+		private readonly userService: UserService,
 		private readonly cls: ClsService<DevChatCls>,
 		private readonly githubService: GitHubService,
 	) {}
@@ -125,22 +127,14 @@ export class AuthService {
 		return this.issueTokenPair(decoded.sub);
 	}
 
-	async getUserByAccessToken(token: string) {
-		const decocded = jwt.verify(token, Env.JWT_SECRET, {
+	verifyAccessToken(token: string) {
+		let decoded = jwt.verify(token, Env.JWT_SECRET, {
 			issuer: Env.JWT_ISSUER,
 		});
-		if (typeof decocded === "string" || !decocded.sub) {
-			return null;
+		if (typeof decoded === "string" || !decoded.sub) {
+			throw new InvalidTokenError();
 		}
-		const userId = decocded.sub;
-
-		const user = await this.userRepo.findOne({
-			where: {
-				id: userId,
-			},
-		});
-
-		return user;
+		return decoded;
 	}
 
 	refresh(dto: TokenRefreshRequest): TokenResponse {
@@ -167,17 +161,7 @@ export class AuthService {
 			.toString("utf-8")
 			.split(":");
 
-		const user = await this.userRepo.findOne({
-			where: [
-				{
-					username: usernameOrEmail,
-				},
-				{
-					email: usernameOrEmail,
-				},
-			],
-		});
-
+		const user = await this.userService.findByUniqueKey(usernameOrEmail);
 		if (!user) throw new WrongUsernameOrPasswordError();
 
 		const isPassValid = bcrypt.compareSync(password, user.password);
@@ -198,28 +182,22 @@ export class AuthService {
 
 		if (!email) throw new InvalidGoogleCredentialsError();
 
-		let user = await this.userRepo.findOne({
-			where: {
-				email,
-			},
-		});
+		let user = await this.userService.findByUniqueKey(email);
 
 		if (!user) {
-			const data = await this.userRepo.insert({
-				email: email,
-				username: email.split("@")[0],
-				password: bcrypt.hashSync(Math.random().toString(36).slice(-8), 10),
-				firstName: payload.given_name ?? "",
-				lastName: payload.family_name ?? "",
-				avatarUrl: payload.picture ?? null,
-				emailVerified: payload.email_verified,
-			});
-
-			user = await this.userRepo.findOne({
-				where: {
-					id: data.identifiers[0].id,
+			const data = await this.userService.create(
+				{
+					email: email,
+					username: email.split("@")[0],
+					password: Math.random().toString(36).slice(-8),
+					firstName: payload.given_name ?? "",
+					lastName: payload.family_name ?? "",
+					avatarUrl: payload.picture ?? null,
 				},
-			});
+				payload.email_verified,
+			);
+
+			user = await this.userService.findById(data.identifiers[0].id);
 		}
 
 		return user;
@@ -235,28 +213,22 @@ export class AuthService {
 		const primaryEmailObj =
 			emailsRes.find((emailObj) => emailObj.primary) || emailsRes[0];
 
-		let user = await this.userRepo.findOne({
-			where: {
-				email: primaryEmailObj.email,
-			},
-		});
+		let user = await this.userService.findByUniqueKey(primaryEmailObj.email);
 
 		if (!user) {
-			const data = await this.userRepo.insert({
-				email: primaryEmailObj.email,
-				username: userInfoRes.login,
-				password: bcrypt.hashSync(Math.random().toString(36).slice(-8), 10),
-				firstName: userInfoRes.name ?? "",
-				lastName: "",
-				avatarUrl: userInfoRes.avatar_url ?? null,
-				emailVerified: primaryEmailObj.verified,
-			});
-
-			user = await this.userRepo.findOne({
-				where: {
-					id: data.identifiers[0].id,
+			const data = await this.userService.create(
+				{
+					email: primaryEmailObj.email,
+					username: userInfoRes.login,
+					password: bcrypt.hashSync(Math.random().toString(36).slice(-8), 10),
+					firstName: userInfoRes.name ?? "",
+					lastName: "",
+					avatarUrl: userInfoRes.avatar_url ?? null,
 				},
-			});
+				true,
+			);
+
+			user = await this.userService.findById(data.identifiers[0].id);
 		}
 
 		return user;
