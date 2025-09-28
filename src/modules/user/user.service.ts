@@ -1,13 +1,12 @@
-import { UserEntity } from "@db/entities";
 import { UserRepository } from "@db/repositories";
-import { Injectable, NotFoundException } from "@nestjs/common"; // Add this import
+import { Injectable } from "@nestjs/common";
 import { UserExistedError } from "./errors/user-existed.error";
 import * as bcrypt from "bcryptjs";
 import { PaginationDto } from "@utils";
 import { CreateUserRequest, UpdateUserRequest, UserQuery } from "./dto";
 import { UserNotFoundError } from "./errors";
 
-@Injectable() // Add this decorator
+@Injectable()
 export class UserService {
 	constructor(private readonly userRepo: UserRepository) {}
 
@@ -28,7 +27,7 @@ export class UserService {
 		}
 	}
 
-	async create(dto: CreateUserRequest) {
+	async create(dto: CreateUserRequest, emailVerified = false) {
 		await this.validateBeforeCreate(dto);
 
 		const hashedPass = bcrypt.hashSync(dto.password, 10);
@@ -40,26 +39,26 @@ export class UserService {
 			lastName: dto.lastName ?? null,
 			avatarUrl: dto.avatarUrl ?? null,
 			timezone: dto.timezone ?? null,
+			emailVerified,
 		});
 
-		await this.userRepo.insert(user);
+		return await this.userRepo.insert(user);
 	}
 
 	async findById(id: string) {
 		const user = await this.userRepo.findOne({ where: { id } });
 		if (!user) {
-			throw new NotFoundException(`User with ID ${id} not found`);
+			throw new UserNotFoundError();
 		}
 		return user;
 	}
 
-	// Find by id OR username OR email
 	async findByUniqueKey(uniqueKey: string) {
 		const user = await this.userRepo.findOne({
 			where: [{ id: uniqueKey }, { email: uniqueKey }, { username: uniqueKey }],
 		});
 		if (!user) {
-			throw new NotFoundException(`User with key ${uniqueKey} not found`);
+			throw new UserNotFoundError();
 		}
 		return user;
 	}
