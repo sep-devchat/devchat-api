@@ -1,6 +1,7 @@
 export const DbConstants = {
 	TableName: {
 		User: "user",
+		Group: "group",
 	},
 	ColumnName: {
 		User: {
@@ -18,11 +19,24 @@ export const DbConstants = {
 			lastLogin: "last_login",
 			timezone: "timezone",
 		},
+		Group: {
+			id: "group_id",
+			name: "name",
+			description: "description",
+			avatar: "avatar",
+			createdBy: "created_by",
+			createdAt: "created_at",
+			updatedAt: "updated_at",
+			isActive: "is_active",
+		},
 	},
 	IndexName: {
 		User: {
 			username: "idx_user_unique_username",
 			email: "idx_user_unique_email",
+		},
+		Group: {
+			name: "idx_group_name",
 		},
 	},
 };

@@ -1,13 +1,12 @@
-import { UserEntity } from "@db/entities";
 import { UserRepository } from "@db/repositories";
-import { Injectable, NotFoundException } from "@nestjs/common"; // Add this import
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { UserExistedError } from "./errors/user-existed.error";
 import * as bcrypt from "bcryptjs";
 import { PaginationDto } from "@utils";
 import { CreateUserRequest, UpdateUserRequest, UserQuery } from "./dto";
 import { UserNotFoundError } from "./errors";
 
-@Injectable() // Add this decorator
+@Injectable()
 export class UserService {
 	constructor(private readonly userRepo: UserRepository) {}
 
@@ -48,7 +47,7 @@ export class UserService {
 	async findById(id: string) {
 		const user = await this.userRepo.findOne({ where: { id } });
 		if (!user) {
-			throw new NotFoundException(`User with ID ${id} not found`);
+			throw new UserNotFoundError();
 		}
 		return user;
 	}
@@ -59,7 +58,7 @@ export class UserService {
 			where: [{ id: uniqueKey }, { email: uniqueKey }, { username: uniqueKey }],
 		});
 		if (!user) {
-			throw new NotFoundException(`User with key ${uniqueKey} not found`);
+			throw new UserNotFoundError();
 		}
 		return user;
 	}
@@ -91,6 +90,8 @@ export class UserService {
 	}
 
 	async delete(id: string) {
-		return this.userRepo.delete(id);
+		const user = await this.findByUniqueKey(id);
+		user.isActive = false;
+		await this.userRepo.save(user);
 	}
 }
