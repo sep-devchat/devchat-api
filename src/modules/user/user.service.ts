@@ -53,11 +53,11 @@ export class UserService {
 		return user;
 	}
 
-	async findByUniqueKey(uniqueKey: string) {
+	async findByUniqueKey(uniqueKey: string, throwIfNotFound = true) {
 		const user = await this.userRepo.findOne({
 			where: [{ id: uniqueKey }, { email: uniqueKey }, { username: uniqueKey }],
 		});
-		if (!user) {
+		if (!user && throwIfNotFound) {
 			throw new UserNotFoundError();
 		}
 		return user;

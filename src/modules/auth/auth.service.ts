@@ -182,7 +182,7 @@ export class AuthService {
 
 		if (!email) throw new InvalidGoogleCredentialsError();
 
-		let user = await this.userService.findByUniqueKey(email);
+		let user = await this.userService.findByUniqueKey(email, false);
 
 		if (!user) {
 			const data = await this.userService.create(
@@ -213,7 +213,10 @@ export class AuthService {
 		const primaryEmailObj =
 			emailsRes.find((emailObj) => emailObj.primary) || emailsRes[0];
 
-		let user = await this.userService.findByUniqueKey(primaryEmailObj.email);
+		let user = await this.userService.findByUniqueKey(
+			primaryEmailObj.email,
+			false,
+		);
 
 		if (!user) {
 			const data = await this.userService.create(
