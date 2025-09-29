@@ -14,13 +14,15 @@ import {
 	UpdateMessageRequest,
 	MessageQuery,
 	MessageResponse,
+	CreateUserMessageDeleteRequest,
 } from "./dto";
 import {
+	ApiMessageResponseDto,
 	ApiResponseDto,
 	SwaggerApiMessageResponse,
 	SwaggerApiResponse,
 } from "@utils";
-import { ApiBearerAuth } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiOperation, ApiParam } from "@nestjs/swagger";
 
 @Controller("message")
 @ApiBearerAuth()
@@ -64,9 +66,25 @@ export class MessageController {
 	}
 
 	@Delete(":id")
+	@ApiOperation({ summary: "Delete message for everyone" })
+	@ApiParam({ name: "id", description: "Message ID" })
 	@SwaggerApiMessageResponse()
 	async deleteOne(@Param("id") id: string) {
-		await this.messageService.deleteOne(id);
-		return new ApiResponseDto(null, null, "Deleted successfully");
+		await this.messageService.deleteMessageForEveryone(id);
+		return new ApiMessageResponseDto(
+			"Deleted message for everyone successfully",
+		);
+	}
+
+	@Post("create-user-message-delete")
+	@ApiOperation({
+		summary: "Create user message delete for function delete message by myself",
+	})
+	@SwaggerApiMessageResponse()
+	async createUserMessageDelete(
+		@Body() request: CreateUserMessageDeleteRequest,
+	) {
+		await this.messageService.createUserMessageDelete(request);
+		return new ApiMessageResponseDto("Deleted for myself successfully");
 	}
 }

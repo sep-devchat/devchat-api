@@ -2,9 +2,17 @@ import { Global, Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { datasource } from "./datasource";
 import { addTransactionalDataSource } from "typeorm-transactional";
-import { MessageRepository, UserRepository } from "./repositories";
+import {
+	MessageRepository,
+	UserMessageDeleteRepository,
+	UserRepository,
+} from "./repositories";
 
-const repositories = [UserRepository, MessageRepository];
+const repositories = [
+	UserRepository,
+	MessageRepository,
+	UserMessageDeleteRepository,
+];
 
 @Module({
 	imports: [

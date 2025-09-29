@@ -2,6 +2,7 @@ export const DbConstants = {
 	TableName: {
 		User: "user",
 		Message: "message",
+		UserMessageDelete: "user_message_delete",
 	},
 	ColumnName: {
 		User: {
@@ -26,6 +27,11 @@ export const DbConstants = {
 			senderId: "sender_id",
 			content: "content",
 			parentMessageId: "parent_message_id",
+		},
+		UserMessageDelete: {
+			id: "user_message_delete_id",
+			userId: "user_id",
+			messageId: "message_id",
 		},
 		Audit: {
 			createdAt: "created_at",
