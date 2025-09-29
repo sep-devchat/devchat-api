@@ -5,6 +5,10 @@ import * as bcrypt from "bcryptjs";
 import { PaginationDto } from "@utils";
 import { CreateUserRequest, UpdateUserRequest, UserQuery } from "./dto";
 import { UserNotFoundError } from "./errors";
+import { randomBytes } from "crypto";
+import { sendVerificationEmail } from "src/utils/mailer";
+
+const emailToken = randomBytes(32).toString("hex");
 
 @Injectable()
 export class UserService {
@@ -40,7 +44,10 @@ export class UserService {
 			avatarUrl: dto.avatarUrl ?? null,
 			timezone: dto.timezone ?? null,
 			emailVerified,
+			emailVerificationToken: emailToken,
 		});
+
+		await sendVerificationEmail(user.email, emailToken);
 
 		return await this.userRepo.insert(user);
 	}
@@ -61,6 +68,28 @@ export class UserService {
 			throw new UserNotFoundError();
 		}
 		return user;
+	}
+
+	async findByEmailToken(token: string) {
+		const user = await this.userRepo.findOne({
+			where: { emailVerificationToken: token },
+		});
+
+		if (!user) {
+			throw new UserNotFoundError();
+		}
+		return user;
+	}
+
+	async markEmailAsVerified(id: string) {
+		const user = await this.findById(id);
+		if (!user) {
+			throw new UserNotFoundError();
+		}
+		await this.userRepo.update(id, {
+			emailVerified: true,
+			isActive: true,
+		});
 	}
 
 	async getAll(query: UserQuery) {

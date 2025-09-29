@@ -14,6 +14,7 @@ export const DbConstants = {
 			avatarUrl: "avatar_url",
 			isActive: "is_active",
 			emailVerified: "email_verified",
+			emailVerificationToken: "email_verification_token",
 			createdAt: "created_at",
 			updatedAt: "updated_at",
 			lastLogin: "last_login",

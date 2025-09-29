@@ -46,6 +46,7 @@
 		"multer": "^1.4.5-lts.1",
 		"mysql2": "^3.14.4",
 		"nestjs-cls": "^6.0.1",
+		"nodemailer": "^7.0.6",
 		"reflect-metadata": "^0.1.13",
 		"rxjs": "^7.8.1",
 		"socket.io": "^4.8.1",

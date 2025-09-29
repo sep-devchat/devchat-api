@@ -8,6 +8,7 @@ import {
 	LoginMethodNotSupportedError,
 	InvalidPkceAuthCodeError,
 	InvalidTokenError,
+	MissingVerifyTokenError,
 } from "./errors";
 import * as bcrypt from "bcryptjs";
 import * as jwt from "jsonwebtoken";
@@ -235,5 +236,15 @@ export class AuthService {
 		}
 
 		return user;
+	}
+
+	async verifyEmail(token: string) {
+		if (!token) throw new MissingVerifyTokenError();
+
+		const user = await this.userService.findByEmailToken(token);
+
+		if (!user) throw new InvalidTokenError();
+
+		await this.userService.markEmailAsVerified(user.id);
 	}
 }

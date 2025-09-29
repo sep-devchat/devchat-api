@@ -23,6 +23,12 @@ export const Env = {
 	PKCE_AUTH_CODE_JWT_EXPIRES_IN: Number(
 		process.env.PKCE_AUTH_CODE_JWT_EXPIRES_IN || "0",
 	),
+	EMAIL_HOST: process.env.EMAIL_HOST || "",
+	EMAIL_PORT: Number(process.env.EMAIL_PORT || "0"),
+	EMAIL_USER: process.env.EMAIL_USER || "",
+	EMAIL_PASS: process.env.EMAIL_PASS || "",
+	FRONTEND_VERIFY_URL: process.env.FRONTEND_VERIFY_URL || "",
+	EMAIL_FROM: process.env.EMAIL_FROM || "",
 } as const;
 
 console.log(Env);

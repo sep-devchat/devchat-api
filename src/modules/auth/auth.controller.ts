@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Res } from "@nestjs/common";
+import { Body, Controller, Get, Post, Query, Res } from "@nestjs/common";
 import { AuthService } from "./auth.service";
 import {
 	ApiMessageResponseDto,
@@ -71,6 +71,13 @@ export class AuthController {
 	async pkceIssueToken(@Body() dto: PkceIssueTokenRequest) {
 		const data = await this.authService.pkceIssueToken(dto);
 		return new ApiResponseDto(data, null, "PKCE issue token successful");
+	}
+
+	@Get("verify-email")
+	@SkipAuth()
+	async verifyEmail(@Query("token") token: string) {
+		await this.authService.verifyEmail(token);
+		return new ApiMessageResponseDto("Email verified successfully");
 	}
 
 	@Get("profile")
