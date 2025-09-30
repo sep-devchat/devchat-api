@@ -6,7 +6,7 @@ export class MissingVerifyTokenError extends ApiError {
 			code: "missing_verify_token_err",
 			message: "Missing verify token",
 			detail: null,
-			status: 400,
+			status: 404,
 		});
 	}
 }

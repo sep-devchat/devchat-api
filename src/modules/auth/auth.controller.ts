@@ -19,6 +19,12 @@ import {
 import { SkipAuth } from "../../utils/skip-auth.decorator";
 import { ApiBearerAuth } from "@nestjs/swagger";
 import { Response } from "express";
+import {
+	ForgotPasswordRequest,
+	SendResetCodeRequest,
+	ConfirmResetCodeRequest,
+	ResetPasswordRequest,
+} from "./dto";
 
 @Controller("auth")
 export class AuthController {
@@ -78,6 +84,38 @@ export class AuthController {
 	async verifyEmail(@Query("token") token: string) {
 		await this.authService.verifyEmail(token);
 		return new ApiMessageResponseDto("Email verified successfully");
+	}
+
+	@Post("forgot-password")
+	@SwaggerApiMessageResponse()
+	@SkipAuth()
+	async forgotPassword(@Body() dto: ForgotPasswordRequest) {
+		await this.authService.forgotPassword(dto);
+		return new ApiMessageResponseDto("Reset code has been sent");
+	}
+
+	@Post("send-reset-code")
+	@SwaggerApiMessageResponse()
+	@SkipAuth()
+	async sendResetCode(@Body() dto: SendResetCodeRequest) {
+		await this.authService.sendResetCode(dto);
+		return new ApiMessageResponseDto("Reset code sent successfully");
+	}
+
+	@Post("confirm-reset-code")
+	@SwaggerApiMessageResponse()
+	@SkipAuth()
+	async confirmResetCode(@Body() dto: ConfirmResetCodeRequest) {
+		await this.authService.confirmResetCode(dto);
+		return new ApiMessageResponseDto("Code verified successfully");
+	}
+
+	@Post("reset-password")
+	@SwaggerApiMessageResponse()
+	@SkipAuth()
+	async resetPassword(@Body() dto: ResetPasswordRequest) {
+		await this.authService.resetPassword(dto);
+		return new ApiMessageResponseDto("Password reset successfully");
 	}
 
 	@Get("profile")

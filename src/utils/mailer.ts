@@ -1,10 +1,13 @@
 import * as mailer from "nodemailer";
 import { Env } from "./env";
 
+const port = Env.EMAIL_PORT ?? 587;
+const secure = Env.EMAIL_SECURE ?? (port === 465 ? true : false);
+
 const transporter = mailer.createTransport({
 	host: Env.EMAIL_HOST,
-	port: Env.EMAIL_PORT,
-	secure: false, // true for 465, false for other ports
+	port,
+	secure,
 	auth: {
 		user: Env.EMAIL_USER,
 		pass: Env.EMAIL_PASS,
@@ -12,7 +15,7 @@ const transporter = mailer.createTransport({
 });
 
 export async function sendVerificationEmail(emailTo: string, token: string) {
-	const verifyUrl = `${Env.FRONTEND_VERIFY_URL}/verify-email?token=${token}`;
+	const verifyUrl = `${Env.FRONTEND_VERIFY_URL}?token=${token}`;
 	const mailOptions = {
 		from: Env.EMAIL_FROM,
 		to: emailTo,
@@ -23,6 +26,29 @@ export async function sendVerificationEmail(emailTo: string, token: string) {
             <p>If you did not request this, please ignore this email.</p>
         `,
 	};
+	try {
+		await transporter.sendMail(mailOptions);
+	} catch (err: any) {
+		const reason = err?.response || err?.message || "Unknown error";
+		throw new Error(`Failed to send verification email: ${reason}`);
+	}
+}
 
-	await transporter.sendMail(mailOptions);
+export async function sendPasswordResetCode(emailTo: string, code: string) {
+	const mailOptions = {
+		from: Env.EMAIL_FROM,
+		to: emailTo,
+		subject: "Your DevChat password reset code",
+		html: `
+            <p>Use the following verification code to reset your password:</p>
+            <p style="font-size: 20px; font-weight: bold;">${code}</p>
+            <p>This code will expire in 15 minutes. If you did not request this, you can ignore this email.</p>
+        `,
+	};
+	try {
+		await transporter.sendMail(mailOptions);
+	} catch (err: any) {
+		const reason = err?.response || err?.message || "Unknown error";
+		throw new Error(`Failed to send password reset code: ${reason}`);
+	}
 }

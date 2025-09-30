@@ -25,6 +25,7 @@ export const Env = {
 	),
 	EMAIL_HOST: process.env.EMAIL_HOST || "",
 	EMAIL_PORT: Number(process.env.EMAIL_PORT || "0"),
+	EMAIL_SECURE: Boolean(process.env.EMAIL_SECURE) || false,
 	EMAIL_USER: process.env.EMAIL_USER || "",
 	EMAIL_PASS: process.env.EMAIL_PASS || "",
 	FRONTEND_VERIFY_URL: process.env.FRONTEND_VERIFY_URL || "",
