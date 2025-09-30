@@ -11,13 +11,11 @@ import {
 import { ClsService } from "nestjs-cls";
 import { DevChatCls } from "@utils";
 import { MessageNotFoundError } from "./errors";
-import { UserService } from "@modules/user";
 
 @Injectable()
 export class MessageService {
 	constructor(
 		private readonly messageRepo: MessageRepository,
-		private readonly userService: UserService,
 		private readonly userMessageDeleteRepo: UserMessageDeleteRepository,
 		private readonly cls: ClsService<DevChatCls>,
 	) {}
@@ -66,26 +64,21 @@ export class MessageService {
 		return this.messageRepo.save(message);
 	}
 
-	private async validateBeforeCreateUserMessageDelete(
-		userId: string,
-		messageId: string,
-	) {
+	private async validateBeforeCreateUserMessageDelete(messageId: string) {
 		// Check if message exists
 		const message = await this.findOne(messageId);
 		if (!message) {
 			throw new MessageNotFoundError();
 		}
-
-		// check valid user Id
-		// This function already throws error if user not found
-		await this.userService.findById(userId);
 	}
 
 	// Delete message for self
 	async createUserMessageDelete(request: CreateUserMessageDeleteRequest) {
-		const { userId, messageId } = request;
+		const { messageId } = request;
 
-		await this.validateBeforeCreateUserMessageDelete(userId, messageId);
+		const userId = this.cls.get("profile").id;
+
+		await this.validateBeforeCreateUserMessageDelete(messageId);
 
 		const message = this.userMessageDeleteRepo.create({
 			userId,

@@ -9,12 +9,4 @@ export class CreateUserMessageDeleteRequest {
 	@IsString()
 	@IsNotEmpty()
 	messageId: string;
-
-	@ApiProperty({
-		example: "123e4567-e89b-12d3-a456-426614174000",
-		description: "User ID who is deleting the message",
-	})
-	@IsString()
-	@IsNotEmpty()
-	userId: string;
 }

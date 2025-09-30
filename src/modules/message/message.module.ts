@@ -5,7 +5,6 @@ import { UserModule } from "@modules/user";
 
 @Module({
 	providers: [MessageService],
-	imports: [UserModule],
 	exports: [MessageService],
 	controllers: [MessageController],
 })
