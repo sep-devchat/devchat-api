@@ -2,6 +2,8 @@ export const DbConstants = {
 	TableName: {
 		User: "user",
 		Message: "message",
+		PasswordResetToken: "password_reset_token",
+		Attachment: "attachment",
 	},
 	ColumnName: {
 		User: {
@@ -28,6 +30,27 @@ export const DbConstants = {
 			content: "content",
 			parentMessageId: "parent_message_id",
 		},
+		PasswordResetToken: {
+			id: "password_reset_token_id",
+			userId: "user_id",
+			code: "code",
+			expiresAt: "expires_at",
+			usedAt: "used_at",
+			attempts: "attempts",
+		},
+		Attachment: {
+			id: "attachment_id",
+			messageId: "message_id",
+			fileName: "file_name",
+			originalFileName: "original_file_name",
+			filePath: "file_path",
+			fileSize: "file_size",
+			fileType: "file_type",
+			folder: "folder",
+			format: "format",
+			publicId: "public_id",
+			uploadedBy: "uploaded_by",
+		},
 		Audit: {
 			createdAt: "created_at",
 			updatedAt: "updated_at",
@@ -38,6 +61,13 @@ export const DbConstants = {
 		User: {
 			username: "idx_user_unique_username",
 			email: "idx_user_unique_email",
+		},
+		PasswordResetToken: {
+			userId: "idx_password_reset_user",
+			code: "idx_password_reset_code",
+		},
+		Attachment: {
+			messageId: "idx_attachment_message",
 		},
 	},
 };

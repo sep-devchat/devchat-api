@@ -8,6 +8,10 @@ import { ClsModule } from "nestjs-cls";
 import { GitHubModule } from "@providers/github";
 import { MessageModule } from "@modules/message";
 import { SocketModule } from "@modules/socket";
+import { ConfigModule } from "@nestjs/config";
+import { CloudinaryModule } from "@providers/cloudinary";
+import { AttachmentModule } from "@modules/attachment";
+import { UploadModule } from "@modules/upload";
 
 @Module({
 	imports: [
@@ -18,6 +22,7 @@ import { SocketModule } from "@modules/socket";
 				mount: true,
 			},
 		}),
+		ConfigModule.forRoot({ isGlobal: true }),
 		GitHubModule.register({
 			clientId: Env.GITHUB_CLIENT_ID,
 			clientSecret: Env.GITHUB_CLIENT_SECRET,
@@ -26,6 +31,9 @@ import { SocketModule } from "@modules/socket";
 		UserModule,
 		MessageModule,
 		SocketModule,
+		CloudinaryModule,
+		AttachmentModule,
+		UploadModule,
 	],
 	controllers: [],
 	providers: [

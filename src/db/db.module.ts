@@ -6,12 +6,14 @@ import {
 	MessageRepository,
 	UserRepository,
 	PasswordResetTokenRepository,
+	AttachmentRepository,
 } from "./repositories";
 
 const repositories = [
 	UserRepository,
 	MessageRepository,
 	PasswordResetTokenRepository,
+	AttachmentRepository,
 ];
 
 @Module({
