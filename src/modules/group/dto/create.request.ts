@@ -20,16 +20,4 @@ export class CreateGroupRequest {
 	@IsString()
 	@IsOptional()
 	avatar?: string | null;
-
-	@ApiProperty({
-		required: true,
-		example: "550e8400-e29b-41d4-a716-446655440000",
-	})
-	@IsString()
-	@IsNotEmpty()
-	createdBy: string;
-
-	@ApiProperty({ required: false, example: true })
-	@IsOptional()
-	isActive?: boolean;
 }

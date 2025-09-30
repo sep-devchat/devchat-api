@@ -3,27 +3,23 @@ import { CreateGroupRequest, UpdateGroupRequest, GroupQuery } from "./dto";
 import { GroupRepository } from "@db/repositories";
 import { Like } from "typeorm";
 import { GroupNotExistedError } from "./errors";
-import { PaginationDto } from "@utils";
-import { UserService } from "@modules/user";
+import { DevChatCls, PaginationDto } from "@utils";
+import { ClsService } from "nestjs-cls";
 
 @Injectable()
 export class GroupService {
 	constructor(
 		private readonly groupRepo: GroupRepository,
-		private readonly userService: UserService,
+		private readonly cls: ClsService<DevChatCls>,
 	) {}
 
 	async createOne(dto: CreateGroupRequest) {
-		// This function will throw an error if user not found
-		// So that, do need need to throw again in this Group service
-		await this.userService.findById(dto.createdBy);
-
+		const createdBy = this.cls.get("profile").id;
 		const group = this.groupRepo.create({
 			name: dto.name,
 			avatar: dto.avatar ?? null,
 			description: dto.description ?? null,
-			createdBy: dto.createdBy,
-			isActive: dto.isActive,
+			createdBy,
 		});
 
 		await this.groupRepo.insert(group);
@@ -34,8 +30,6 @@ export class GroupService {
 	async updateOne(id: string, dto: UpdateGroupRequest) {
 		// check if group exists
 		await this.findOne(id);
-		// check if createdBy user exists
-		await this.userService.findById(dto.createdBy);
 
 		await this.groupRepo.update(id, dto);
 	}
@@ -46,6 +40,7 @@ export class GroupService {
 			where: {
 				...(name ? { name: Like(`%${name}%`) } : {}),
 				isActive: true,
+				// When have table UserGroup will add more condition here
 			},
 			skip: (page - 1) * page,
 			take: limit,
@@ -68,6 +63,7 @@ export class GroupService {
 	}
 
 	async deleteOne(id: string) {
+		// when have table user group will check if user is the owner of the group
 		const group = await this.findOne(id);
 		group.isActive = false;
 		await this.groupRepo.save(group);

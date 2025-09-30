@@ -6,6 +6,7 @@ export class GroupNotExistedError extends ApiError {
 			code: "group_not_existed_err",
 			message: "Group does not exist",
 			detail: null,
+			status: 404,
 		});
 	}
 }
