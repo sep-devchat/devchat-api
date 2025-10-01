@@ -8,6 +8,7 @@ import { ClsModule } from "nestjs-cls";
 import { GitHubModule } from "@providers/github";
 import { MessageModule } from "@modules/message";
 import { SocketModule } from "@modules/socket";
+import { GroupModule } from "@modules/group";
 
 @Module({
 	imports: [
@@ -26,6 +27,7 @@ import { SocketModule } from "@modules/socket";
 		UserModule,
 		MessageModule,
 		SocketModule,
+		GroupModule,
 	],
 	controllers: [],
 	providers: [
