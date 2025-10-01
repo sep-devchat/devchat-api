@@ -12,6 +12,7 @@ import { ConfigModule } from "@nestjs/config";
 import { CloudinaryModule } from "@providers/cloudinary";
 import { AttachmentModule } from "@modules/attachment";
 import { UploadModule } from "@modules/upload";
+import { GroupModule } from "@modules/group";
 
 @Module({
 	imports: [
@@ -34,6 +35,7 @@ import { UploadModule } from "@modules/upload";
 		CloudinaryModule,
 		AttachmentModule,
 		UploadModule,
+		GroupModule,
 	],
 	controllers: [],
 	providers: [

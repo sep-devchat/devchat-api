@@ -119,6 +119,8 @@ export class UserService {
 	}
 
 	async delete(id: string) {
-		return this.userRepo.delete(id);
+		const user = await this.findByUniqueKey(id);
+		user.isActive = false;
+		await this.userRepo.save(user);
 	}
 }

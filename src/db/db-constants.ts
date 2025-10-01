@@ -2,6 +2,8 @@ export const DbConstants = {
 	TableName: {
 		User: "user",
 		Message: "message",
+		Group: "group",
+		UserMessageDelete: "user_message_delete",
 		PasswordResetToken: "password_reset_token",
 		Attachment: "attachment",
 	},
@@ -30,6 +32,11 @@ export const DbConstants = {
 			content: "content",
 			parentMessageId: "parent_message_id",
 		},
+		UserMessageDelete: {
+			id: "user_message_delete_id",
+			userId: "user_id",
+			messageId: "message_id",
+		},
 		PasswordResetToken: {
 			id: "password_reset_token_id",
 			userId: "user_id",
@@ -56,11 +63,24 @@ export const DbConstants = {
 			updatedAt: "updated_at",
 			deletedAt: "deleted_at",
 		},
+		Group: {
+			id: "group_id",
+			name: "name",
+			description: "description",
+			avatar: "avatar",
+			createdBy: "created_by",
+			createdAt: "created_at",
+			updatedAt: "updated_at",
+			isActive: "is_active",
+		},
 	},
 	IndexName: {
 		User: {
 			username: "idx_user_unique_username",
 			email: "idx_user_unique_email",
+		},
+		Group: {
+			name: "idx_group_name",
 		},
 		PasswordResetToken: {
 			userId: "idx_password_reset_user",
