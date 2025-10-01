@@ -7,13 +7,17 @@ import {
 	UserRepository,
 	MessageRepository,
 	UserMessageDeleteRepository,
+	PasswordResetTokenRepository,
+	AttachmentRepository,
 } from "./repositories";
 
 const repositories = [
 	UserRepository,
-	GroupRepository,
 	MessageRepository,
+	GroupRepository,
 	UserMessageDeleteRepository,
+	PasswordResetTokenRepository,
+	AttachmentRepository,
 ];
 
 @Module({

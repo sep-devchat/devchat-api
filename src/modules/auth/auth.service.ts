@@ -1,4 +1,4 @@
-import { UserRepository } from "@db/repositories";
+import { PasswordResetTokenRepository, UserRepository } from "@db/repositories";
 import { Injectable } from "@nestjs/common";
 import {
 	InvalidGoogleCredentialsError,
@@ -8,6 +8,7 @@ import {
 	LoginMethodNotSupportedError,
 	InvalidPkceAuthCodeError,
 	InvalidTokenError,
+	MissingVerifyTokenError,
 } from "./errors";
 import * as bcrypt from "bcryptjs";
 import * as jwt from "jsonwebtoken";
@@ -25,6 +26,16 @@ import { OAuth2Client } from "google-auth-library";
 import { GitHubService } from "@providers/github";
 import { UserEntity } from "@db/entities";
 import { UserService } from "@modules/user";
+import {
+	ForgotPasswordRequest,
+	SendResetCodeRequest,
+	ConfirmResetCodeRequest,
+	ResetPasswordRequest,
+} from "./dto";
+import { sendPasswordResetCode } from "@utils";
+import { CodeUsedError } from "./errors/code-used.error";
+import { CodeExpiredError } from "./errors/code-expired.error";
+import { PasswordDuplicatedError } from "./errors";
 
 @Injectable()
 export class AuthService {
@@ -32,6 +43,8 @@ export class AuthService {
 		private readonly userService: UserService,
 		private readonly cls: ClsService<DevChatCls>,
 		private readonly githubService: GitHubService,
+		private readonly prRepo: PasswordResetTokenRepository,
+		private readonly userRepo: UserRepository,
 	) {}
 
 	private signAccessToken(userId: string) {
@@ -235,5 +248,82 @@ export class AuthService {
 		}
 
 		return user;
+	}
+
+	async verifyEmail(token: string) {
+		if (!token) throw new MissingVerifyTokenError();
+
+		const user = await this.userService.findByEmailToken(token);
+
+		if (!user) throw new InvalidTokenError();
+
+		await this.userService.markEmailAsVerified(user.id);
+	}
+
+	private generateCode(): string {
+		// 6-digit numeric code
+		return Math.floor(100000 + Math.random() * 900000).toString();
+	}
+
+	async forgotPassword(dto: ForgotPasswordRequest) {
+		// Alias for sendResetCode to keep API semantics
+		return this.sendResetCode({ email: dto.email });
+	}
+
+	async sendResetCode(dto: SendResetCodeRequest) {
+		const user = await this.userService.findByUniqueKey(dto.email, false);
+		// For security, respond success even if user not found
+		if (!user) return;
+
+		const code = this.generateCode();
+		const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+		await this.prRepo.insert({
+			userId: user.id,
+			code,
+			expiresAt,
+			attempts: 0,
+		});
+
+		// Send the numeric code
+		await sendPasswordResetCode(user.email, code);
+	}
+
+	async confirmResetCode(dto: ConfirmResetCodeRequest) {
+		const user = await this.userService.findByUniqueKey(dto.email, false);
+		if (!user) return; // same behavior: no user info leak
+
+		const token = await this.prRepo.findOne({
+			where: { userId: user.id, code: dto.code },
+			order: { createdAt: "DESC" as const },
+		});
+		if (!token) throw new InvalidTokenError();
+		if (token.usedAt) throw new CodeUsedError();
+		if (token.expiresAt < new Date()) throw new CodeExpiredError();
+
+		// Optionally increment attempts to track brute force
+		await this.prRepo.update(token.id, { attempts: (token.attempts || 0) + 1 });
+	}
+
+	async resetPassword(dto: ResetPasswordRequest) {
+		const user = await this.userService.findByUniqueKey(dto.email, false);
+		if (!user) return;
+
+		if (bcrypt.compareSync(dto.newPassword, user.password)) {
+			throw new PasswordDuplicatedError();
+		}
+
+		const token = await this.prRepo.findOne({
+			where: { userId: user.id, code: dto.code },
+			order: { createdAt: "DESC" as const },
+		});
+		if (!token) throw new InvalidTokenError();
+		if (token.usedAt) throw new CodeUsedError();
+
+		// Update password
+		const hashedPass = bcrypt.hashSync(dto.newPassword, 10);
+		await this.userRepo.update(user.id, { password: hashedPass });
+
+		// Invalidate this token
+		await this.prRepo.update(token.id, { usedAt: new Date() });
 	}
 }

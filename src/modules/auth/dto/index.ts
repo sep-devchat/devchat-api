@@ -5,3 +5,7 @@ export * from "./token-refresh.request";
 export * from "./login-pkce.request";
 export * from "./login-pkce.response";
 export * from "./pkce-issue-token.request";
+export * from "./forgot-password.request";
+export * from "./send-reset-code.request";
+export * from "./confirm-reset-code.request";
+export * from "./reset-password.request";

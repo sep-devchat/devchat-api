@@ -35,7 +35,7 @@ export class UserEntity {
 	@Column({ name: ColumnName.User.avatarUrl, type: "text", nullable: true })
 	avatarUrl: string | null;
 
-	@Column({ name: ColumnName.User.isActive, type: "boolean", default: true })
+	@Column({ name: ColumnName.User.isActive, type: "boolean", default: false })
 	isActive: boolean;
 
 	@Column({
@@ -44,6 +44,13 @@ export class UserEntity {
 		default: false,
 	})
 	emailVerified: boolean;
+
+	@Column({
+		name: ColumnName.User.emailVerificationToken,
+		type: "text",
+		nullable: true,
+	})
+	emailVerificationToken: string | null;
 
 	@CreateDateColumn({ name: ColumnName.User.createdAt })
 	createdAt: Date;
