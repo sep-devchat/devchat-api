@@ -1,4 +1,5 @@
 export * from "./user.repository";
 export * from "./base-repository";
 export * from "./message.repository";
+export * from "./user-message-delete.repository";
 export * from "./group.repository";
