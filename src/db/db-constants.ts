@@ -2,6 +2,7 @@ export const DbConstants = {
 	TableName: {
 		User: "user",
 		Message: "message",
+		Group: "group",
 		UserMessageDelete: "user_message_delete",
 	},
 	ColumnName: {
@@ -38,11 +39,24 @@ export const DbConstants = {
 			updatedAt: "updated_at",
 			deletedAt: "deleted_at",
 		},
+		Group: {
+			id: "group_id",
+			name: "name",
+			description: "description",
+			avatar: "avatar",
+			createdBy: "created_by",
+			createdAt: "created_at",
+			updatedAt: "updated_at",
+			isActive: "is_active",
+		},
 	},
 	IndexName: {
 		User: {
 			username: "idx_user_unique_username",
 			email: "idx_user_unique_email",
+		},
+		Group: {
+			name: "idx_group_name",
 		},
 	},
 };

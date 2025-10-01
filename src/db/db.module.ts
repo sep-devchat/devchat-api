@@ -3,13 +3,15 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { datasource } from "./datasource";
 import { addTransactionalDataSource } from "typeorm-transactional";
 import {
+	GroupRepository,
+	UserRepository,
 	MessageRepository,
 	UserMessageDeleteRepository,
-	UserRepository,
 } from "./repositories";
 
 const repositories = [
 	UserRepository,
+	GroupRepository,
 	MessageRepository,
 	UserMessageDeleteRepository,
 ];
