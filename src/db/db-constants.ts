@@ -3,6 +3,7 @@ export const DbConstants = {
 		User: "user",
 		Message: "message",
 		Group: "group",
+		UserGroup: "user_group",
 	},
 	ColumnName: {
 		User: {
@@ -28,11 +29,6 @@ export const DbConstants = {
 			content: "content",
 			parentMessageId: "parent_message_id",
 		},
-		Audit: {
-			createdAt: "created_at",
-			updatedAt: "updated_at",
-			deletedAt: "deleted_at",
-		},
 		Group: {
 			id: "group_id",
 			name: "name",
@@ -42,6 +38,19 @@ export const DbConstants = {
 			createdAt: "created_at",
 			updatedAt: "updated_at",
 			isActive: "is_active",
+		},
+		UserGroup: {
+			userId: "user_id",
+			groupId: "group_id",
+			role: "role",
+			joinedAt: "joined_at",
+			invitedBy: "invited_by",
+			status: "status",
+		},
+		Audit: {
+			createdAt: "created_at",
+			updatedAt: "updated_at",
+			deletedAt: "deleted_at",
 		},
 	},
 	IndexName: {
