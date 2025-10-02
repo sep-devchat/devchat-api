@@ -40,7 +40,7 @@ export const DbConstants = {
 		PasswordResetToken: {
 			id: "password_reset_token_id",
 			userId: "user_id",
-			code: "code",
+			verifyCode: "verify_code",
 			expiresAt: "expires_at",
 			usedAt: "used_at",
 			attempts: "attempts",
@@ -83,11 +83,11 @@ export const DbConstants = {
 			name: "idx_group_name",
 		},
 		PasswordResetToken: {
-			userId: "idx_password_reset_user",
-			code: "idx_password_reset_code",
+			userId: "idx_password_reset_token_normal_userId",
+			verifyCode: "idx_password_reset_token_normal_verifyCode",
 		},
 		Attachment: {
-			messageId: "idx_attachment_message",
+			messageId: "idx_attachment_normal_messageId",
 		},
 	},
 };
