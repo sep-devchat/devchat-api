@@ -13,6 +13,7 @@ import { CloudinaryModule } from "@providers/cloudinary";
 import { AttachmentModule } from "@modules/attachment";
 import { UploadModule } from "@modules/upload";
 import { GroupModule } from "@modules/group";
+import { ChannelModule } from "@modules/channel";
 
 @Module({
 	imports: [
@@ -36,6 +37,7 @@ import { GroupModule } from "@modules/group";
 		AttachmentModule,
 		UploadModule,
 		GroupModule,
+		ChannelModule,
 	],
 	controllers: [],
 	providers: [

@@ -6,6 +6,8 @@ export const DbConstants = {
 		UserMessageDelete: "user_message_delete",
 		PasswordResetToken: "password_reset_token",
 		Attachment: "attachment",
+		Channel: "channel",
+		Thread: "thread",
 	},
 	ColumnName: {
 		User: {
@@ -26,8 +28,6 @@ export const DbConstants = {
 		},
 		Message: {
 			id: "message_id",
-			channelId: "channel_id",
-			threadId: "thread_id",
 			senderId: "sender_id",
 			content: "content",
 			parentMessageId: "parent_message_id",
@@ -62,6 +62,10 @@ export const DbConstants = {
 			createdAt: "created_at",
 			updatedAt: "updated_at",
 			deletedAt: "deleted_at",
+			createdBy: "created_by",
+			updatedBy: "updated_by",
+			deletedBy: "deleted_by",
+			isActive: "is_active",
 		},
 		Group: {
 			id: "group_id",
@@ -73,6 +77,16 @@ export const DbConstants = {
 			updatedAt: "updated_at",
 			isActive: "is_active",
 		},
+		Channel: {
+			id: "channel_id",
+			name: "channel_name",
+			description: "channel_description",
+		},
+		Thread: {
+			id: "thread_id",
+			name: "thread_name",
+			description: "thread_description",
+		},
 	},
 	IndexName: {
 		User: {
@@ -81,6 +95,10 @@ export const DbConstants = {
 		},
 		Group: {
 			name: "idx_group_name",
+		},
+		Channel: {
+			name: "idx_channel_unique_name",
+			groupId: "idx_channel_normal_group",
 		},
 		PasswordResetToken: {
 			userId: "idx_password_reset_token_normal_userId",
