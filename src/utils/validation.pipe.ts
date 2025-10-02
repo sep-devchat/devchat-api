@@ -18,19 +18,26 @@ export class ValidationPipe implements PipeTransform {
 	 * @returns The validated value if successful, throws an error otherwise.
 	 */
 	async transform(value: any, { metatype }: ArgumentMetadata) {
-		// Transform the plain object to a DTO instance.
-		const object = plainToInstance(metatype, value, {
-			// enableImplicitConversion: true,
-			// enableCircularCheck: true,
-		});
-
 		// Skip validation if no metatype is provided or if it's a primitive type.
 		if (!metatype || !this.toValidate(metatype)) {
-			return object;
+			return value;
 		}
 
+		// If value is null/undefined (e.g., missing body/query), skip validation to avoid 'unknownValue'.
+		if (value === null || value === undefined) {
+			return value;
+		}
+
+		// Transform the plain object to a DTO instance with implicit conversion (e.g., query string numbers).
+		const object = plainToInstance(metatype, value, {
+			enableImplicitConversion: true,
+		});
+
 		// Validate the DTO instance against the validation rules defined in the DTO.
-		const errors = await validate(object);
+		const errors = await validate(object, {
+			skipMissingProperties: true,
+			forbidUnknownValues: false,
+		});
 
 		// Throw an error if validation fails.
 		if (errors.length > 0) {

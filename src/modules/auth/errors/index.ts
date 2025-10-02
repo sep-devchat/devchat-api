@@ -5,3 +5,7 @@ export * from "./invalid-google-credentials.error";
 export * from "./refresh-token.error";
 export * from "./login-method-not-supported.error";
 export * from "./invalid-pkce-auth-code.error";
+export * from "./missing-verify-token.error";
+export * from "./code-used.error";
+export * from "./code-expired.error";
+export * from "./password-duplicated.error";

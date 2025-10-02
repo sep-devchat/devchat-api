@@ -6,9 +6,19 @@ import {
 	GroupRepository,
 	UserRepository,
 	MessageRepository,
+	UserMessageDeleteRepository,
+	PasswordResetTokenRepository,
+	AttachmentRepository,
 } from "./repositories";
 
-const repositories = [UserRepository, GroupRepository, MessageRepository];
+const repositories = [
+	UserRepository,
+	MessageRepository,
+	GroupRepository,
+	UserMessageDeleteRepository,
+	PasswordResetTokenRepository,
+	AttachmentRepository,
+];
 
 @Module({
 	imports: [

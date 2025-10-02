@@ -1,17 +1,22 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import {
 	CreateMessageRequest,
 	UpdateMessageRequest,
-	MessageQuery,
+	CreateUserMessageDeleteRequest,
 } from "./dto";
-import { MessageRepository } from "@db/repositories";
+import {
+	MessageRepository,
+	UserMessageDeleteRepository,
+} from "@db/repositories";
 import { ClsService } from "nestjs-cls";
 import { DevChatCls } from "@utils";
+import { MessageNotFoundError } from "./errors";
 
 @Injectable()
 export class MessageService {
 	constructor(
 		private readonly messageRepo: MessageRepository,
+		private readonly userMessageDeleteRepo: UserMessageDeleteRepository,
 		private readonly cls: ClsService<DevChatCls>,
 	) {}
 
@@ -47,5 +52,39 @@ export class MessageService {
 		});
 	}
 
-	async deleteOne(id: string | number) {}
+	// Mark message as deleted for everyone
+	async deleteMessageForEveryone(id: string | number) {
+		const message = await this.findOne(id);
+		if (!message) {
+			throw new MessageNotFoundError();
+		}
+		// Set deletedAt timestamp for soft delete
+		message.deletedAt = new Date();
+
+		return this.messageRepo.save(message);
+	}
+
+	private async validateBeforeCreateUserMessageDelete(messageId: string) {
+		// Check if message exists
+		const message = await this.findOne(messageId);
+		if (!message) {
+			throw new MessageNotFoundError();
+		}
+	}
+
+	// Delete message for self
+	async createUserMessageDelete(request: CreateUserMessageDeleteRequest) {
+		const { messageId } = request;
+
+		const userId = this.cls.get("profile").id;
+
+		await this.validateBeforeCreateUserMessageDelete(messageId);
+
+		const message = this.userMessageDeleteRepo.create({
+			userId,
+			messageId,
+			deletedAt: new Date(),
+		});
+		return this.userMessageDeleteRepo.insert(message);
+	}
 }

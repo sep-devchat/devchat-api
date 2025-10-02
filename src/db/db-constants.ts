@@ -3,6 +3,9 @@ export const DbConstants = {
 		User: "user",
 		Message: "message",
 		Group: "group",
+		UserMessageDelete: "user_message_delete",
+		PasswordResetToken: "password_reset_token",
+		Attachment: "attachment",
 		UserGroup: "user_group",
 	},
 	ColumnName: {
@@ -16,6 +19,7 @@ export const DbConstants = {
 			avatarUrl: "avatar_url",
 			isActive: "is_active",
 			emailVerified: "email_verified",
+			emailVerificationToken: "email_verification_token",
 			createdAt: "created_at",
 			updatedAt: "updated_at",
 			lastLogin: "last_login",
@@ -28,6 +32,37 @@ export const DbConstants = {
 			senderId: "sender_id",
 			content: "content",
 			parentMessageId: "parent_message_id",
+		},
+		UserMessageDelete: {
+			id: "user_message_delete_id",
+			userId: "user_id",
+			messageId: "message_id",
+		},
+		PasswordResetToken: {
+			id: "password_reset_token_id",
+			userId: "user_id",
+			code: "code",
+			expiresAt: "expires_at",
+			usedAt: "used_at",
+			attempts: "attempts",
+		},
+		Attachment: {
+			id: "attachment_id",
+			messageId: "message_id",
+			fileName: "file_name",
+			originalFileName: "original_file_name",
+			filePath: "file_path",
+			fileSize: "file_size",
+			fileType: "file_type",
+			folder: "folder",
+			format: "format",
+			publicId: "public_id",
+			uploadedBy: "uploaded_by",
+		},
+		Audit: {
+			createdAt: "created_at",
+			updatedAt: "updated_at",
+			deletedAt: "deleted_at",
 		},
 		Group: {
 			id: "group_id",
@@ -47,11 +82,6 @@ export const DbConstants = {
 			invitedBy: "invited_by",
 			status: "status",
 		},
-		Audit: {
-			createdAt: "created_at",
-			updatedAt: "updated_at",
-			deletedAt: "deleted_at",
-		},
 	},
 	IndexName: {
 		User: {
@@ -60,6 +90,13 @@ export const DbConstants = {
 		},
 		Group: {
 			name: "idx_group_name",
+		},
+		PasswordResetToken: {
+			userId: "idx_password_reset_user",
+			code: "idx_password_reset_code",
+		},
+		Attachment: {
+			messageId: "idx_attachment_message",
 		},
 	},
 };
