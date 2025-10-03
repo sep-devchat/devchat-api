@@ -26,9 +26,9 @@ export class PasswordResetTokenEntity {
 	@JoinColumn({ name: ColumnName.PasswordResetToken.userId })
 	user: UserEntity;
 
-	@Column({ name: ColumnName.PasswordResetToken.code, length: 10 })
-	@Index(IndexName.PasswordResetToken.code)
-	code: string; // 6-digit numeric code or short token
+	@Column({ name: ColumnName.PasswordResetToken.verifyCode, length: 10 })
+	@Index(IndexName.PasswordResetToken.verifyCode)
+	verifyCode: string; // 6-digit numeric code or short token
 
 	@Column({ name: ColumnName.PasswordResetToken.expiresAt, type: "datetime" })
 	expiresAt: Date;
