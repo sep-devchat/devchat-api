@@ -23,7 +23,6 @@ import {
 import { FileInterceptor } from "@nestjs/platform-express";
 import { UploadFileRequest } from "./dto/upload-file.request";
 
-@ApiTags("Upload")
 @ApiBearerAuth()
 @Controller("upload")
 export class UploadController {

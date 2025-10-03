@@ -45,7 +45,7 @@ export class ThreadController {
 	}
 
 	@Get()
-	@SwaggerApiResponse(ThreadResponse, { isArray: true, withPagination: true })
+	@SwaggerApiResponse(ThreadResponse, { isArray: true })
 	async findMany() {
 		const data = await this.threadService.findMany();
 		return new ApiResponseDto(data);
