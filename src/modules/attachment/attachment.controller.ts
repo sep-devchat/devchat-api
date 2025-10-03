@@ -5,7 +5,6 @@ import { ApiResponseDto, SwaggerApiResponse } from "@utils";
 import { AttachmentResponse } from "./dto";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 
-@ApiTags("Attachment")
 @ApiBearerAuth()
 @Controller("attachment")
 export class AttachmentController {

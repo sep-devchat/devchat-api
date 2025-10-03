@@ -9,6 +9,8 @@ import {
 	UserMessageDeleteRepository,
 	PasswordResetTokenRepository,
 	AttachmentRepository,
+	ChannelRepository,
+	ThreadRepository,
 } from "./repositories";
 
 const repositories = [
@@ -18,6 +20,8 @@ const repositories = [
 	UserMessageDeleteRepository,
 	PasswordResetTokenRepository,
 	AttachmentRepository,
+	ChannelRepository,
+	ThreadRepository,
 ];
 
 @Module({
