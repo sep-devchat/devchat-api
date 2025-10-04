@@ -4,3 +4,4 @@ export * from "./user-message-delete.entity";
 export * from "./group.entity";
 export * from "./password-reset-token.entity";
 export * from "./attachment.entity";
+export * from "./user-group.entity";

@@ -1,3 +1,5 @@
+import { permission } from "process";
+
 export const DbConstants = {
 	TableName: {
 		User: "user",
@@ -75,12 +77,11 @@ export const DbConstants = {
 			isActive: "is_active",
 		},
 		UserGroup: {
+			id: "user_group_id",
 			userId: "user_id",
 			groupId: "group_id",
-			role: "role",
+			addedBy: "added_by",
 			joinedAt: "joined_at",
-			invitedBy: "invited_by",
-			status: "status",
 		},
 	},
 	IndexName: {

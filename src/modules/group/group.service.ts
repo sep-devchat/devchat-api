@@ -34,24 +34,8 @@ export class GroupService {
 		await this.groupRepo.update(id, dto);
 	}
 
-	async findMany(query: GroupQuery) {
-		const { page, limit, name } = query;
-		const [data, total] = await this.groupRepo.findAndCount({
-			where: {
-				...(name ? { name: Like(`%${name}%`) } : {}),
-				isActive: true,
-				// When have table UserGroup will add more condition here
-			},
-			skip: (page - 1) * page,
-			take: limit,
-		});
-
-		const pagination = new PaginationDto(page, limit, total);
-
-		return {
-			data,
-			pagination,
-		};
+	async findMany() {
+		return await this.groupRepo.find();
 	}
 
 	async findOne(id: string) {
