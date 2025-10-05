@@ -1,23 +1,20 @@
-import {
-	forwardRef,
-	Inject,
-	Injectable,
-	NotFoundException,
-} from "@nestjs/common";
-import {
-	CreateUserGroupRequest,
-	UpdateUserGroupRequest,
-	UserGroupQuery,
-} from "./dto";
+import { Injectable } from "@nestjs/common";
+import { UpdateUserGroupRequest, UserGroupQuery } from "./dto";
 import { UserGroupRepository } from "@db/repositories";
 import { ClsService } from "nestjs-cls";
 import { DevChatCls, PaginationDto } from "@utils";
 import { GroupService } from "@modules/group";
 import { UserService } from "@modules/user/user.service";
-import { MemberExistedError, MemberNotFoundError } from "./errors";
+import {
+	InvalidInvitationError,
+	InvitationNotFoundError,
+	MemberAlreadyInvitedError,
+	MemberExistedError,
+	MemberNotFoundError,
+} from "./errors";
 import { FindOptionsWhere } from "typeorm";
 import { UserEntity, UserGroupEntity } from "@db/entities";
-import { MemberResponse } from "./dto/member.response";
+import { InvitationStatus } from "./user-group.enum";
 
 @Injectable()
 export class UserGroupService {
@@ -27,37 +24,6 @@ export class UserGroupService {
 		private readonly userService: UserService,
 		private readonly cls: ClsService<DevChatCls>,
 	) {}
-
-	// Add member
-	async createOne(groupId: string, userId: string) {
-		const addedBy = this.cls.get("profile");
-
-		// Validate group exists
-		const group = await this.groupService.findOne(groupId);
-
-		// Validate user exists
-		const user = await this.userService.findById(userId);
-
-		// Check if user is already in group
-		const existingMember = await this.userGroupRepo.findOne({
-			where: { group: { id: groupId }, user: { id: userId } },
-		});
-
-		if (existingMember) {
-			// Throw an error that member already exist
-			throw new MemberExistedError();
-		}
-
-		const userGroup = this.userGroupRepo.create({
-			group: group,
-			user: user,
-			addedBy,
-			joinedAt: new Date(),
-		});
-
-		await this.userGroupRepo.insert(userGroup);
-		return userGroup;
-	}
 
 	async getGroupMembers(groupId: string, query: UserGroupQuery) {
 		const { page, limit } = query;
@@ -192,5 +158,84 @@ export class UserGroupService {
 		}
 
 		return this.userGroupRepo.insert(members);
+	}
+	// Invite user to a group
+	async inviteUser(groupId: string, userId: string) {
+		const invitedById = this.cls.get("profile").id;
+
+		// Validate group and user exist
+		const group = await this.groupService.findOne(groupId);
+		const user = await this.userService.findById(userId);
+		const addedBy = await this.userService.findById(invitedById);
+
+		// Check if already invited/member
+		const existing = await this.userGroupRepo.findOne({
+			where: { group: { id: groupId }, user: { id: userId } },
+		});
+
+		if (existing) {
+			if (existing.status === InvitationStatus.Pending) {
+				// Throw an user here
+				throw new MemberAlreadyInvitedError();
+			}
+			if (existing.status === InvitationStatus.Accepted) {
+				// Throw an error here
+				throw new MemberExistedError();
+			}
+			// Allow re-invite if previously declined
+			if (existing.status === InvitationStatus.Declined) {
+				existing.status = InvitationStatus.Pending;
+				existing.invitedAt = new Date();
+				existing.addedBy = addedBy;
+				return this.userGroupRepo.save(existing);
+			}
+		}
+
+		const invitation = this.userGroupRepo.create({
+			group,
+			user,
+			addedBy: addedBy,
+			status: InvitationStatus.Pending,
+			invitedAt: new Date(),
+			joinedAt: null,
+		});
+
+		return this.userGroupRepo.save(invitation);
+	}
+
+	// Update invitation status (accepted/declined)
+	async updateInvitationStatus(
+		groupId: string,
+		userId: string,
+		status: InvitationStatus,
+	) {
+		const invitation = await this.userGroupRepo.findOne({
+			where: {
+				group: { id: groupId },
+				user: { id: userId },
+				status: InvitationStatus.Pending,
+			},
+			relations: ["user", "group", "addedBy"],
+		});
+
+		if (!invitation) {
+			throw new InvitationNotFoundError();
+		}
+
+		if (
+			![InvitationStatus.Accepted, InvitationStatus.Declined].includes(status)
+		) {
+			throw new InvalidInvitationError();
+		}
+
+		// Update status
+		invitation.status = status;
+
+		if (status === InvitationStatus.Accepted) {
+			invitation.joinedAt = new Date();
+		}
+
+		const result = await this.userGroupRepo.save(invitation);
+		return result;
 	}
 }

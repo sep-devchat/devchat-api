@@ -23,22 +23,24 @@ import {
 } from "@utils";
 import { ApiBearerAuth, ApiOperation, ApiParam } from "@nestjs/swagger";
 import { MemberResponse } from "./dto/member.response";
+import { UpdateInvitationRequest } from "./dto/update-invitation.request";
 
 @Controller("group")
 @ApiBearerAuth()
 export class UserGroupController {
 	constructor(private readonly userGroupService: UserGroupService) {}
 
-	@Post(":groupId/member/:userId")
-	@ApiOperation({ summary: "Add member to group" })
+	@Post(":groupId/invitations/:userId")
+	@ApiOperation({ summary: "Invite a user to group" })
 	@ApiParam({ name: "groupId", description: "Group ID" })
+	@ApiParam({ name: "userId", description: "UserId" })
 	@SwaggerApiResponse(UserGroupResponse)
 	async addMember(
 		@Param("groupId") groupId: string,
 		@Param("userId") userId: string,
 	) {
 		// Override groupId from URL
-		const data = await this.userGroupService.createOne(groupId, userId);
+		const data = await this.userGroupService.inviteUser(groupId, userId);
 		return new ApiResponseDto(
 			UserGroupResponse.fromEntity(data),
 			null,
@@ -46,6 +48,27 @@ export class UserGroupController {
 		);
 	}
 
+	@Put(":groupId/invitations/:userId")
+	@ApiOperation({ summary: "Update invitation (accept/declined)" })
+	@ApiParam({ name: "groupId", description: "Group ID" })
+	@ApiParam({ name: "userId", description: "User ID" })
+	@SwaggerApiResponse(UserGroupResponse)
+	async acceptInvitation(
+		@Param("groupId") groupId: string,
+		@Param("userId") userId: string,
+		@Body() body: UpdateInvitationRequest,
+	) {
+		const data = await this.userGroupService.updateInvitationStatus(
+			groupId,
+			userId,
+			body.status,
+		);
+		return new ApiResponseDto(
+			UserGroupResponse.fromEntity(data),
+			null,
+			`Invitation ${body.status} successfully`,
+		);
+	}
 	@Get(":groupId/member")
 	@ApiOperation({ summary: "Get all members of group" })
 	@ApiParam({ name: "groupId", description: "Group ID" })

@@ -9,6 +9,8 @@ import {
 } from "typeorm";
 import { GroupEntity } from "./group.entity";
 import { UserEntity } from "./user.entity";
+import { Profile } from "@modules/auth/dto";
+import { InvitationStatus } from "@modules/user-group";
 
 const { TableName, ColumnName, IndexName } = DbConstants;
 @Entity(TableName.UserGroup)
@@ -28,6 +30,21 @@ export class UserGroupEntity {
 	@JoinColumn({ name: ColumnName.UserGroup.addedBy })
 	addedBy: UserEntity;
 
-	@Column({ type: "datetime", name: ColumnName.UserGroup.joinedAt })
-	joinedAt: Date;
+	@Column({
+		type: "datetime",
+		name: ColumnName.UserGroup.joinedAt,
+		nullable: true,
+	})
+	joinedAt: Date | null;
+
+	@Column({
+		name: ColumnName.UserGroup.status,
+		type: "enum",
+		enum: InvitationStatus,
+		default: InvitationStatus.Pending,
+	})
+	status: InvitationStatus;
+
+	@Column({ name: ColumnName.UserGroup.invitedAt, type: "datetime" })
+	invitedAt: Date;
 }
