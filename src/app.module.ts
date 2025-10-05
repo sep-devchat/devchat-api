@@ -14,6 +14,8 @@ import { AttachmentModule } from "@modules/attachment";
 import { UploadModule } from "@modules/upload";
 import { GroupModule } from "@modules/group";
 import { UserGroupModule } from "@modules/user-group";
+import { ChannelModule } from "@modules/channel";
+import { ThreadModule } from "@modules/thread";
 
 @Module({
 	imports: [
@@ -38,6 +40,8 @@ import { UserGroupModule } from "@modules/user-group";
 		UploadModule,
 		GroupModule,
 		UserGroupModule,
+		ChannelModule,
+		ThreadModule,
 	],
 	controllers: [],
 	providers: [

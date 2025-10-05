@@ -275,17 +275,17 @@ export class AuthService {
 		// For security, respond success even if user not found
 		if (!user) return;
 
-		const code = this.generateCode();
+		const verifyCode = this.generateCode();
 		const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 		await this.prRepo.insert({
 			userId: user.id,
-			code,
+			verifyCode,
 			expiresAt,
 			attempts: 0,
 		});
 
 		// Send the numeric code
-		await sendPasswordResetCode(user.email, code);
+		await sendPasswordResetCode(user.email, verifyCode);
 	}
 
 	async confirmResetCode(dto: ConfirmResetCodeRequest) {
@@ -293,7 +293,7 @@ export class AuthService {
 		if (!user) return; // same behavior: no user info leak
 
 		const token = await this.prRepo.findOne({
-			where: { userId: user.id, code: dto.code },
+			where: { userId: user.id, verifyCode: dto.code },
 			order: { createdAt: "DESC" as const },
 		});
 		if (!token) throw new InvalidTokenError();
@@ -313,7 +313,7 @@ export class AuthService {
 		}
 
 		const token = await this.prRepo.findOne({
-			where: { userId: user.id, code: dto.code },
+			where: { userId: user.id, verifyCode: dto.code },
 			order: { createdAt: "DESC" as const },
 		});
 		if (!token) throw new InvalidTokenError();

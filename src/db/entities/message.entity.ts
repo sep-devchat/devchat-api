@@ -9,6 +9,8 @@ import {
 	UpdateDateColumn,
 } from "typeorm";
 import { UserEntity } from "./user.entity";
+import { ChannelEntity } from "./channel.entity";
+import { ThreadEntity } from "./thread.entity";
 
 const { TableName, ColumnName, IndexName } = DbConstants;
 
@@ -17,11 +19,19 @@ export class MessageEntity {
 	@PrimaryGeneratedColumn("uuid", { name: ColumnName.Message.id })
 	id: string;
 
-	@Column({ name: ColumnName.Message.channelId, type: "uuid" })
+	@Column({ name: ColumnName.Channel.id, type: "uuid" })
 	channelId: string;
 
-	@Column({ name: ColumnName.Message.threadId, type: "uuid", nullable: true })
+	@ManyToOne(() => ChannelEntity)
+	@JoinColumn({ name: ColumnName.Channel.id })
+	channel: ChannelEntity;
+
+	@Column({ name: ColumnName.Thread.id, type: "uuid", nullable: true })
 	threadId: string | null;
+
+	@ManyToOne(() => ThreadEntity)
+	@JoinColumn({ name: ColumnName.Thread.id })
+	thread: ThreadEntity | null;
 
 	@Column({
 		name: ColumnName.Message.parentMessageId,

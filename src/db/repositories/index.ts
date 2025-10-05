@@ -5,4 +5,6 @@ export * from "./user-message-delete.repository";
 export * from "./group.repository";
 export * from "./password-reset-token.repository";
 export * from "./attachment.repository";
+export * from "./channel.repository";
+export * from "./thread.repository";
 export * from "./user-group.repository";

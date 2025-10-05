@@ -10,6 +10,8 @@ import {
 	PasswordResetTokenRepository,
 	AttachmentRepository,
 	UserGroupRepository,
+	ChannelRepository,
+	ThreadRepository,
 } from "./repositories";
 
 const repositories = [
@@ -20,6 +22,8 @@ const repositories = [
 	PasswordResetTokenRepository,
 	AttachmentRepository,
 	UserGroupRepository,
+	ChannelRepository,
+	ThreadRepository,
 ];
 
 @Module({
