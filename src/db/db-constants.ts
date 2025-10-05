@@ -8,6 +8,7 @@ export const DbConstants = {
 		Attachment: "attachment",
 		Channel: "channel",
 		Thread: "thread",
+		UserFriend: "user_friend",
 	},
 	ColumnName: {
 		User: {
@@ -86,6 +87,14 @@ export const DbConstants = {
 			id: "thread_id",
 			name: "thread_name",
 			description: "thread_description",
+		},
+		UserFriend: {
+			id: "user_friend_id",
+			senderId: "sender_id",
+			receiverId: "receiver_id",
+			status: "status",
+			message: "message",
+			respondedAt: "responded_at",
 		},
 	},
 	IndexName: {
