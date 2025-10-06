@@ -57,4 +57,46 @@ export class UploadService {
 			throw new UploadedException(error?.message || error);
 		}
 	}
+
+	/**
+	 * Persist a previously uploaded (direct client-side) Cloudinary asset response.
+	 * Accepts sanitized subset of Cloudinary response.
+	 */
+	async saveCloudinaryUpload(payload: {
+		public_id: string;
+		original_filename: string;
+		secure_url: string;
+		resource_type: string;
+		bytes: number;
+		format: string;
+		asset_folder?: string;
+		display_name?: string;
+		messageId?: string;
+	}) {
+		// Derive folder: prefer explicit asset_folder else parse from public_id before last segment
+		let folder = payload.asset_folder;
+		if (!folder) {
+			const parts = payload.public_id.split("/");
+			if (parts.length > 1) {
+				folder = parts.slice(0, -1).join("/");
+			} else {
+				folder = commonFolderPath; // fallback to root common
+			}
+		}
+
+		await this.attachmentRepo.insert({
+			originalFileName: payload.original_filename,
+			filePath: payload.secure_url,
+			fileType: payload.resource_type,
+			fileSize: payload.bytes,
+			messageId: payload.messageId || null,
+			fileName: payload.display_name || payload.original_filename,
+			folder,
+			format: payload.format,
+			publicId: payload.public_id,
+			uploadedBy: this.cls.get("profile")?.id ?? null,
+		});
+
+		return { publicId: payload.public_id };
+	}
 }
