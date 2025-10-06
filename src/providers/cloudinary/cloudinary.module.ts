@@ -5,6 +5,7 @@ import { CloudinaryService } from "./cloudinary.service";
 
 @Module({
 	imports: [ConfigModule],
+	controllers: [],
 	providers: [CloudinaryProvider, CloudinaryService],
 	exports: [CloudinaryService],
 })
