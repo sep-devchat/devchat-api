@@ -8,7 +8,15 @@ import {
 	UseInterceptors,
 } from "@nestjs/common";
 import { UploadService } from "./upload.service";
-import { CreateUploadRequest, UpdateUploadRequest, UploadQuery } from "./dto"; // (possibly unused now)
+import {
+	CreateUploadRequest,
+	DeliverySignatureDto,
+	DeliverySignatureResponseDto,
+	UpdateUploadRequest,
+	UploadQuery,
+	UploadSignatureDto,
+	UploadSignatureResponseDto,
+} from "./dto"; // (possibly unused now)
 import { ApiMessageResponseDto, ApiResponseDto, SkipAuth } from "@utils";
 import {
 	ApiBearerAuth,
@@ -21,10 +29,6 @@ import {
 import { FileInterceptor } from "@nestjs/platform-express";
 import { UploadFileRequest } from "./dto/upload-file.request";
 import { CloudinaryService } from "@providers/cloudinary";
-import { UploadSignatureResponseDto } from "./dto/upload-signature.response";
-import { UploadSignatureDto } from "./dto/upload-signature.request";
-import { DeliverySignatureResponseDto } from "./dto/delivery-signature.response";
-import { DeliverySignatureDto } from "./dto/delivery-signature.request";
 import { CloudinaryUploadSaveRequestDto } from "./dto";
 
 @ApiBearerAuth()
@@ -64,10 +68,15 @@ export class UploadController {
 	@ApiOkResponse({ type: UploadSignatureResponseDto })
 	getUploadSignature(
 		@Body() body: UploadSignatureDto,
-	): UploadSignatureResponseDto {
-		return this.cloudinaryService.generateUploadSignature(
+	): ApiResponseDto<UploadSignatureResponseDto> {
+		const data = this.cloudinaryService.generateUploadSignature(
 			body,
 		) as UploadSignatureResponseDto;
+		return new ApiResponseDto<UploadSignatureResponseDto>(
+			data,
+			null,
+			"Upload successfully",
+		);
 	}
 
 	@Post("sign-delivery")
@@ -76,13 +85,18 @@ export class UploadController {
 	@ApiOkResponse({ type: DeliverySignatureResponseDto })
 	getDeliverySignature(
 		@Body() body: DeliverySignatureDto,
-	): DeliverySignatureResponseDto {
+	): ApiResponseDto<DeliverySignatureResponseDto> {
 		const transformation = body.transformations ?? body.transformation;
-		return this.cloudinaryService.generateSignedDeliveryUrl({
+		const data = this.cloudinaryService.generateSignedDeliveryUrl({
 			publicId: body.publicId,
 			transformation,
 			format: body.format,
 		}) as DeliverySignatureResponseDto;
+		return new ApiResponseDto<DeliverySignatureResponseDto>(
+			data,
+			null,
+			"Delivery signature generated successfully",
+		);
 	}
 
 	@Post("save-data")
