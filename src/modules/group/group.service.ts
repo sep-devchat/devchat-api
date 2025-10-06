@@ -1,8 +1,7 @@
 import { Injectable } from "@nestjs/common";
-import { CreateGroupRequest, UpdateGroupRequest, GroupQuery } from "./dto";
-import { Like } from "typeorm";
+import { CreateGroupRequest, UpdateGroupRequest } from "./dto";
 import { GroupNotExistedError } from "./errors";
-import { DevChatCls, PaginationDto } from "@utils";
+import { DevChatCls } from "@utils";
 import { ClsService } from "nestjs-cls";
 import { GroupRepository } from "@db/repositories";
 

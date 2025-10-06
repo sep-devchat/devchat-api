@@ -1,8 +1,13 @@
 import { Injectable } from "@nestjs/common";
-import { UpdateUserGroupRequest, UserGroupQuery } from "./dto";
+import {
+	CreateInvitationRequest,
+	DeleteMemberRequest,
+	UpdateUserGroupRequest,
+	UserGroupQuery,
+} from "./dto";
 import { UserGroupRepository } from "@db/repositories";
 import { ClsService } from "nestjs-cls";
-import { DevChatCls, PaginationDto } from "@utils";
+import { DevChatCls, InvitationStatus, PaginationDto } from "@utils";
 import { GroupService } from "@modules/group";
 import { UserService } from "@modules/user/user.service";
 import {
@@ -14,7 +19,7 @@ import {
 } from "./errors";
 import { FindOptionsWhere } from "typeorm";
 import { UserEntity, UserGroupEntity } from "@db/entities";
-import { InvitationStatus } from "./user-group.enum";
+import { UpdateInvitationRequest } from "./dto/update-invitation.request";
 
 @Injectable()
 export class UserGroupService {
@@ -31,7 +36,7 @@ export class UserGroupService {
 		await this.groupService.findOne(groupId);
 
 		const [data, total] = await this.userGroupRepo.findAndCount({
-			where: { group: { id: groupId } },
+			where: { group: { id: groupId }, status: InvitationStatus.ACCEPTED },
 			relations: ["user", "addedBy", "group"],
 		});
 
@@ -99,7 +104,9 @@ export class UserGroupService {
 	}
 
 	// Remove member of a group
-	async removeMemberByGroupAndUser(groupId: string, userId: string) {
+	async removeMemberByGroupAndUser(request: DeleteMemberRequest) {
+		const groupId = this.cls.get("group").id;
+		const { userId } = request;
 		const member = await this.getMemberByGroupAndUser(groupId, userId);
 		return this.userGroupRepo.remove(member);
 	}
@@ -160,8 +167,10 @@ export class UserGroupService {
 		return this.userGroupRepo.insert(members);
 	}
 	// Invite user to a group
-	async inviteUser(groupId: string, userId: string) {
+	async inviteUser(request: CreateInvitationRequest) {
+		const { userId } = request;
 		const invitedById = this.cls.get("profile").id;
+		const groupId = this.cls.get("group").id;
 
 		// Validate group and user exist
 		const group = await this.groupService.findOne(groupId);
@@ -174,17 +183,17 @@ export class UserGroupService {
 		});
 
 		if (existing) {
-			if (existing.status === InvitationStatus.Pending) {
+			if (existing.status === InvitationStatus.PENDING) {
 				// Throw an user here
 				throw new MemberAlreadyInvitedError();
 			}
-			if (existing.status === InvitationStatus.Accepted) {
+			if (existing.status === InvitationStatus.ACCEPTED) {
 				// Throw an error here
 				throw new MemberExistedError();
 			}
 			// Allow re-invite if previously declined
-			if (existing.status === InvitationStatus.Declined) {
-				existing.status = InvitationStatus.Pending;
+			if (existing.status === InvitationStatus.PENDING) {
+				existing.status = InvitationStatus.ACCEPTED;
 				existing.invitedAt = new Date();
 				existing.addedBy = addedBy;
 				return this.userGroupRepo.save(existing);
@@ -195,7 +204,7 @@ export class UserGroupService {
 			group,
 			user,
 			addedBy: addedBy,
-			status: InvitationStatus.Pending,
+			status: InvitationStatus.PENDING,
 			invitedAt: new Date(),
 			joinedAt: null,
 		});
@@ -204,16 +213,15 @@ export class UserGroupService {
 	}
 
 	// Update invitation status (accepted/declined)
-	async updateInvitationStatus(
-		groupId: string,
-		userId: string,
-		status: InvitationStatus,
-	) {
+	async updateInvitationStatus(request: UpdateInvitationRequest) {
+		const { userId, status } = request;
+		const groupId = this.cls.get("group").id;
+
 		const invitation = await this.userGroupRepo.findOne({
 			where: {
 				group: { id: groupId },
 				user: { id: userId },
-				status: InvitationStatus.Pending,
+				status: InvitationStatus.PENDING,
 			},
 			relations: ["user", "group", "addedBy"],
 		});
@@ -223,7 +231,7 @@ export class UserGroupService {
 		}
 
 		if (
-			![InvitationStatus.Accepted, InvitationStatus.Declined].includes(status)
+			![InvitationStatus.ACCEPTED, InvitationStatus.DECLINED].includes(status)
 		) {
 			throw new InvalidInvitationError();
 		}
@@ -231,7 +239,7 @@ export class UserGroupService {
 		// Update status
 		invitation.status = status;
 
-		if (status === InvitationStatus.Accepted) {
+		if (status === InvitationStatus.ACCEPTED) {
 			invitation.joinedAt = new Date();
 		}
 

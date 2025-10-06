@@ -1,13 +1,14 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { InvitationStatus } from "../user-group.enum";
-import { IsEnum } from "class-validator";
+import { InvitationStatus } from "@utils";
+import { Max, Min } from "class-validator";
+import { CreateInvitationRequest } from "./create.request";
 
-export class UpdateInvitationRequest {
+export class UpdateInvitationRequest extends CreateInvitationRequest {
 	@ApiProperty({
-		enum: InvitationStatus,
-		description: "Status of invitation (accepted, declined, pending)",
-		example: InvitationStatus.Accepted,
+		description: "Status of invitation (0-pending, 1-accepted, 2-declined)",
+		example: InvitationStatus.ACCEPTED,
 	})
-	@IsEnum(InvitationStatus)
-	status: InvitationStatus;
+	@Min(0)
+	@Max(2)
+	status: number;
 }

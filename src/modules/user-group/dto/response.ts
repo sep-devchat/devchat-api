@@ -3,7 +3,7 @@ import { Profile } from "@modules/auth/dto";
 import { GroupResponse } from "@modules/group/dto";
 import { UserResponse } from "@modules/user/dto";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { InvitationStatus } from "../user-group.enum";
+import { InvitationStatus } from "@utils";
 
 export class UserGroupResponse {
 	@ApiProperty({ example: "ccc2c770-9fa6-11f0-b97a-4d13d9b105b0" })
@@ -24,8 +24,8 @@ export class UserGroupResponse {
 	@ApiProperty({ example: "2024-01-01T00:00:00.000Z" })
 	invitedAt: Date;
 
-	@ApiProperty({ example: `${InvitationStatus.Pending}` })
-	status: InvitationStatus;
+	@ApiProperty({ example: `${InvitationStatus.PENDING}` })
+	status: number;
 
 	@ApiProperty()
 	group: GroupResponse;
