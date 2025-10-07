@@ -15,6 +15,8 @@ import { UploadModule } from "@modules/upload";
 import { GroupModule } from "@modules/group";
 import { ChannelModule } from "@modules/channel";
 import { ThreadModule } from "@modules/thread";
+import { AdminRoleModule } from "@modules/admin-role";
+import { PermissionModule } from "@modules/permission";
 
 @Module({
 	imports: [
@@ -40,6 +42,8 @@ import { ThreadModule } from "@modules/thread";
 		GroupModule,
 		ChannelModule,
 		ThreadModule,
+		AdminRoleModule,
+		PermissionModule,
 	],
 	controllers: [],
 	providers: [

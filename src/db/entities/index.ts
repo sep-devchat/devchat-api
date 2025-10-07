@@ -6,3 +6,5 @@ export * from "./password-reset-token.entity";
 export * from "./attachment.entity";
 export * from "./channel.entity";
 export * from "./thread.entity";
+export * from "./admin-role.entity";
+export * from "./permission.entity";

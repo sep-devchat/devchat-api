@@ -7,3 +7,5 @@ export * from "./password-reset-token.repository";
 export * from "./attachment.repository";
 export * from "./channel.repository";
 export * from "./thread.repository";
+export * from "./admin-role.repository";
+export * from "./permission.repository";

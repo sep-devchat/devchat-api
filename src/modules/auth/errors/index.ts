@@ -9,3 +9,4 @@ export * from "./missing-verify-token.error";
 export * from "./code-used.error";
 export * from "./code-expired.error";
 export * from "./password-duplicated.error";
+export * from "./forbidden-permission.error";

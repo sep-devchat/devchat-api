@@ -8,6 +8,8 @@ export const DbConstants = {
 		Attachment: "attachment",
 		Channel: "channel",
 		Thread: "thread",
+		AdminRole: "admin_role",
+		Permission: "permission",
 	},
 	ColumnName: {
 		User: {
@@ -25,6 +27,7 @@ export const DbConstants = {
 			updatedAt: "updated_at",
 			lastLogin: "last_login",
 			timezone: "timezone",
+			adminRoleId: "admin_role_id",
 		},
 		Message: {
 			id: "message_id",
@@ -86,6 +89,19 @@ export const DbConstants = {
 			id: "thread_id",
 			name: "thread_name",
 			description: "thread_description",
+		},
+		AdminRole: {
+			id: "admin_role_id",
+			role: "role",
+			roleName: "role_name",
+			roleLevel: "role_level",
+			permissions: "permissions",
+		},
+		Permission: {
+			id: "permission_id",
+			code: "permission_code",
+			name: "permission_name",
+			description: "permission_description",
 		},
 	},
 	IndexName: {

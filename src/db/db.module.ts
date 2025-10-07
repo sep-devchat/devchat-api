@@ -11,6 +11,8 @@ import {
 	AttachmentRepository,
 	ChannelRepository,
 	ThreadRepository,
+	AdminRoleRepository,
+	PermissionRepository,
 } from "./repositories";
 
 const repositories = [
@@ -22,6 +24,8 @@ const repositories = [
 	AttachmentRepository,
 	ChannelRepository,
 	ThreadRepository,
+	AdminRoleRepository,
+	PermissionRepository,
 ];
 
 @Module({
