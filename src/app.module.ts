@@ -15,6 +15,7 @@ import { UploadModule } from "@modules/upload";
 import { GroupModule } from "@modules/group";
 import { ChannelModule } from "@modules/channel";
 import { ThreadModule } from "@modules/thread";
+import { CodeModule } from "@modules/code";
 
 @Module({
 	imports: [
@@ -40,6 +41,7 @@ import { ThreadModule } from "@modules/thread";
 		GroupModule,
 		ChannelModule,
 		ThreadModule,
+		CodeModule,
 	],
 	controllers: [],
 	providers: [
