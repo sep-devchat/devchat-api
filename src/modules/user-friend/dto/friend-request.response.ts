@@ -1,7 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { FriendRequestStatus } from "../user-friend.enum";
 import { UserResponse } from "@modules/user/dto";
-import { UserEntity, UserFriendEntity } from "@db/entities";
+import { UserFriendEntity } from "@db/entities";
+import { FriendRequestStatus } from "@utils";
 
 export class FriendRequestResponseDto {
 	@ApiProperty({
@@ -23,11 +23,10 @@ export class FriendRequestResponseDto {
 	receiverId: string;
 
 	@ApiProperty({
-		enum: FriendRequestStatus,
-		example: FriendRequestStatus.Pending,
+		example: FriendRequestStatus.PENDING,
 		description: "Friend request status ex: pending, accepted",
 	})
-	status: string;
+	status: number;
 
 	@ApiProperty({
 		example: "Can I be your friend?",
@@ -50,14 +49,19 @@ export class FriendRequestResponseDto {
 	static fromEntity(entity: UserFriendEntity): FriendRequestResponseDto {
 		const dto = new FriendRequestResponseDto();
 		dto.id = entity.id;
-		dto.senderId = entity.sender.id;
-		dto.receiverId = entity.sender.id;
+		dto.senderId = entity.senderId;
+		dto.receiverId = entity.receiverId;
 		dto.status = entity.status;
 		dto.message = entity.message;
 		dto.createdAt = entity.createdAt;
 		dto.respondedAt = entity.respondedAt;
-		dto.sender = UserResponse.fromEntity(entity.sender);
-		dto.receiver = UserResponse.fromEntity(entity.receiver);
+
+		if (entity.sender) {
+			dto.sender = UserResponse.fromEntity(entity.sender);
+		}
+		if (entity.receiver) {
+			dto.receiver = UserResponse.fromEntity(entity.receiver);
+		}
 		return dto;
 	}
 }

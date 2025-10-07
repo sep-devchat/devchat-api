@@ -16,6 +16,7 @@ import { GroupModule } from "@modules/group";
 import { ChannelModule } from "@modules/channel";
 import { ThreadModule } from "@modules/thread";
 import { CodeModule } from "@modules/code";
+import { UserFriendModule } from "@modules/user-friend";
 
 @Module({
 	imports: [
@@ -33,6 +34,7 @@ import { CodeModule } from "@modules/code";
 		}),
 		AuthModule,
 		UserModule,
+		UserFriendModule,
 		MessageModule,
 		SocketModule,
 		CloudinaryModule,
