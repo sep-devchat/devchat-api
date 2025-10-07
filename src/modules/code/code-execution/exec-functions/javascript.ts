@@ -5,7 +5,7 @@ export const javascriptExecFunction: CodeExecutionFunction = async (
 	code: string,
 ) => {
 	const docker = Docker.getInstance();
-	const container = await docker.createExecContainer("node:22");
+	const container = await docker.createExecContainer("docker.io/node:22");
 	await container.start();
 
 	const exec = await container.exec({
