@@ -1,5 +1,6 @@
 import { Env } from "@utils";
 import * as Dockerode from "dockerode";
+import * as fs from "fs";
 
 export class Docker {
 	private static instance: Docker;
@@ -15,6 +16,10 @@ export class Docker {
 				? {
 						host: Env.DOCKER_DIND_HOST,
 						port: Env.DOCKER_DIND_PORT,
+						protocol: "https",
+						ca: fs.readFileSync("/certs/ca.pem"),
+						cert: fs.readFileSync("/certs/cert.pem"),
+						key: fs.readFileSync("/certs/key.pem"),
 					}
 				: undefined,
 		);
