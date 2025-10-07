@@ -1,3 +1,4 @@
+import { Env } from "@utils";
 import * as Dockerode from "dockerode";
 
 export class Docker {
@@ -9,7 +10,14 @@ export class Docker {
 
 	dockerode: Dockerode;
 	private constructor() {
-		this.dockerode = new Dockerode();
+		this.dockerode = new Dockerode(
+			Env.USE_DOCKER_DIND
+				? {
+						host: Env.DOCKER_DIND_HOST,
+						port: Env.DOCKER_DIND_PORT,
+					}
+				: undefined,
+		);
 	}
 
 	imageNameToContainerName(image: string) {
