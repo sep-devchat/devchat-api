@@ -13,6 +13,7 @@ import { CloudinaryModule } from "@providers/cloudinary";
 import { AttachmentModule } from "@modules/attachment";
 import { UploadModule } from "@modules/upload";
 import { GroupModule } from "@modules/group";
+import { UserGroupModule } from "@modules/user-group";
 import { ChannelModule } from "@modules/channel";
 import { ThreadModule } from "@modules/thread";
 import { CodeModule } from "@modules/code";
@@ -39,6 +40,7 @@ import { CodeModule } from "@modules/code";
 		AttachmentModule,
 		UploadModule,
 		GroupModule,
+		UserGroupModule,
 		ChannelModule,
 		ThreadModule,
 		CodeModule,
