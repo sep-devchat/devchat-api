@@ -17,6 +17,8 @@ import { UserGroupModule } from "@modules/user-group";
 import { ChannelModule } from "@modules/channel";
 import { ThreadModule } from "@modules/thread";
 import { CodeModule } from "@modules/code";
+import { AdminRoleModule } from "@modules/admin-role";
+import { PermissionModule } from "@modules/permission";
 
 @Module({
 	imports: [
@@ -44,6 +46,8 @@ import { CodeModule } from "@modules/code";
 		ChannelModule,
 		ThreadModule,
 		CodeModule,
+		AdminRoleModule,
+		PermissionModule,
 	],
 	controllers: [],
 	providers: [

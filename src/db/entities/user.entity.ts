@@ -4,9 +4,12 @@ import {
 	CreateDateColumn,
 	Entity,
 	Index,
+	JoinColumn,
+	OneToOne,
 	PrimaryGeneratedColumn,
 	UpdateDateColumn,
 } from "typeorm";
+import { AdminRoleEntity } from "./admin-role.entity";
 
 const { TableName, ColumnName, IndexName } = DbConstants;
 
@@ -63,4 +66,9 @@ export class UserEntity {
 
 	@Column({ name: ColumnName.User.timezone, length: 50, nullable: true })
 	timezone: string | null;
+
+	@Column({ name: ColumnName.User.adminRoleId, type: "uuid", nullable: true })
+	@OneToOne(() => AdminRoleEntity)
+	@JoinColumn({ name: ColumnName.AdminRole.id })
+	adminRoleId: string | null;
 }
