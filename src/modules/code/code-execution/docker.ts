@@ -36,10 +36,6 @@ export class Docker {
 		return `${this.codeExecutionDir}/${runId}`;
 	}
 
-	getContainerExecDir(runId: string) {
-		return `${this.containerWorkingDir}/${runId}`;
-	}
-
 	async pullImageIfNotExists(image: string) {
 		console.log("Checking for image:", image);
 		const images = await this.dockerode.listImages({
@@ -49,7 +45,10 @@ export class Docker {
 
 		if (images.length === 0) {
 			console.log("Pulling image:", image);
-			await this.dockerode.pull(`docker.io/${image}`);
+			const stream = await this.dockerode.pull(`docker.io/${image}`);
+			for await (const chunk of stream) {
+				process.stdout.write(chunk);
+			}
 			console.log("Pulled image:", image);
 		}
 	}
@@ -63,15 +62,14 @@ export class Docker {
 			AttachStdout: true,
 			AttachStderr: true,
 			Tty: true,
-			WorkingDir: runId ? this.getContainerExecDir(runId) : undefined,
+			WorkingDir: this.containerWorkingDir,
 			HostConfig: runId
 				? {
-						Binds: [
-							`${this.getExecDir(runId)}:${this.getContainerExecDir(runId)}`,
-						],
+						Binds: [`${this.getExecDir(runId)}:${this.containerWorkingDir}`],
 					}
 				: undefined,
 		});
+		console.log(`${this.getExecDir(runId)}:${this.containerWorkingDir}`);
 		console.log("Created container for image:", image);
 
 		return container;
