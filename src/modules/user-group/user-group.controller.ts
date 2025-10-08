@@ -7,10 +7,12 @@ import {
 	Get,
 	Put,
 	Delete,
+	UseGuards,
 } from "@nestjs/common";
 import { UserGroupService } from "./user-group.service";
 import {
-	CreateUserGroupRequest,
+	CreateInvitationRequest,
+	DeleteMemberRequest,
 	UpdateUserGroupRequest,
 	UserGroupQuery,
 	UserGroupResponse,
@@ -23,22 +25,22 @@ import {
 } from "@utils";
 import { ApiBearerAuth, ApiOperation, ApiParam } from "@nestjs/swagger";
 import { MemberResponse } from "./dto/member.response";
+import { UpdateInvitationRequest } from "./dto/update-invitation.request";
+import { GroupGuard } from "@modules/group";
 
-@Controller("group")
 @ApiBearerAuth()
+@UseGuards(GroupGuard)
+@Controller("group/:groupId/member")
+@ApiParam({ name: "groupId", type: String, required: true })
 export class UserGroupController {
 	constructor(private readonly userGroupService: UserGroupService) {}
 
-	@Post(":groupId/member/:userId")
-	@ApiOperation({ summary: "Add member to group" })
-	@ApiParam({ name: "groupId", description: "Group ID" })
+	@Post()
+	@ApiOperation({ summary: "Invite a user to group" })
 	@SwaggerApiResponse(UserGroupResponse)
-	async addMember(
-		@Param("groupId") groupId: string,
-		@Param("userId") userId: string,
-	) {
+	async addMember(@Body() request: CreateInvitationRequest) {
 		// Override groupId from URL
-		const data = await this.userGroupService.createOne(groupId, userId);
+		const data = await this.userGroupService.inviteUser(request);
 		return new ApiResponseDto(
 			UserGroupResponse.fromEntity(data),
 			null,
@@ -46,7 +48,18 @@ export class UserGroupController {
 		);
 	}
 
-	@Get(":groupId/member")
+	@Put()
+	@ApiOperation({ summary: "Update invitation (accept/declined)" })
+	@SwaggerApiResponse(UserGroupResponse)
+	async acceptInvitation(@Body() body: UpdateInvitationRequest) {
+		const data = await this.userGroupService.updateInvitationStatus(body);
+		return new ApiResponseDto(
+			UserGroupResponse.fromEntity(data),
+			null,
+			`Invitation updated successfully`,
+		);
+	}
+	@Get()
 	@ApiOperation({ summary: "Get all members of group" })
 	@ApiParam({ name: "groupId", description: "Group ID" })
 	@SwaggerApiResponse(MemberResponse, { isArray: true, withPagination: true })
@@ -62,28 +75,8 @@ export class UserGroupController {
 		);
 	}
 
-	@Get(":groupId/member/:userId")
-	@ApiOperation({ summary: "Get specific member in group" })
-	@ApiParam({ name: "groupId", description: "Group ID" })
-	@ApiParam({ name: "userId", description: "User ID" })
-	@SwaggerApiResponse(MemberResponse)
-	async getMember(
-		@Param("groupId") groupId: string,
-		@Param("userId") userId: string,
-	) {
-		const data = await this.userGroupService.getMemberByGroupAndUser(
-			groupId,
-			userId,
-		);
-		return new ApiResponseDto(
-			MemberResponse.fromEntity(data.user),
-			null,
-			"Member retrieved successfully",
-		);
-	}
-
 	// Now don't have update service, still don't have roles and permissions functions
-	@Put(":groupId/member/:userId")
+	@Put("/role")
 	@ApiOperation({ summary: "Update member role/permissions" })
 	@ApiParam({ name: "groupId", description: "Group ID" })
 	@ApiParam({ name: "userId", description: "User ID" })
@@ -96,16 +89,11 @@ export class UserGroupController {
 		return new ApiMessageResponseDto("Member updated successfully");
 	}
 
-	@Delete(":groupId/member/:userId")
+	@Delete()
 	@ApiOperation({ summary: "Remove member from group" })
-	@ApiParam({ name: "groupId", description: "Group ID" })
-	@ApiParam({ name: "userId", description: "User ID" })
 	@SwaggerApiMessageResponse()
-	async removeMember(
-		@Param("groupId") groupId: string,
-		@Param("userId") userId: string,
-	) {
-		await this.userGroupService.removeMemberByGroupAndUser(groupId, userId);
+	async removeMember(@Body() request: DeleteMemberRequest) {
+		await this.userGroupService.removeMemberByGroupAndUser(request);
 		return new ApiMessageResponseDto("Member removed successfully");
 	}
 }

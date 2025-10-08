@@ -96,6 +96,9 @@ export const DbConstants = {
 			groupId: "group_id",
 			addedBy: "added_by",
 			joinedAt: "joined_at",
+			invitedAt: "invited_at",
+			status: "status",
+			acceptedAt: "accepted_at",
 		},
 	},
 	IndexName: {

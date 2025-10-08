@@ -28,6 +28,20 @@ export class UserGroupEntity {
 	@JoinColumn({ name: ColumnName.UserGroup.addedBy })
 	addedBy: UserEntity;
 
-	@Column({ type: "datetime", name: ColumnName.UserGroup.joinedAt })
-	joinedAt: Date;
+	@Column({
+		type: "datetime",
+		name: ColumnName.UserGroup.joinedAt,
+		nullable: true,
+	})
+	joinedAt: Date | null;
+
+	@Column({
+		name: ColumnName.UserGroup.status,
+		type: "int",
+		default: 0,
+	})
+	status: number;
+
+	@Column({ name: ColumnName.UserGroup.invitedAt, type: "datetime" })
+	invitedAt: Date;
 }
