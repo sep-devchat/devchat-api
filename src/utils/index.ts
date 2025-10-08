@@ -8,3 +8,4 @@ export * from "./devchat-cls";
 export * from "./enums";
 export * from "./skip-auth.decorator";
 export * from "./mailer";
+export * from "./permission.decorator";

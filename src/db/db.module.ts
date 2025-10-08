@@ -3,14 +3,17 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { datasource } from "./datasource";
 import { addTransactionalDataSource } from "typeorm-transactional";
 import {
-	GroupRepository,
 	UserRepository,
 	MessageRepository,
 	UserMessageDeleteRepository,
 	PasswordResetTokenRepository,
 	AttachmentRepository,
+	UserGroupRepository,
 	ChannelRepository,
 	ThreadRepository,
+	GroupRepository,
+	AdminRoleRepository,
+	PermissionRepository,
 	UserFriendRepository,
 } from "./repositories";
 
@@ -21,8 +24,11 @@ const repositories = [
 	UserMessageDeleteRepository,
 	PasswordResetTokenRepository,
 	AttachmentRepository,
+	UserGroupRepository,
 	ChannelRepository,
 	ThreadRepository,
+	AdminRoleRepository,
+	PermissionRepository,
 	UserFriendRepository,
 ];
 

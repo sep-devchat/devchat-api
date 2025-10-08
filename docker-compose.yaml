@@ -11,6 +11,20 @@ services:
     networks:
       - devchat-api_net
 
+  devchat-api_dind:
+    image: docker:dind
+    hostname: dind
+    privileged: true
+    environment:
+      DOCKER_TLS_CERTDIR: /certs
+    volumes:
+      - ./dind-client-certs:/certs/client
+      - ./code-execution-tmp:/app/code-execution-tmp
+    networks:
+      devchat-api_net:
+        aliases:
+          - dind
+
 networks:
   devchat-api_net:
     name: devchat-api_net

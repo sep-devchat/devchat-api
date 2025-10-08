@@ -13,9 +13,12 @@ import { CloudinaryModule } from "@providers/cloudinary";
 import { AttachmentModule } from "@modules/attachment";
 import { UploadModule } from "@modules/upload";
 import { GroupModule } from "@modules/group";
+import { UserGroupModule } from "@modules/user-group";
 import { ChannelModule } from "@modules/channel";
 import { ThreadModule } from "@modules/thread";
 import { CodeModule } from "@modules/code";
+import { AdminRoleModule } from "@modules/admin-role";
+import { PermissionModule } from "@modules/permission";
 import { UserFriendModule } from "@modules/user-friend";
 
 @Module({
@@ -41,9 +44,12 @@ import { UserFriendModule } from "@modules/user-friend";
 		AttachmentModule,
 		UploadModule,
 		GroupModule,
+		UserGroupModule,
 		ChannelModule,
 		ThreadModule,
 		CodeModule,
+		AdminRoleModule,
+		PermissionModule,
 	],
 	controllers: [],
 	providers: [

@@ -1,10 +1,9 @@
 import { Injectable } from "@nestjs/common";
-import { CreateGroupRequest, UpdateGroupRequest, GroupQuery } from "./dto";
-import { GroupRepository } from "@db/repositories";
-import { Like } from "typeorm";
+import { CreateGroupRequest, UpdateGroupRequest } from "./dto";
 import { GroupNotExistedError } from "./errors";
-import { DevChatCls, PaginationDto } from "@utils";
+import { DevChatCls } from "@utils";
 import { ClsService } from "nestjs-cls";
+import { GroupRepository } from "@db/repositories";
 
 @Injectable()
 export class GroupService {
@@ -34,24 +33,8 @@ export class GroupService {
 		await this.groupRepo.update(id, dto);
 	}
 
-	async findMany(query: GroupQuery) {
-		const { page, limit, name } = query;
-		const [data, total] = await this.groupRepo.findAndCount({
-			where: {
-				...(name ? { name: Like(`%${name}%`) } : {}),
-				isActive: true,
-				// When have table UserGroup will add more condition here
-			},
-			skip: (page - 1) * page,
-			take: limit,
-		});
-
-		const pagination = new PaginationDto(page, limit, total);
-
-		return {
-			data,
-			pagination,
-		};
+	async findMany() {
+		return await this.groupRepo.find();
 	}
 
 	async findOne(id: string) {
