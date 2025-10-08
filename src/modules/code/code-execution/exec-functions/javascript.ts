@@ -5,7 +5,7 @@ export const javascriptExecFunction: CodeExecutionFunction = async (
 	code: string,
 ) => {
 	const docker = Docker.getInstance();
-	const container = await docker.createExecContainer("docker.io/node:22");
+	const container = await docker.createExecContainer("node:22");
 	await container.start();
 
 	const exec = await container.exec({
@@ -32,22 +32,7 @@ export const javascriptExecFunction: CodeExecutionFunction = async (
 	console.log(JSON.stringify(execInfo, null, 2));
 
 	console.log("Stopping container...");
-	container
-		.stop()
-		.then(() => {
-			console.log("Removing container...");
-			container
-				.remove()
-				.then(() => {
-					console.log("Removed container.");
-				})
-				.catch((err) => {
-					console.error("Error removing container:", err);
-				});
-		})
-		.catch((err) => {
-			console.error("Error stopping container:", err);
-		});
+	docker.cleanupContainer(container);
 
 	return {
 		output: buff.toString(),

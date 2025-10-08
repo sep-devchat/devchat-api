@@ -40,3 +40,6 @@ pnpm-lock.yaml
 
 .env
 src/db/migrations
+
+dind-client-certs
+code-execution-tmp

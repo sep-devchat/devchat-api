@@ -1,3 +1,5 @@
+import { permission } from "process";
+
 export const DbConstants = {
 	TableName: {
 		User: "user",
@@ -8,6 +10,7 @@ export const DbConstants = {
 		Attachment: "attachment",
 		Channel: "channel",
 		Thread: "thread",
+		UserGroup: "user_group",
 		AdminRole: "admin_role",
 		Permission: "permission",
 	},
@@ -89,6 +92,16 @@ export const DbConstants = {
 			id: "thread_id",
 			name: "thread_name",
 			description: "thread_description",
+		},
+		UserGroup: {
+			id: "user_group_id",
+			userId: "user_id",
+			groupId: "group_id",
+			addedBy: "added_by",
+			joinedAt: "joined_at",
+			invitedAt: "invited_at",
+			status: "status",
+			acceptedAt: "accepted_at",
 		},
 		AdminRole: {
 			id: "admin_role_id",

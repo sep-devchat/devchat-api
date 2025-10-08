@@ -51,12 +51,12 @@ export class GroupController {
 
 	@Get()
 	@ApiOperation({ summary: "Get list of groups" })
-	@SwaggerApiResponse(GroupResponse, { isArray: true, withPagination: true })
-	async findMany(@Query() query: GroupQuery) {
-		const response = await this.groupService.findMany(query);
+	@SwaggerApiResponse(GroupResponse)
+	async findMany() {
+		const response = await this.groupService.findMany();
 		return new ApiResponseDto(
-			GroupResponse.fromEntities(response.data),
-			response.pagination,
+			GroupResponse.fromEntities(response),
+			null,
 			"Groups retrieved successfully",
 		);
 	}

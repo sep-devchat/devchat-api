@@ -4,6 +4,12 @@ export enum LoginMethodEnum {
 	GITHUB = "github",
 }
 
+export enum InvitationStatus {
+	PENDING = 0,
+	ACCEPTED = 1,
+	DECLINED = 2,
+}
+
 export enum AdminPermissionEnum {
 	MANAGE_USERS = "MANAGE_USERS",
 	MANAGE_GROUPS = "MANAGE_GROUPS",

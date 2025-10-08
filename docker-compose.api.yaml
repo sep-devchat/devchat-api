@@ -1,0 +1,21 @@
+services:
+  devchat-api_api:
+    image: devchat-api_api:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 3000:3000
+    env_file:
+      - .env
+    volumes:
+      - ./dind-client-certs/:/certs
+      - ./code-execution-tmp:/app/code-execution-tmp
+    networks:
+      - devchat-api_net
+    tty: true
+
+networks:
+  devchat-api_net:
+    name: devchat-api_net
+    external: true
