@@ -1,0 +1,27 @@
+sequenceDiagram
+    autonumber
+    participant U as User
+    participant D as DevChat Desktop
+    participant W as DevChat Web
+    participant API as DevChat API
+    participant DB as DevChat Database
+    participant GG as Google/GitHub Login
+
+    U->>D: Request Login
+    D->>W: Open Login Page (code challenge)
+    W->>GG: Redirect
+    GG->>W: Authorization code
+    W->>API: Authorization code
+    API->>GG: Authorization code
+    GG->>API: User email
+    API->>DB: Find user with email
+    DB->>API: Query response
+    alt U Not Found
+        API->>DB: Insert new user
+        DB->>API: Query response
+    end
+    API->>W: Desktop auth code
+    W->>D: Desktop auth code
+    D->>API: Desktop auth code + code verifier
+    API->>D: Access token
+    D->>U: Login completion

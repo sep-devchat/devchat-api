@@ -1,0 +1,36 @@
+sequenceDiagram
+    autonumber
+    participant C as Client
+    participant SGateway as SocketGateway
+    participant SS as SocketService
+    participant AS as AuthService
+    participant DB as Database
+
+    C->>SGateway: Initiate connection
+    SGateway->>C: Connection established
+    alt No auth token after timeout
+        SGateway->>C: Disconnect
+    end
+    
+    C->>SGateway: Send auth token
+    SGateway->>SS: Forward auth token
+    SS->>AS: Validate token
+    AS->>AS: Decode & verify token
+    alt Invalid token
+        AS->>SS: Token invalid
+        SS->>SGateway: Auth failed
+        SGateway->>C: Disconnect
+    else Valid token
+        AS->>DB: Find user
+        DB->>AS: User data
+        alt User not found
+            AS->>SS: User not found
+            SS->>SGateway: Auth failed
+            SGateway->>C: Disconnect
+        else User found
+            AS->>SS: Token valid
+            SS->>SS: Init socket session
+            SS->>SGateway: Auth successful
+            SGateway->>C: Auth success
+        end
+    end

@@ -1,0 +1,18 @@
+sequenceDiagram
+    autonumber
+    Client->>DevChat API: Request code execution
+    DevChat API->>Docker Host: Check for available image
+    Docker Host->>DevChat API: Image status
+    alt Image Not Found
+        DevChat API->>Docker Host: Pull image
+        Docker Host->>DevChat API: Image pulled
+    end
+    DevChat API->>Docker Host: Start container
+    Docker Host->>DevChat API: Container started
+    alt Code need build:
+        DevChat API->>Docker Host: Build code
+        Docker Host->>DevChat API: Build completed
+    end
+    DevChat API->>Docker Host: Execute code
+    Docker Host->>DevChat API: Execution result
+    DevChat API->>Client: Execution result

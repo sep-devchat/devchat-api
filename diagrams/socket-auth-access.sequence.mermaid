@@ -1,0 +1,18 @@
+sequenceDiagram
+    autonumber
+    participant C as Client
+    participant SG as SocketGuard
+    participant SGateway as SocketGateway
+
+    C->>SG: Event
+    SG->>SG: Check user session
+    alt No user session
+        SG->>C: Disconnect
+    else
+        alt Expired session
+            SG->>C: Disconnect
+        else
+            SG->>SGateway: Forward event
+            SGateway->>C: Event processed
+        end
+    end

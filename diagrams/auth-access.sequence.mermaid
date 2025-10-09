@@ -1,0 +1,34 @@
+sequenceDiagram
+    autonumber
+    participant C as Client
+    participant AG as AuthGuard
+    participant AS as AuthService
+    participant DB as Database
+    participant Controller
+
+    C->>AG: Request with token
+    AG->>AS: Validate token
+    AS->>AS: Decode & verify token
+    alt Invalid token
+        AS->>AG: Token invalid
+        AG->>C: Access denied
+    else Valid token
+        AS->>DB: Find user
+        DB->>AS: Query result
+        alt User not found
+            AS->>AG: User not found
+            AG->>C: Access denied
+        else User found
+            AS->>AS: Check permissions
+            alt Insufficient permissions
+                AS->>AG: Permission denied
+                AG->>C: Access denied
+            else Sufficient permissions
+                AS->>AG: Token valid
+                AG->>Controller: Forward request
+                Controller->>C: Access granted
+            end
+        end
+    end
+    
+    
