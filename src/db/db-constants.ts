@@ -1,5 +1,3 @@
-import { permission } from "process";
-
 export const DbConstants = {
 	TableName: {
 		User: "user",
@@ -14,6 +12,7 @@ export const DbConstants = {
 		AdminRole: "admin_role",
 		Permission: "permission",
 		UserFriend: "user_friend",
+		AuditLog: "audit_log",
 	},
 	ColumnName: {
 		User: {
@@ -125,6 +124,14 @@ export const DbConstants = {
 			message: "message",
 			respondedAt: "responded_at",
 		},
+		AuditLog: {
+			id: "audit_log_id",
+			userId: "user_id",
+			action: "action",
+			entityType: "entity_type",
+			oldValues: "old_values",
+			newValues: "new_values",
+		},
 	},
 	IndexName: {
 		User: {
@@ -144,6 +151,11 @@ export const DbConstants = {
 		},
 		Attachment: {
 			messageId: "idx_attachment_normal_messageId",
+		},
+		AuditLog: {
+			userId: "idx_audit_log_normal_userId",
+			entityType: "idx_audit_log_normal_entityType",
+			entityId: "idx_audit_log_normal_entityId",
 		},
 	},
 };

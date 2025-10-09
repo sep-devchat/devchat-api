@@ -153,3 +153,138 @@ When throwing error, it is catched by the exception filter.
     | aws.service.ts
     | index.ts
 ```
+
+## Audit Logging Guide
+
+This project includes a reusable auditing system built with a decorator + interceptor pair to capture user actions (create/update/etc.) and persist structured change logs in the `audit_log` table.
+
+### Components
+
+- `AuditLogEntity`: Database entity storing audit entries
+- `@AuditLog(...)` decorator: Declares audit metadata per endpoint / service method
+- `AuditLogInterceptor`: Reads metadata, captures request/response and stores a record
+
+### Enabling (Global Registration)
+
+Add the interceptor provider (if not already) in `AppModule` or a dedicated `AuditModule`:
+
+```ts
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { AuditLogInterceptor } from './interceptors/audit-log.interceptor';
+
+@Module({
+  providers: [
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AuditLogInterceptor,
+    },
+  ],
+})
+export class AppModule {}
+```
+
+You can also apply it selectively:
+
+```ts
+@UseInterceptors(AuditLogInterceptor)
+@Controller('admin-role')
+export class AdminRoleController {}
+```
+
+### Decorator Usage
+
+```ts
+import { AuditLog } from '@utils';
+
+@Post()
+@AuditLog({
+  action: 'ADMIN_ROLE_CREATE',
+  entityType: 'AdminRole',
+  captureResponse: true, // store created entity (response.data or response)
+})
+createRole(@Body() dto: CreateAdminRoleRequest) { ... }
+
+@Put(':id')
+@AuditLog({
+  action: 'ADMIN_ROLE_UPDATE',
+  entityType: 'AdminRole',
+  entity: AdminRoleEntity,     // enables diffing old vs new values
+  entityIdParam: 'id',          // route param to fetch original entity
+  pickBodyFields: ['roleName','permissions'], // optional – limit fields captured
+})
+updateRole(@Param('id') id: string, @Body() dto: UpdateAdminRoleRequest) { ... }
+```
+
+### Options Reference
+
+| Option | Type | Required | Description |
+|--------|------|----------|-------------|
+| `action` | `string` | Yes | High-level verb (e.g. `ADMIN_ROLE_UPDATE`) |
+| `entityType` | `string` | No | Logical domain name (defaults to action / `Generic`) |
+| `entity` | `Function` | No | Entity class; when provided with `entityIdParam` enables old/new diffing |
+| `entityIdParam` | `string` | No | Name of the route param containing the entity id |
+| `pickBodyFields` | `string[]` | No | Whitelist of fields to persist (applied after body capture) |
+| `omitBodyFields` | `string[]` | No | Blacklist of fields to exclude |
+| `captureResponse` | `boolean` | No | If true, uses handler response (prefers `response.data`) as `newValues` |
+
+### What Gets Stored
+
+| Column | Source |
+|--------|--------|
+| `userId` | From CLS `profile.id` (set in AuthGuard) |
+| `action` | `action` option |
+| `entityType` | `entityType` option or `'Generic'` |
+| `oldValues` | Diffed original (only changed keys) when `entity` + `entityIdParam` present |
+| `newValues` | Filtered body OR response (or diff-only if original found) |
+| `createdBy` | Same as `userId` (fallback `system`) |
+| `createdAt` | Auto timestamp |
+
+### Update Diff Behavior
+
+If `entity` and `entityIdParam` are supplied:
+1. The interceptor loads the original record via repository.
+2. After handler executes, it builds a shallow diff for keys present in captured new values.
+3. `oldValues` contains only changed fields’ previous values; `newValues` replaced with only changed fields.
+
+If the original entity can’t be fetched (not found or error), it silently falls back to storing full `newValues` without `oldValues`.
+
+### Example Output (Update)
+
+```json
+{
+  "action": "ADMIN_ROLE_UPDATE",
+  "entityType": "AdminRole",
+  "oldValues": { "roleName": "Moderator" },
+  "newValues": { "roleName": "Senior Moderator" },
+  "userId": "1c9f...",
+  "createdAt": "2025-10-09T08:12:24.512Z"
+}
+```
+
+### Best Practices
+
+1. Keep `action` constants consistent (UPPER_SNAKE_CASE or dot.case). 
+2. Avoid dumping entire large objects—use `pickBodyFields` to limit size. 
+3. Redact secrets before they reach the interceptor (strip in DTO or use `omitBodyFields`). 
+4. Add indexes for analytics queries (e.g. on `created_at`, `action`, `entity_type`). 
+5. Consider a retention strategy (archive / prune old logs). 
+6. Add a viewing endpoint (paginated) with permission gating, e.g. `audit.log.list` permission. 
+
+### Extending Further
+
+- Implement deep diffing (recursive) for nested configs.
+- Publish audit events to a queue for async processing / external SIEM ingestion.
+- Correlate requests using a trace ID in CLS and include it in the audit log entity.
+- Add `oldValues` enrichment (e.g. include related entity names) in a background worker.
+
+### Quick Checklist For Adding Audit To An Endpoint
+
+1. Decide action name + entityType.
+2. Add `@AuditLog({...})` decorator to the controller method.
+3. For updates: include `entity` + `entityIdParam`.
+4. Optionally whitelist or omit fields.
+5. Confirm interceptor is globally registered.
+6. Exercise endpoint and verify row in `audit_log` table.
+
+---
+Audit logging now ready for consistent, low-friction observability across mutations.
