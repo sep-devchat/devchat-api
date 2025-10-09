@@ -8,7 +8,7 @@ import { Profile } from "./dto";
 import { Reflector } from "@nestjs/core";
 import { SKIP_AUTH_KEY } from "../../utils/skip-auth.decorator";
 import { UserService } from "@modules/user";
-import { AdminRoleService } from "@modules/admin-role";
+import { AdminRoleRepository } from "@db/repositories";
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -17,7 +17,7 @@ export class AuthGuard implements CanActivate {
 		private readonly userService: UserService,
 		private readonly cls: ClsService<DevChatCls>,
 		private readonly reflector: Reflector,
-		private readonly adminRoleService: AdminRoleService,
+		private readonly adminRoleRepo: AdminRoleRepository,
 	) {}
 
 	async canActivate(context: ExecutionContext) {
@@ -36,9 +36,16 @@ export class AuthGuard implements CanActivate {
 
 		const decoded = this.authService.verifyAccessToken(token);
 		const user = await this.userService.findById(decoded.sub);
+		console.log("Admin role:", user.adminRoleId);
 		const profile = Profile.fromEntity(user);
-		const adminRole = await this.adminRoleService.findOne(user.adminRoleId);
-		this.cls.set("profile", { ...profile, adminRole });
+		let adminRole = null as any;
+		if (user.adminRoleId) {
+			adminRole = await this.adminRoleRepo.findOne({
+				where: { id: user.adminRoleId },
+			});
+		}
+		console.log("Admin Role in Auth Guard:", adminRole);
+		this.cls.set("profile", adminRole ? { ...profile, adminRole } : profile);
 
 		if (adminRole) {
 			const requiredPermissions = this.reflector.getAllAndOverride<string[]>(

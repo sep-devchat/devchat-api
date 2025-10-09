@@ -11,6 +11,7 @@ export const DbConstants = {
 		UserGroup: "user_group",
 		AdminRole: "admin_role",
 		Permission: "permission",
+		UserFriend: "user_friend",
 		AuditLog: "audit_log",
 	},
 	ColumnName: {
@@ -114,6 +115,14 @@ export const DbConstants = {
 			code: "permission_code",
 			name: "permission_name",
 			description: "permission_description",
+		},
+		UserFriend: {
+			id: "user_friend_id",
+			senderId: "sender_id",
+			receiverId: "receiver_id",
+			status: "status",
+			message: "message",
+			respondedAt: "responded_at",
 		},
 		AuditLog: {
 			id: "audit_log_id",

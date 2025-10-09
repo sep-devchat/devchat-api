@@ -14,6 +14,7 @@ import {
 	GroupRepository,
 	AdminRoleRepository,
 	PermissionRepository,
+	UserFriendRepository,
 	AuditLogRepository,
 } from "./repositories";
 
@@ -29,6 +30,7 @@ const repositories = [
 	ThreadRepository,
 	AdminRoleRepository,
 	PermissionRepository,
+	UserFriendRepository,
 	AuditLogRepository,
 ];
 

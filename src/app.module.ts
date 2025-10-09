@@ -19,6 +19,7 @@ import { ThreadModule } from "@modules/thread";
 import { CodeModule } from "@modules/code";
 import { AdminRoleModule } from "@modules/admin-role";
 import { PermissionModule } from "@modules/permission";
+import { UserFriendModule } from "@modules/user-friend";
 import { AuditLogInterceptor } from "./interceptors";
 
 @Module({
@@ -37,6 +38,7 @@ import { AuditLogInterceptor } from "./interceptors";
 		}),
 		AuthModule,
 		UserModule,
+		UserFriendModule,
 		MessageModule,
 		SocketModule,
 		CloudinaryModule,
