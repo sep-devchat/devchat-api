@@ -14,6 +14,7 @@ import {
 	GroupRepository,
 	AdminRoleRepository,
 	PermissionRepository,
+	AuditLogRepository,
 } from "./repositories";
 
 const repositories = [
@@ -28,6 +29,7 @@ const repositories = [
 	ThreadRepository,
 	AdminRoleRepository,
 	PermissionRepository,
+	AuditLogRepository,
 ];
 
 @Module({

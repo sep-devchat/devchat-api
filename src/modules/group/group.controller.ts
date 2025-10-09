@@ -18,10 +18,12 @@ import {
 import {
 	ApiMessageResponseDto,
 	ApiResponseDto,
+	AuditLog,
 	SwaggerApiMessageResponse,
 	SwaggerApiResponse,
 } from "@utils";
 import { ApiBearerAuth, ApiOperation, ApiParam } from "@nestjs/swagger";
+import { GroupEntity } from "@db/entities";
 
 @Controller("group")
 @ApiBearerAuth()
@@ -31,6 +33,12 @@ export class GroupController {
 	@Post()
 	@ApiOperation({ summary: "Create a new group" })
 	@SwaggerApiResponse(GroupResponse)
+	@AuditLog({
+		action: "GROUP_CREATE",
+		entityType: "Group",
+		entity: GroupEntity,
+		captureResponse: true,
+	})
 	async createOne(@Body() dto: CreateGroupRequest) {
 		const response = await this.groupService.createOne(dto);
 		return new ApiResponseDto(
@@ -44,6 +52,12 @@ export class GroupController {
 	@ApiParam({ name: "id", description: "Group ID" })
 	@ApiOperation({ summary: "Update a group" })
 	@SwaggerApiMessageResponse()
+	@AuditLog({
+		action: "GROUP_UPDATE",
+		entityType: "Group",
+		entity: GroupEntity,
+		entityIdParam: "id",
+	})
 	async updateOne(@Param("id") id: string, @Body() dto: UpdateGroupRequest) {
 		await this.groupService.updateOne(id, dto);
 		return new ApiMessageResponseDto("Updated group successfully");

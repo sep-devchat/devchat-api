@@ -1,5 +1,5 @@
 import { Module } from "@nestjs/common";
-import { APP_FILTER, APP_GUARD, APP_PIPE } from "@nestjs/core";
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from "@nestjs/core";
 import { Env, MyExceptionFilter, ValidationPipe } from "@utils";
 import { DbModule } from "@db";
 import { AuthGuard, AuthModule } from "@modules/auth";
@@ -19,6 +19,7 @@ import { ThreadModule } from "@modules/thread";
 import { CodeModule } from "@modules/code";
 import { AdminRoleModule } from "@modules/admin-role";
 import { PermissionModule } from "@modules/permission";
+import { AuditLogInterceptor } from "./interceptors";
 
 @Module({
 	imports: [
@@ -62,6 +63,10 @@ import { PermissionModule } from "@modules/permission";
 		{
 			provide: APP_GUARD,
 			useClass: AuthGuard,
+		},
+		{
+			provide: APP_INTERCEPTOR,
+			useClass: AuditLogInterceptor,
 		},
 	],
 })
