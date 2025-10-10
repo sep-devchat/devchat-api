@@ -1,0 +1,38 @@
+classDiagram
+    class AppModule
+    class ValidationPipe
+    class ExceptionFilter
+    class AuthGuard
+
+    class DbModule
+    class Entity
+    class BaseRepository~Entity~
+    class Repository
+
+    BaseRepository~Entity~ --> Entity : works with
+    Repository <|-- BaseRepository~Entity~ : extends
+    Repository --> Entity : works with
+
+    DbModule *-- Repository : provides
+
+    class Module
+    class Service
+    class Controller
+    class OtherModule
+    class OtherService
+
+    OtherModule *-- OtherService : contains
+
+    Controller o-- Service : uses
+    Service o-- Repository : uses
+    Service o-- OtherService: uses
+    Module *-- Controller : contains
+    Module *-- Service : contains
+    Module o-- OtherModule: uses
+
+    AppModule *-- ValidationPipe : uses
+    AppModule *-- ExceptionFilter : uses
+    AppModule *-- AuthGuard : uses
+    AppModule *-- DbModule : uses
+    AppModule *-- OtherModule : uses
+    AppModule *-- Module : contains

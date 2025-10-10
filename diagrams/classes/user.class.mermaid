@@ -1,0 +1,41 @@
+classDiagram
+    class AppModule
+    class DbModule
+    class BaseRepository~UserEntity~
+    class UserEntity
+    class UserRepository
+    class UserModule
+    class UserService {
+        - UserRepository userRepo
+        - validateBeforeCreate(UserEntity user) Promise~void~
+        + create(CreateUserRequest dto, boolean? emailVerified) Promise~InsertResult~ throws UserExistedError
+        + findById(string id) Promise~UserEntity~ throws UserNotFoundError
+        + findByUniqueKey(string uniqueKey, boolean throwIfNotFound) Promise~UserEntity~ throws UserNotFoundError
+        + findByEmailToken(string token) Promise~UserEntity~ throws UserNotFoundError
+        + markEmailAsVerified(string id) Promise~void~ throws UserNotFoundError
+        + getAll(UserQuery query) Promise~ListEntitiesWithPagination~UserEntity~~
+        + update(string id, UpdateUserRequest updateData) Promise~void~ throws UserNotFoundError
+        + delete(string id) Promise~void~ throws UserNotFoundError
+    }
+    class UserController {
+        - UserService userService
+        + getgetUserByUniqueKey(string uniqueKey) Promise~ApiResponseDto~UserResponse~~
+        + register(CreateUserRequest dto) Promise~ApiMessageResponseDto~
+        + updateUser(string id, UpdateUserRequest dto) Promise~ApiMessageResponseDto~
+        + deleteUser(string id) Promise~ApiMessageResponseDto~
+        + getUsers(UserQuery query) Promise~ApiResponseDto~UserResponse[]~~
+    }
+
+    UserRepository <|-- BaseRepository~UserEntity~ : extends
+    BaseRepository~UserEntity~ --> UserEntity : works with
+    UserRepository --> UserEntity : works with
+
+    DbModule *-- UserRepository : provides
+    UserService o-- UserRepository : uses
+    UserController o-- UserService : uses
+
+    UserModule *-- UserService : contains
+    UserModule *-- UserController : contains
+
+    AppModule *-- DbModule : uses
+    AppModule *-- UserModule : contains
