@@ -13,6 +13,7 @@ export const DbConstants = {
 		Permission: "permission",
 		UserFriend: "user_friend",
 		AuditLog: "audit_log",
+		Task: "task",
 	},
 	ColumnName: {
 		User: {
@@ -132,6 +133,15 @@ export const DbConstants = {
 			oldValues: "old_values",
 			newValues: "new_values",
 		},
+		Task: {
+			id: "task_id",
+			name: "name",
+			description: "description",
+			status: "status",
+			priority: "priority",
+			dueDate: "due_date",
+			assigneeId: "assignee_id",
+		},
 	},
 	IndexName: {
 		User: {
@@ -156,6 +166,9 @@ export const DbConstants = {
 			userId: "idx_audit_log_normal_userId",
 			entityType: "idx_audit_log_normal_entityType",
 			entityId: "idx_audit_log_normal_entityId",
+		},
+		Task: {
+			groupId: "idx_task_normal_groupId",
 		},
 	},
 };
