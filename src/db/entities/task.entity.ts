@@ -20,6 +20,7 @@ export class TaskEntity {
 	@Column({
 		name: ColumnName.Task.assigneeId,
 		type: "uuid",
+		nullable: true,
 	})
 	assigneeId: string | null;
 
@@ -66,7 +67,7 @@ export class TaskEntity {
 	@JoinColumn({
 		name: ColumnName.Task.assigneeId,
 	})
-	assignee: UserEntity;
+	assignee: UserEntity | null;
 
 	@ManyToOne(() => UserEntity)
 	@JoinColumn({

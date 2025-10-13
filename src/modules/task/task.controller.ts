@@ -16,22 +16,10 @@ import { ApiResponseDto } from "@utils";
 export class TaskController {
 	constructor(private readonly taskService: TaskService) {}
 
-	@Post()
-	async createOne(@Body() dto: CreateTaskRequest) {
-		await this.taskService.createOne(dto);
-		return new ApiResponseDto(null, null, "Created successfully");
-	}
-
 	@Put(":id")
 	async updateOne(@Param("id") id: string, @Body() dto: UpdateTaskRequest) {
 		await this.taskService.updateOne(id, dto);
 		return new ApiResponseDto(null, null, "Updated successfully");
-	}
-
-	@Get()
-	async findMany(@Query() query: TaskQuery) {
-		const data = await this.taskService.findMany(query);
-		return new ApiResponseDto(data);
 	}
 
 	@Get(":id")
