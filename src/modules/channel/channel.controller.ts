@@ -32,11 +32,14 @@ export class ChannelController {
 		return new ApiResponseDto(null, null, "Created successfully");
 	}
 
-	@Put(":id")
-	@ApiParam({ name: "id", type: String, required: true })
+	@Put(":channelId")
+	@ApiParam({ name: "channelId", type: String, required: true })
 	@UseGuards(ChannelGuard)
-	async updateOne(@Param("id") id: string, @Body() dto: UpdateChannelRequest) {
-		await this.channelService.updateOne(id, dto);
+	async updateOne(
+		@Param("channelId") channelId: string,
+		@Body() dto: UpdateChannelRequest,
+	) {
+		await this.channelService.updateOne(channelId, dto);
 		return new ApiResponseDto(null, null, "Updated successfully");
 	}
 
@@ -50,11 +53,11 @@ export class ChannelController {
 		);
 	}
 
-	@Get(":id")
-	@ApiParam({ name: "id", type: String, required: true })
+	@Get(":channelId")
+	@ApiParam({ name: "channelId", type: String, required: true })
 	@UseGuards(ChannelGuard)
-	async findOne(@Param("id") id: string) {
-		const data = await this.channelService.findOne(id);
+	async findOne(@Param("channelId") channelId: string) {
+		const data = await this.channelService.findOne(channelId);
 		return new ApiResponseDto(
 			ChannelResponse.fromEntity(data),
 			null,
@@ -62,11 +65,11 @@ export class ChannelController {
 		);
 	}
 
-	@Delete(":id")
-	@ApiParam({ name: "id", type: String, required: true })
+	@Delete(":channelId")
+	@ApiParam({ name: "channelId", type: String, required: true })
 	@UseGuards(ChannelGuard)
-	async deleteOne(@Param("id") id: string) {
-		await this.channelService.deleteOne(id);
+	async deleteOne(@Param("channelId") channelId: string) {
+		await this.channelService.deleteOne(channelId);
 		return new ApiResponseDto(null, null, "Deleted successfully");
 	}
 }

@@ -44,18 +44,21 @@ export class GroupController {
 		return new ApiResponseDto(null, null, "Created successfully");
 	}
 
-	@Put(":id")
-	@ApiParam({ name: "id", description: "Group ID" })
+	@Put(":groupId")
+	@ApiParam({ name: "groupId", description: "Group ID" })
 	@ApiOperation({ summary: "Update a group" })
 	@SwaggerApiMessageResponse()
 	@AuditLog({
 		action: "GROUP_UPDATE",
 		entityType: "Group",
 		entity: GroupEntity,
-		entityIdParam: "id",
+		entityIdParam: "groupId",
 	})
-	async updateOne(@Param("id") id: string, @Body() dto: UpdateGroupRequest) {
-		await this.groupService.updateOne(id, dto);
+	async updateOne(
+		@Param("groupId") groupId: string,
+		@Body() dto: UpdateGroupRequest,
+	) {
+		await this.groupService.updateOne(groupId, dto);
 		return new ApiMessageResponseDto("Updated group successfully");
 	}
 
@@ -71,12 +74,12 @@ export class GroupController {
 		);
 	}
 
-	@Get(":id")
+	@Get(":groupId")
 	@ApiOperation({ summary: "Get group by ID" })
-	@ApiParam({ name: "id", description: "Group ID" })
+	@ApiParam({ name: "groupId", description: "Group ID" })
 	@SwaggerApiResponse(GroupResponse)
-	async findOne(@Param("id") id: string) {
-		const data = await this.groupService.findOne(id);
+	async findOne(@Param("groupId") groupId: string) {
+		const data = await this.groupService.findOne(groupId);
 		return new ApiResponseDto(
 			GroupResponse.fromEntity(data),
 			null,
@@ -84,12 +87,12 @@ export class GroupController {
 		);
 	}
 
-	@Delete(":id")
+	@Delete(":groupId")
 	@ApiOperation({ summary: "Delete a group" })
-	@ApiParam({ name: "id", description: "Group ID" })
+	@ApiParam({ name: "groupId", description: "Group ID" })
 	@SwaggerApiMessageResponse()
-	async deleteOne(@Param("id") id: string) {
-		await this.groupService.deleteOne(id);
+	async deleteOne(@Param("groupId") groupId: string) {
+		await this.groupService.deleteOne(groupId);
 		return new ApiMessageResponseDto("Deleted group successfully");
 	}
 }
