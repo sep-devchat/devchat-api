@@ -4,10 +4,6 @@ import { IsOptional, IsString } from "class-validator";
 export class CreateMessageRequest {
 	@ApiProperty()
 	@IsString()
-	channelId: string;
-
-	@ApiProperty()
-	@IsString()
 	@IsOptional()
 	threadId?: string;
 

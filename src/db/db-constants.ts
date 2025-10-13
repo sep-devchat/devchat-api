@@ -37,6 +37,7 @@ export const DbConstants = {
 			senderId: "sender_id",
 			content: "content",
 			parentMessageId: "parent_message_id",
+			isFirstThreadMessage: "is_first_thread_message",
 		},
 		UserMessageDelete: {
 			id: "user_message_delete_id",

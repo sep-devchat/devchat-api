@@ -13,7 +13,8 @@ export class ChannelGuard implements CanActivate {
 
 	async canActivate(context: ExecutionContext) {
 		const request = context.switchToHttp().getRequest();
-		const channelId: string = request.params.id || request.params.channelId;
+		const channelId: string =
+			request.params.channelId || request.query.channelId;
 		if (!channelId) throw new ChannelNotExistedError();
 		const channel = await this.channelService.findOne(channelId);
 		this.cls.set("channel", channel);
