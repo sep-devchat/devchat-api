@@ -40,12 +40,8 @@ export class GroupController {
 		captureResponse: true,
 	})
 	async createOne(@Body() dto: CreateGroupRequest) {
-		const response = await this.groupService.createOne(dto);
-		return new ApiResponseDto(
-			GroupResponse.fromEntity(response),
-			null,
-			"Created successfully",
-		);
+		await this.groupService.createOne(dto);
+		return new ApiResponseDto(null, null, "Created successfully");
 	}
 
 	@Put(":id")
