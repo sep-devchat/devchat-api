@@ -12,8 +12,9 @@ import {
 import { ClsService } from "nestjs-cls";
 import { DevChatCls } from "@utils";
 import { MessageNotFoundError } from "./errors";
-import { FindOptionsWhere } from "typeorm";
+import { Between, FindOptionsWhere } from "typeorm";
 import { MessageEntity } from "@db/entities";
+import dayjs from "dayjs";
 
 @Injectable()
 export class MessageService {
@@ -45,11 +46,21 @@ export class MessageService {
 	}
 
 	async findMany(query: MessageQuery) {
+		const channelId = this.cls.get("channel").id;
 		const whereObj: FindOptionsWhere<MessageEntity> = {};
 
 		if (query.threadId) {
 			whereObj.threadId = query.threadId;
+		} else {
+			whereObj.channelId = channelId;
 		}
+
+		// if (query.timestamp) {
+		// 	const end = dayjs(query.timestamp);
+		// 	const start = end.subtract(8, "hour");
+
+		// 	whereObj.createdAt = Between(start.toDate(), end.toDate());
+		// }
 
 		return this.messageRepo.find({
 			where: whereObj,
