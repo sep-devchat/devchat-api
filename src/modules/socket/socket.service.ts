@@ -3,10 +3,11 @@ import { InvalidTokenError } from "@modules/auth/errors";
 import { UserService } from "@modules/user";
 import { Injectable } from "@nestjs/common";
 import { Server, Socket } from "socket.io";
-import { AuthenticateRequest } from "./dto";
+import { AuthenticateRequest, JoinRoomRequest } from "./dto";
 import { SocketConstants } from "./socket.constants";
 import { MessageService } from "@modules/message";
 import { CreateMessageRequest, MessageResponse } from "@modules/message/dto";
+import { ChannelRepository, GroupRepository } from "@db/repositories";
 
 const { Events } = SocketConstants;
 
@@ -17,6 +18,8 @@ export class SocketService {
 		private readonly authService: AuthService,
 		private readonly userService: UserService,
 		private readonly messageService: MessageService,
+		private readonly groupRepo: GroupRepository,
+		private readonly channelRepo: ChannelRepository,
 	) {}
 
 	async authenticateSocket(client: Socket, payload: AuthenticateRequest) {
@@ -74,5 +77,41 @@ export class SocketService {
 
 		// Acknowledge back to the sender
 		return resp;
+	}
+
+	async joinRoom(client: Socket, payload: JoinRoomRequest) {
+		const { groupId, channelId } = payload;
+
+		// Validate group exists
+		const group = await this.groupRepo.findOne({ where: { id: groupId } });
+		if (!group) {
+			client.emit(Events.JOIN_ROOM_FAILED, { message: "Group not found" });
+			return;
+		}
+
+		// Validate that the channel belongs to the provided group
+		const channel = await this.channelRepo.findOne({
+			where: { id: channelId, groupId: group.id },
+		});
+		if (!channel) {
+			client.emit(Events.JOIN_ROOM_FAILED, {
+				message: "Channel not found in group",
+			});
+			return;
+		}
+
+		// Build room name convention: group:<groupId>:channel:<channelId>
+		const room = `group:${groupId}:channel:${channelId}`;
+		await client.join(room);
+
+		// Store for future usage
+		client.data.group = group;
+		client.data.channel = channel;
+
+		client.emit(Events.JOINED_ROOM, {
+			room,
+			groupId,
+			channelId,
+		});
 	}
 }

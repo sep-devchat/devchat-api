@@ -18,7 +18,7 @@ import {
 	ValidationPipe,
 } from "@nestjs/common";
 import { SocketExceptionFilter } from "./socket.exception-filter";
-import { AuthenticateRequest } from "./dto";
+import { AuthenticateRequest, JoinRoomRequest } from "./dto";
 import { SocketGuard } from "./socket.guard";
 import { SkipAuth } from "@utils";
 import { CreateMessageRequest } from "@modules/message/dto";
@@ -76,5 +76,14 @@ export class SocketGateway
 	) {
 		console.log("Message received from client:", client.id, payload);
 		return await this.socketService.sendMessage(client, payload);
+	}
+
+	@SubscribeMessage(Events.JOIN_ROOM)
+	async handleJoinRoom(
+		@ConnectedSocket() client: Socket,
+		@MessageBody() payload: JoinRoomRequest,
+	) {
+		console.log("Join room request from client:", client.id, payload);
+		return await this.socketService.joinRoom(client, payload);
 	}
 }
