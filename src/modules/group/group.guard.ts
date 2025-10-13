@@ -13,7 +13,7 @@ export class GroupGuard implements CanActivate {
 
 	async canActivate(context: ExecutionContext) {
 		const request = context.switchToHttp().getRequest();
-		const groupId = request.params.groupId;
+		const groupId: string = request.params.groupId || request.query.groupId;
 		if (!groupId) throw new GroupNotExistedError();
 		const group = await this.groupService.findOne(groupId);
 		this.cls.set("group", group);

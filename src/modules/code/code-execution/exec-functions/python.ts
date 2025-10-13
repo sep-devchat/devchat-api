@@ -1,15 +1,24 @@
 import { Docker } from "../docker";
 import { CodeExecutionFunction } from "../types";
+import * as fs from "fs";
+import { v4 as uuidv4 } from "uuid";
 
-export const javascriptExecFunction: CodeExecutionFunction = async (
+export const pythonExecFunction: CodeExecutionFunction = async (
 	code: string,
 ) => {
 	const docker = Docker.getInstance();
-	const container = await docker.createExecContainer("node:22");
+
+	const runId = uuidv4();
+	const container = await docker.createExecContainer("python:3.14", runId);
 	await container.start();
 
+	// Prepare python file
+	const execDir = docker.getExecDir(runId);
+	console.log("Preparing Python file...");
+	fs.writeFileSync(`${execDir}/script.py`, code);
+
 	const exec = await container.exec({
-		Cmd: ["node", "-e", code],
+		Cmd: ["python", "script.py"],
 		AttachStdout: true,
 		AttachStderr: true,
 	});
@@ -30,8 +39,7 @@ export const javascriptExecFunction: CodeExecutionFunction = async (
 	console.log("Exec info:");
 	console.log(JSON.stringify(execInfo, null, 2));
 
-	console.log("Stopping container...");
-	docker.cleanupContainer(container);
+	docker.cleanupContainer(container, runId);
 
 	return {
 		output: buff.toString("utf-8"),
