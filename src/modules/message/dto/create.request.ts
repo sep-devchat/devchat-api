@@ -15,4 +15,9 @@ export class CreateMessageRequest {
 	@ApiProperty()
 	@IsString()
 	content: string;
+
+	@ApiProperty()
+	@IsString()
+	@IsOptional()
+	channelId?: string;
 }

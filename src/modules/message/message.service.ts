@@ -25,8 +25,9 @@ export class MessageService {
 	) {}
 
 	async createOne(dto: CreateMessageRequest, senderId?: string) {
+		const channelId = this.cls.get("channel").id || dto.channelId;
 		const messageEntity = this.messageRepo.create({
-			channelId: this.cls.get("channel").id,
+			channelId,
 			threadId: dto.threadId,
 			senderId: senderId || this.cls.get("profile").id,
 			parentMessageId: dto.parentMessageId,
