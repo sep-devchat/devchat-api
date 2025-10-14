@@ -1,8 +1,9 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import {
 	CreateMessageRequest,
 	UpdateMessageRequest,
 	CreateUserMessageDeleteRequest,
+	MessageQuery,
 } from "./dto";
 import {
 	MessageRepository,
@@ -11,6 +12,9 @@ import {
 import { ClsService } from "nestjs-cls";
 import { DevChatCls } from "@utils";
 import { MessageNotFoundError } from "./errors";
+import { Between, FindOptionsWhere } from "typeorm";
+import { MessageEntity } from "@db/entities";
+import dayjs from "dayjs";
 
 @Injectable()
 export class MessageService {
@@ -21,8 +25,9 @@ export class MessageService {
 	) {}
 
 	async createOne(dto: CreateMessageRequest, senderId?: string) {
+		const channelId = this.cls.get("channel.id") || dto.channelId;
 		const messageEntity = this.messageRepo.create({
-			channelId: dto.channelId,
+			channelId,
 			threadId: dto.threadId,
 			senderId: senderId || this.cls.get("profile").id,
 			parentMessageId: dto.parentMessageId,
@@ -32,10 +37,34 @@ export class MessageService {
 		return this.messageRepo.insert(messageEntity);
 	}
 
-	async updateOne(id: string | number, dto: UpdateMessageRequest) {}
+	async updateOne(id: string, dto: UpdateMessageRequest) {
+		await this.findOne(id, true);
 
-	async findMany() {
+		return this.messageRepo.update(id, {
+			content: dto.content,
+			updatedAt: new Date(),
+		});
+	}
+
+	async findMany(query: MessageQuery) {
+		const channelId = this.cls.get("channel").id;
+		const whereObj: FindOptionsWhere<MessageEntity> = {};
+
+		if (query.threadId) {
+			whereObj.threadId = query.threadId;
+		} else {
+			whereObj.channelId = channelId;
+		}
+
+		// if (query.timestamp) {
+		// 	const end = dayjs(query.timestamp);
+		// 	const start = end.subtract(8, "hour");
+
+		// 	whereObj.createdAt = Between(start.toDate(), end.toDate());
+		// }
+
 		return this.messageRepo.find({
+			where: whereObj,
 			order: {
 				createdAt: "DESC",
 			},
@@ -45,40 +74,32 @@ export class MessageService {
 		});
 	}
 
-	async findOne(id: string | number) {
-		return this.messageRepo.findOne({
+	async findOne(id: string, owned: boolean = false) {
+		const message = await this.messageRepo.findOne({
 			where: { id: id as string },
 			relations: { sender: true },
 		});
+		if (
+			!message ||
+			(owned && message.senderId !== this.cls.get("profile").id)
+		) {
+			throw new MessageNotFoundError();
+		}
+		return message;
 	}
 
 	// Mark message as deleted for everyone
-	async deleteMessageForEveryone(id: string | number) {
-		const message = await this.findOne(id);
-		if (!message) {
-			throw new MessageNotFoundError();
-		}
-		// Set deletedAt timestamp for soft delete
-		message.deletedAt = new Date();
-
-		return this.messageRepo.save(message);
+	async deleteMessageForEveryone(id: string) {
+		await this.findOne(id, true);
+		await this.messageRepo.delete(id);
 	}
 
-	private async validateBeforeCreateUserMessageDelete(messageId: string) {
-		// Check if message exists
-		const message = await this.findOne(messageId);
-		if (!message) {
-			throw new MessageNotFoundError();
-		}
-	}
-
-	// Delete message for self
 	async createUserMessageDelete(request: CreateUserMessageDeleteRequest) {
 		const { messageId } = request;
 
 		const userId = this.cls.get("profile").id;
 
-		await this.validateBeforeCreateUserMessageDelete(messageId);
+		await this.findOne(messageId, true);
 
 		const message = this.userMessageDeleteRepo.create({
 			userId,

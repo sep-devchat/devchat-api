@@ -20,12 +20,13 @@ export const javaExecFunction: CodeExecutionFunction = async (code: string) => {
 		Cmd: ["javac", "Main.java"],
 		AttachStdout: true,
 		AttachStderr: true,
-		Tty: true,
 	});
 
 	console.log("Compiling Java file...");
-	let buff = Buffer.from("");
-	let stream = await exec.start({});
+	let buff = Buffer.alloc(0);
+	let stream = await exec.start({
+		Tty: true,
+	});
 	for await (const chunk of stream) {
 		buff = Buffer.concat([buff, chunk]);
 	}
@@ -35,11 +36,12 @@ export const javaExecFunction: CodeExecutionFunction = async (code: string) => {
 		Cmd: ["java", "Main"],
 		AttachStdout: true,
 		AttachStderr: true,
-		Tty: true,
 	});
 
 	console.log("Running Java file...");
-	stream = await exec.start({});
+	stream = await exec.start({
+		Tty: true,
+	});
 
 	for await (const chunk of stream) {
 		buff = Buffer.concat([buff, chunk]);
@@ -53,6 +55,6 @@ export const javaExecFunction: CodeExecutionFunction = async (code: string) => {
 	docker.cleanupContainer(container, runId);
 
 	return {
-		output: buff.toString(),
+		output: buff.toString("utf-8"),
 	};
 };

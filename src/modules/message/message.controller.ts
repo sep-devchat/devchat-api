@@ -7,6 +7,7 @@ import {
 	Get,
 	Put,
 	Delete,
+	UseGuards,
 } from "@nestjs/common";
 import { MessageService } from "./message.service";
 import {
@@ -23,8 +24,13 @@ import {
 	SwaggerApiResponse,
 } from "@utils";
 import { ApiBearerAuth, ApiOperation, ApiParam } from "@nestjs/swagger";
+import { GroupGuard } from "@modules/group";
+import { ChannelGuard } from "@modules/channel";
 
-@Controller("message")
+@Controller("group/:groupId/channel/:channelId/message")
+@UseGuards(GroupGuard, ChannelGuard)
+@ApiParam({ name: "groupId", type: String, required: true })
+@ApiParam({ name: "channelId", type: String, required: true })
 @ApiBearerAuth()
 export class MessageController {
 	constructor(private readonly messageService: MessageService) {}
@@ -36,17 +42,20 @@ export class MessageController {
 		return new ApiResponseDto(null, null, "Created successfully");
 	}
 
-	@Put(":id")
+	@Put(":messageId")
 	@SwaggerApiMessageResponse()
-	async updateOne(@Param("id") id: string, @Body() dto: UpdateMessageRequest) {
+	async updateOne(
+		@Param("messageId") id: string,
+		@Body() dto: UpdateMessageRequest,
+	) {
 		await this.messageService.updateOne(id, dto);
 		return new ApiResponseDto(null, null, "Updated successfully");
 	}
 
 	@Get()
 	@SwaggerApiResponse(MessageResponse, { isArray: true })
-	async findMany() {
-		const data = await this.messageService.findMany();
+	async findMany(@Query() query: MessageQuery) {
+		const data = await this.messageService.findMany(query);
 		return new ApiResponseDto(
 			MessageResponse.fromEntities(data),
 			null,

@@ -21,12 +21,6 @@ export class MessageResponse {
 	})
 	threadId: string | null;
 
-	@ApiProperty({
-		example: "777e8888-e99b-00d3-a111-222214174000",
-		description: "Sender (user) ID",
-	})
-	senderId: string;
-
 	@ApiPropertyOptional({
 		example: "999e0000-e11b-22d3-a333-444414174000",
 		description: "Parent message ID if this is a reply",
@@ -65,7 +59,6 @@ export class MessageResponse {
 			id: entity.id,
 			channelId: entity.channelId,
 			threadId: entity.threadId,
-			senderId: entity.senderId,
 			parentMessageId: entity.parentMessageId,
 			content: entity.content,
 			createdAt: entity.createdAt,

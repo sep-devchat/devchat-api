@@ -9,6 +9,7 @@ export const Env = {
 	DB_NAME: process.env.DB_NAME || "",
 	DB_USER: process.env.DB_USER || "",
 	DB_PASS: process.env.DB_PASS || "",
+	DB_LOGGING: process.env.DB_LOGGING === "true",
 	ENABLE_SWAGGER: process.env.ENABLE_SWAGGER === "true",
 	JWT_SECRET: process.env.JWT_SECRET || "",
 	JWT_EXPIRES_IN: Number(process.env.JWT_EXPIRES_IN || "0"),

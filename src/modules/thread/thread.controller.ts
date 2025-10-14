@@ -36,11 +36,14 @@ export class ThreadController {
 		return new ApiResponseDto(null, null, "Created successfully");
 	}
 
-	@Put(":id")
-	@ApiParam({ name: "id", type: String, required: true })
+	@Put(":threadId")
+	@ApiParam({ name: "threadId", type: String, required: true })
 	@SwaggerApiMessageResponse()
-	async updateOne(@Param("id") id: string, @Body() dto: UpdateThreadRequest) {
-		await this.threadService.updateOne(id, dto);
+	async updateOne(
+		@Param("threadId") threadId: string,
+		@Body() dto: UpdateThreadRequest,
+	) {
+		await this.threadService.updateOne(threadId, dto);
 		return new ApiResponseDto(null, null, "Updated successfully");
 	}
 
@@ -51,19 +54,19 @@ export class ThreadController {
 		return new ApiResponseDto(data);
 	}
 
-	@Get(":id")
-	@ApiParam({ name: "id", type: String, required: true })
+	@Get(":threadId")
+	@ApiParam({ name: "threadId", type: String, required: true })
 	@SwaggerApiResponse(ThreadResponse)
-	async findOne(@Param("id") id: string) {
-		const data = await this.threadService.findOne(id);
+	async findOne(@Param("threadId") threadId: string) {
+		const data = await this.threadService.findOne(threadId);
 		return new ApiResponseDto(data);
 	}
 
-	@Delete(":id")
-	@ApiParam({ name: "id", type: String, required: true })
+	@Delete(":threadId")
+	@ApiParam({ name: "threadId", type: String, required: true })
 	@SwaggerApiMessageResponse()
-	async deleteOne(@Param("id") id: string) {
-		await this.threadService.deleteOne(id);
+	async deleteOne(@Param("threadId") threadId: string) {
+		await this.threadService.deleteOne(threadId);
 		return new ApiResponseDto(null, null, "Deleted successfully");
 	}
 }

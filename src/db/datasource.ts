@@ -10,4 +10,5 @@ export const datasource = new DataSource({
 	password: Env.DB_PASS,
 	entities: [__dirname + "/entities/*.entity{.ts,.js}"],
 	migrations: [__dirname + "/migrations/*{.ts,.js}"],
+	logging: Env.DB_LOGGING ? "all" : false,
 });

@@ -69,7 +69,6 @@ export class Docker {
 					}
 				: undefined,
 		});
-		console.log(`${this.getExecDir(runId)}:${this.containerWorkingDir}`);
 		console.log("Created container for image:", image);
 
 		return container;
