@@ -16,6 +16,8 @@ import {
 	PermissionRepository,
 	UserFriendRepository,
 	AuditLogRepository,
+	AiSessionRepository,
+	AiInteractionRepository,
 } from "./repositories";
 
 const repositories = [
@@ -32,6 +34,8 @@ const repositories = [
 	PermissionRepository,
 	UserFriendRepository,
 	AuditLogRepository,
+	AiSessionRepository,
+	AiInteractionRepository,
 ];
 
 @Module({

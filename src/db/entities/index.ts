@@ -11,3 +11,5 @@ export * from "./admin-role.entity";
 export * from "./permission.entity";
 export * from "./user-friend.entity";
 export * from "./audit-log.entity";
+export * from "./ai-session.entity";
+export * from "./ai-interaction.entity";

@@ -37,6 +37,11 @@ export const Env = {
 	USE_DOCKER_DIND: process.env.USE_DOCKER_DIND === "true",
 	DOCKER_DIND_HOST: process.env.DOCKER_DIND_HOST || "",
 	DOCKER_DIND_PORT: Number(process.env.DOCKER_DIND_PORT || "0"),
+	// AI models
+	OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
+	OPENAI_MODEL: process.env.OPENAI_MODEL || "",
+	GOOGLE_API_KEY: process.env.GOOGLE_API_KEY || "",
+	GOOGLE_MODEL: process.env.GOOGLE_MODEL || "",
 } as const;
 
 console.log(Env);

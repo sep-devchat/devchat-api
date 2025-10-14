@@ -27,6 +27,9 @@
 		"schema:drop": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js schema:drop -d src/db/datasource.ts"
 	},
 	"dependencies": {
+		"@langchain/core": "^0.3.78",
+		"@langchain/google-genai": "^0.2.18",
+		"@langchain/openai": "^0.6.16",
 		"@nestjs/common": "^10.0.0",
 		"@nestjs/core": "^10.0.0",
 		"@nestjs/mapped-types": "*",
@@ -47,6 +50,7 @@
 		"google-auth-library": "^10.3.0",
 		"helmet": "^7.1.0",
 		"jsonwebtoken": "^9.0.2",
+		"langchain": "^0.3.36",
 		"multer": "^1.4.5-lts.1",
 		"mysql2": "^3.14.4",
 		"nestjs-cls": "^6.0.1",

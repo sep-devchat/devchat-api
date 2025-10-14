@@ -32,3 +32,22 @@ export enum FriendRequestStatus {
 	DECLINED = 2,
 	CANCELLED = 3,
 }
+
+export enum AIProviderEnum {
+	OPENAI = "openai",
+	GOOGLE = "google",
+}
+
+/**
+ * Types of AI requests that can be made.
+ * - `CHAT`: General chat interactions.
+ * - `SUGGEST`: Requests for suggestions or recommendations.
+ * - `EXPLAIN`: Requests for explanations or clarifications.
+ * - `REFACTOR`: Requests for code refactoring or improvements.
+ */
+export enum AIRequestTypeEnum {
+	CHAT = "chat",
+	SUGGEST = "suggest",
+	EXPLAIN = "explain",
+	REFACTOR = "refactor",
+}

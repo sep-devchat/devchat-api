@@ -21,6 +21,7 @@ import { AdminRoleModule } from "@modules/admin-role";
 import { PermissionModule } from "@modules/permission";
 import { UserFriendModule } from "@modules/user-friend";
 import { AuditLogInterceptor } from "./interceptors";
+import { AiModule } from "@modules/ai/ai.module";
 
 @Module({
 	imports: [
@@ -51,6 +52,7 @@ import { AuditLogInterceptor } from "./interceptors";
 		CodeModule,
 		AdminRoleModule,
 		PermissionModule,
+		AiModule,
 	],
 	controllers: [],
 	providers: [
