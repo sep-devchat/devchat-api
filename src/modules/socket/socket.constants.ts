@@ -7,6 +7,8 @@ export const SocketConstants = {
 		MESSAGE: "message",
 		JOIN_ROOM: "join_room",
 		JOINED_ROOM: "joined_room",
-		JOIN_ROOM_FAILED: "join_room_failed",
+		FETCH_MESSAGES: "fetch_messages",
+		EDIT_MESSAGE: "edit_message",
+		DELETE_MESSAGE: "delete_message",
 	},
 };

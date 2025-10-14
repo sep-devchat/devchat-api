@@ -6,7 +6,6 @@ import { AuthGuard, AuthModule } from "@modules/auth";
 import { UserModule } from "@modules/user";
 import { ClsModule } from "nestjs-cls";
 import { GitHubModule } from "@providers/github";
-import { MessageModule } from "@modules/message";
 import { SocketModule } from "@modules/socket";
 import { ConfigModule } from "@nestjs/config";
 import { CloudinaryModule } from "@providers/cloudinary";
@@ -39,7 +38,6 @@ import { AuditLogInterceptor } from "./interceptors";
 		AuthModule,
 		UserModule,
 		UserFriendModule,
-		MessageModule,
 		SocketModule,
 		CloudinaryModule,
 		AttachmentModule,

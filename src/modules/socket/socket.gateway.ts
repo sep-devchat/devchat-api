@@ -18,10 +18,14 @@ import {
 	ValidationPipe,
 } from "@nestjs/common";
 import { SocketExceptionFilter } from "./socket.exception-filter";
-import { AuthenticateRequest, JoinRoomRequest } from "./dto";
+import {
+	AuthenticateRequest,
+	EditMessageRequest,
+	JoinRoomRequest,
+	SendMessageRequest,
+} from "./dto";
 import { SocketGuard } from "./socket.guard";
 import { SkipAuth } from "@utils";
-import { CreateMessageRequest } from "@modules/message/dto";
 
 const { Events } = SocketConstants;
 
@@ -72,10 +76,15 @@ export class SocketGateway
 	@SubscribeMessage(Events.MESSAGE)
 	async handleMessage(
 		@ConnectedSocket() client: Socket,
-		@MessageBody() payload: CreateMessageRequest,
+		@MessageBody() payload: SendMessageRequest,
 	) {
 		console.log("Message received from client:", client.id, payload);
 		return await this.socketService.sendMessage(client, payload);
+	}
+
+	@SubscribeMessage(Events.FETCH_MESSAGES)
+	async handleFetchMessages(@ConnectedSocket() client: Socket) {
+		return await this.socketService.fetchMessages(client);
 	}
 
 	@SubscribeMessage(Events.JOIN_ROOM)
@@ -85,5 +94,21 @@ export class SocketGateway
 	) {
 		console.log("Join room request from client:", client.id, payload);
 		return await this.socketService.joinRoom(client, payload);
+	}
+
+	@SubscribeMessage(Events.EDIT_MESSAGE)
+	async handleEditMessage(
+		@ConnectedSocket() client: Socket,
+		@MessageBody() payload: EditMessageRequest,
+	) {
+		return await this.socketService.editMessage(client, payload);
+	}
+
+	@SubscribeMessage(Events.DELETE_MESSAGE)
+	async handleDeleteMessage(
+		@ConnectedSocket() client: Socket,
+		@MessageBody() id: string,
+	) {
+		return await this.socketService.deleteMessage(client, id);
 	}
 }
