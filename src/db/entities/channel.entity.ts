@@ -18,7 +18,7 @@ export class ChannelEntity {
 	id: string;
 
 	@Column({ name: ColumnName.Channel.name })
-	@Index(IndexName.Channel.name, { unique: true })
+	@Index(IndexName.Channel.name)
 	name: string;
 
 	@Column({ name: ColumnName.Group.id })
