@@ -30,10 +30,7 @@ import { CreateTaskRequest, TaskQuery, TaskResponse } from "@modules/task/dto";
 @Controller("group")
 @ApiBearerAuth()
 export class GroupController {
-	constructor(
-		private readonly groupService: GroupService,
-		private readonly taskService: TaskService,
-	) {}
+	constructor(private readonly groupService: GroupService) {}
 
 	@Post()
 	@ApiOperation({ summary: "Create a new group" })
@@ -99,42 +96,5 @@ export class GroupController {
 	async deleteOne(@Param("groupId") groupId: string) {
 		await this.groupService.deleteOne(groupId);
 		return new ApiMessageResponseDto("Deleted group successfully");
-	}
-
-	@Post(":id/tasks")
-	@ApiParam({ name: "id", description: "Group ID" })
-	@ApiOperation({ summary: "Create a new task in group" })
-	@SwaggerApiResponse(TaskResponse)
-	@AuditLog({
-		action: "TASK_CREATE",
-		entityType: "Task",
-		captureResponse: true,
-	})
-	async createTask(
-		@Param("id") groupId: string,
-		@Body() dto: CreateTaskRequest,
-	) {
-		const response = await this.taskService.createOne(groupId, dto);
-		return new ApiResponseDto(
-			TaskResponse.fromEntity(response),
-			null,
-			"Task created successfully",
-		);
-	}
-
-	@Get(":id/tasks")
-	@ApiParam({ name: "id", description: "Group ID" })
-	@ApiOperation({ summary: "Get all tasks in group" })
-	@SwaggerApiResponse(TaskResponse, { withPagination: true, isArray: true })
-	async getTasks(@Param("id") groupId: string, @Query() query: TaskQuery) {
-		const { data, pagination } = await this.taskService.findByGroup(
-			groupId,
-			query,
-		);
-		return new ApiResponseDto(
-			TaskResponse.fromEntities(data),
-			pagination,
-			"Tasks retrieved successfully",
-		);
 	}
 }

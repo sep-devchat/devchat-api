@@ -33,8 +33,11 @@ export class TaskService {
 		}
 	}
 
-	async createOne(groupId: string, dto: CreateTaskRequest) {
+	async createOne(dto: CreateTaskRequest) {
 		const userId = this.cls.get("profile").id;
+		const groupId = this.cls.get("group").id;
+
+		await this.validateBeforeCreate(groupId, dto.assigneeId);
 
 		const task = this.repo.create({
 			name: dto.name,
@@ -56,7 +59,9 @@ export class TaskService {
 		});
 	}
 
-	async findByGroup(groupId: string, query: TaskQuery) {
+	async findByGroup(query: TaskQuery) {
+		const groupId = this.cls.get("group").id;
+
 		const {
 			page,
 			limit,
@@ -163,9 +168,11 @@ export class TaskService {
 	}
 
 	async findOne(id: string) {
+		const groupId = this.cls.get("group").id;
 		const existingTask = await this.repo.findOne({
 			where: {
 				id,
+				groupId,
 				isActive: true,
 			},
 			relations: ["assignee", "creator", "group"],
