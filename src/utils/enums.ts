@@ -33,6 +33,18 @@ export enum FriendRequestStatus {
 	CANCELLED = 3,
 }
 
+export enum TaskStatusEnum {
+	TODO = 0,
+	IN_PROGRESS = 1,
+	DONE = 2,
+}
+
+export enum TaskPriorityEnum {
+	LOW = 0,
+	MEDIUM = 1,
+	HIGH = 2,
+}
+
 /**
  * Represents the priority levels for todo items.
  *

@@ -24,6 +24,8 @@ import {
 } from "@utils";
 import { ApiBearerAuth, ApiOperation, ApiParam } from "@nestjs/swagger";
 import { GroupEntity } from "@db/entities";
+import { TaskService } from "@modules/task";
+import { CreateTaskRequest, TaskQuery, TaskResponse } from "@modules/task/dto";
 
 @Controller("group")
 @ApiBearerAuth()

@@ -21,6 +21,7 @@ import { AdminRoleModule } from "@modules/admin-role";
 import { PermissionModule } from "@modules/permission";
 import { UserFriendModule } from "@modules/user-friend";
 import { AuditLogInterceptor } from "./interceptors";
+import { TaskModule } from "@modules/task";
 import { TodoModule } from "@modules/todo";
 
 @Module({
@@ -52,6 +53,7 @@ import { TodoModule } from "@modules/todo";
 		CodeModule,
 		AdminRoleModule,
 		PermissionModule,
+		TaskModule,
 		TodoModule,
 	],
 	controllers: [],

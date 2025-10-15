@@ -11,4 +11,5 @@ export * from "./admin-role.entity";
 export * from "./permission.entity";
 export * from "./user-friend.entity";
 export * from "./audit-log.entity";
+export * from "./task.entity";
 export * from "./todo.entity";

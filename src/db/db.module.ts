@@ -16,6 +16,7 @@ import {
 	PermissionRepository,
 	UserFriendRepository,
 	AuditLogRepository,
+	TaskRepository,
 	TodoRepository,
 } from "./repositories";
 
@@ -33,6 +34,7 @@ const repositories = [
 	PermissionRepository,
 	UserFriendRepository,
 	AuditLogRepository,
+	TaskRepository,
 	TodoRepository,
 ];
 

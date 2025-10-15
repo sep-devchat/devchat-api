@@ -1,7 +1,7 @@
 import { forwardRef, Module } from "@nestjs/common";
 import { UserGroupService } from "./user-group.service";
 import { UserGroupController } from "./user-group.controller";
-import { GroupModule } from "@modules/group";
+import { GroupModule } from "../group/group.module";
 import { UserModule } from "@modules/user";
 
 @Module({
