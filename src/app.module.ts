@@ -20,6 +20,7 @@ import { AdminRoleModule } from "@modules/admin-role";
 import { PermissionModule } from "@modules/permission";
 import { UserFriendModule } from "@modules/user-friend";
 import { AuditLogInterceptor } from "./interceptors";
+import { TaskModule } from "@modules/task";
 
 @Module({
 	imports: [
@@ -49,6 +50,7 @@ import { AuditLogInterceptor } from "./interceptors";
 		CodeModule,
 		AdminRoleModule,
 		PermissionModule,
+		TaskModule,
 	],
 	controllers: [],
 	providers: [
