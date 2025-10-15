@@ -22,6 +22,7 @@ import { PermissionModule } from "@modules/permission";
 import { UserFriendModule } from "@modules/user-friend";
 import { AuditLogInterceptor } from "./interceptors";
 import { TaskModule } from "@modules/task";
+import { TodoModule } from "@modules/todo";
 
 @Module({
 	imports: [
@@ -53,6 +54,7 @@ import { TaskModule } from "@modules/task";
 		AdminRoleModule,
 		PermissionModule,
 		TaskModule,
+		TodoModule,
 	],
 	controllers: [],
 	providers: [

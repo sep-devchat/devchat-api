@@ -44,3 +44,31 @@ export enum TaskPriorityEnum {
 	MEDIUM = 1,
 	HIGH = 2,
 }
+
+/**
+ * Represents the priority levels for todo items.
+ *
+ * Each priority indicates the urgency and importance of the todo:
+ * - `LOW`: Low priority tasks that can be completed when time permits
+ * - `MEDIUM`: Medium priority tasks that should be completed in a reasonable timeframe
+ * - `HIGH`: High priority tasks that require immediate or urgent attention
+ */
+export enum TodoPriorityEnum {
+	LOW = 0,
+	MEDIUM = 1,
+	HIGH = 2,
+}
+
+/**
+ * Represents the current status of a todo item in its workflow.
+ *
+ * Each status indicates the current state of the todo:
+ * - `TODO`: Task is created and pending to be started
+ * - `IN_PROGRESS`: Task is currently being worked on
+ * - `DONE`: Task has been completed successfully
+ */
+export enum TodoStatusEnum {
+	TODO = 0,
+	IN_PROGRESS = 1,
+	DONE = 2,
+}
