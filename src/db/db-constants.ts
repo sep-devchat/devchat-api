@@ -14,6 +14,7 @@ export const DbConstants = {
 		UserFriend: "user_friend",
 		AuditLog: "audit_log",
 		Task: "task",
+		Todo: "todo",
 	},
 	ColumnName: {
 		User: {
@@ -143,6 +144,14 @@ export const DbConstants = {
 			dueDate: "due_date",
 			assigneeId: "assignee_id",
 		},
+		Todo: {
+			id: "todo_id",
+			name: "name",
+			description: "description",
+			priority: "priority",
+			status: "status",
+			dueDate: "due_date",
+		},
 	},
 	IndexName: {
 		User: {
@@ -170,6 +179,9 @@ export const DbConstants = {
 		},
 		Task: {
 			groupId: "idx_task_normal_groupId",
+		},
+		Todo: {
+			userId: "idx_todo_normal_userId",
 		},
 	},
 };
