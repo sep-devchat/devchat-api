@@ -6,7 +6,6 @@ import { AuthGuard, AuthModule } from "@modules/auth";
 import { UserModule } from "@modules/user";
 import { ClsModule } from "nestjs-cls";
 import { GitHubModule } from "@providers/github";
-import { MessageModule } from "@modules/message";
 import { SocketModule } from "@modules/socket";
 import { ConfigModule } from "@nestjs/config";
 import { CloudinaryModule } from "@providers/cloudinary";
@@ -21,6 +20,8 @@ import { AdminRoleModule } from "@modules/admin-role";
 import { PermissionModule } from "@modules/permission";
 import { UserFriendModule } from "@modules/user-friend";
 import { AuditLogInterceptor } from "./interceptors";
+import { TaskModule } from "@modules/task";
+import { TodoModule } from "@modules/todo";
 import { AiModule } from "@modules/ai/ai.module";
 
 @Module({
@@ -40,7 +41,6 @@ import { AiModule } from "@modules/ai/ai.module";
 		AuthModule,
 		UserModule,
 		UserFriendModule,
-		MessageModule,
 		SocketModule,
 		CloudinaryModule,
 		AttachmentModule,
@@ -52,6 +52,8 @@ import { AiModule } from "@modules/ai/ai.module";
 		CodeModule,
 		AdminRoleModule,
 		PermissionModule,
+		TaskModule,
+		TodoModule,
 		AiModule,
 	],
 	controllers: [],

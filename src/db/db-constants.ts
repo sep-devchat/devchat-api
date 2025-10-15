@@ -17,6 +17,8 @@ export const DbConstants = {
 		Permission: "permission",
 		UserFriend: "user_friend",
 		AuditLog: "audit_log",
+		Task: "task",
+		Todo: "todo",
 		AiSession: "ai_session",
 		AiInteraction: "ai_interaction",
 	},
@@ -139,6 +141,23 @@ export const DbConstants = {
 			oldValues: "old_values",
 			newValues: "new_values",
 		},
+		Task: {
+			id: "task_id",
+			name: "name",
+			description: "description",
+			status: "status",
+			priority: "priority",
+			dueDate: "due_date",
+			assigneeId: "assignee_id",
+		},
+		Todo: {
+			id: "todo_id",
+			name: "name",
+			description: "description",
+			priority: "priority",
+			status: "status",
+			dueDate: "due_date",
+		},
 		AiSession: {
 			id: "ai_session_id",
 			userId: "user_id",
@@ -183,6 +202,12 @@ export const DbConstants = {
 			userId: "idx_audit_log_normal_userId",
 			entityType: "idx_audit_log_normal_entityType",
 			entityId: "idx_audit_log_normal_entityId",
+		},
+		Task: {
+			groupId: "idx_task_normal_groupId",
+		},
+		Todo: {
+			userId: "idx_todo_normal_userId",
 		},
 		AiSession: {
 			userId: "idx_ai_session_normal_userId",
