@@ -32,6 +32,10 @@ export class GroupService {
 			groupId: insertResult.identifiers[0].id,
 			createdAt: new Date(),
 		});
+
+		return await this.groupRepo.findOne({
+			where: { id: insertResult.identifiers[0].id },
+		});
 	}
 
 	async updateOne(id: string, dto: UpdateGroupRequest) {
