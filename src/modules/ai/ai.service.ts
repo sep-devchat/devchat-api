@@ -149,7 +149,6 @@ export class AiService {
 
 		const interaction = this.interactions.create({
 			sessionId: session.id,
-			userId: userId,
 			messageId: dto.messageId ?? null,
 			aiResponse: answer,
 			model: dto.model ?? model?.modelName ?? model?.model ?? null,

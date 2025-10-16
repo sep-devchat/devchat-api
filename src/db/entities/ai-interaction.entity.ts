@@ -10,7 +10,6 @@ import {
 	UpdateDateColumn,
 } from "typeorm";
 import { AiSessionEntity } from "./ai-session.entity";
-import { UserEntity } from "./user.entity";
 import { MessageEntity } from "./message.entity";
 
 const { TableName, ColumnName, IndexName } = DbConstants;
@@ -27,18 +26,6 @@ export class AiInteractionEntity {
 	@ManyToOne(() => AiSessionEntity, { nullable: false, onDelete: "CASCADE" })
 	@JoinColumn({ name: ColumnName.AiInteraction.sessionId })
 	session: AiSessionEntity;
-
-	@Index(IndexName.AiInteraction.userId)
-	@Column({
-		name: ColumnName.AiInteraction.userId,
-		type: "uuid",
-		nullable: true,
-	})
-	userId: string | null;
-
-	@ManyToOne(() => UserEntity, { nullable: true })
-	@JoinColumn({ name: ColumnName.AiInteraction.userId })
-	user?: UserEntity | null;
 
 	@Index(IndexName.AiInteraction.messageId)
 	@Column({
