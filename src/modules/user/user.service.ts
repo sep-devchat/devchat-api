@@ -47,7 +47,7 @@ export class UserService {
 			emailVerificationToken: emailToken,
 		});
 
-		// await sendVerificationEmail(user.email, emailToken);
+		await sendVerificationEmail(user.email, emailToken);
 
 		return await this.userRepo.insert(user);
 	}
