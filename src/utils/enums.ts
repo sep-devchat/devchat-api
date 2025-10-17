@@ -75,7 +75,7 @@ export enum TodoStatusEnum {
 
 export enum AIProviderEnum {
 	OPENAI = "openai",
-	GOOGLE = "google",
+	GEMINI = "gemini",
 }
 
 /**

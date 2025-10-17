@@ -6,7 +6,7 @@ import {
 } from "@db/repositories";
 import { AiInteractionEntity, AiSessionEntity } from "@db/entities";
 import { ClsService } from "nestjs-cls";
-import { DevChatCls, Env } from "@utils";
+import { AIProviderEnum, AIRequestTypeEnum, DevChatCls, Env } from "@utils";
 import { AskDto, StartSessionDto } from "./dto";
 import { ChatOpenAI } from "@langchain/openai";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
@@ -19,7 +19,7 @@ import {
 } from "./errors";
 import { buildPrompt } from "./ai.prompt";
 
-type ModelProvider = "openai" | "google";
+type ModelProvider = AIProviderEnum;
 
 @Injectable()
 export class AiService {
@@ -37,21 +37,21 @@ export class AiService {
 		const openaiKey = Env.OPENAI_API_KEY;
 		const googleKey = Env.GOOGLE_API_KEY;
 
-		if (provider === "openai") {
+		if (provider === AIProviderEnum.OPENAI) {
 			if (!openaiKey) throw new OpenAIKeyMissingError();
 			const model = new ChatOpenAI({
 				apiKey: openaiKey,
 				model: modelOverride || Env.OPENAI_MODEL || "gpt-4o-mini",
 			});
-			return { provider: "openai", model };
+			return { provider: AIProviderEnum.OPENAI, model };
 		}
-		if (provider === "google") {
+		if (provider === AIProviderEnum.GEMINI) {
 			if (!googleKey) throw new GoogleKeyMissingError();
 			const model = new ChatGoogleGenerativeAI({
 				apiKey: googleKey,
 				model: modelOverride || Env.GOOGLE_MODEL || "gemini-1.5-flash",
 			});
-			return { provider: "google", model };
+			return { provider: AIProviderEnum.GEMINI, model };
 		}
 
 		// Auto-pick when not provided
@@ -60,14 +60,14 @@ export class AiService {
 				apiKey: openaiKey,
 				model: Env.OPENAI_MODEL || "gpt-4o-mini",
 			});
-			return { provider: "openai", model };
+			return { provider: AIProviderEnum.OPENAI, model };
 		}
 		if (googleKey) {
 			const model = new ChatGoogleGenerativeAI({
 				apiKey: googleKey,
 				model: Env.GOOGLE_MODEL || "gemini-1.5-flash",
 			});
-			return { provider: "google", model };
+			return { provider: AIProviderEnum.GEMINI, model };
 		}
 		throw new NoLLMConfiguredError();
 	}
@@ -100,26 +100,55 @@ export class AiService {
 		if (!session) {
 			session = await this.startSession({
 				sessionType: "chat",
-				provider: dto.provider,
+				provider: undefined,
 				model: dto.model,
 			});
 		}
 
-		const { model } = this.getModel(
-			dto.provider as ModelProvider | undefined,
-			dto.model,
-		);
-
-		// Determine input text: prefer prompt, else message content
-		let inputText = dto.prompt?.trim();
-		if (!inputText && dto.messageId) {
-			const msg = await this.messages.findOne({ where: { id: dto.messageId } });
-			if (!msg) throw new MessageNotFoundError(dto.messageId);
-			inputText = msg.content?.trim();
+		// Resolve input message and parse provider/requestType from its content
+		if (!dto.messageId) {
+			throw new MissingPromptOrMessageError();
 		}
+		const msg = await this.messages.findOne({ where: { id: dto.messageId } });
+		if (!msg) throw new MessageNotFoundError(dto.messageId);
+		const raw = (msg.content || "").trim();
+		// Pattern: @<provider>/<requestType> rest of message
+		// provider: openai|gemini (map gemini->AIProviderEnum.GEMINI), requestType matches AIRequestTypeEnum
+		let parsedProvider: ModelProvider | undefined;
+		let parsedType: AIRequestTypeEnum = AIRequestTypeEnum.CHAT;
+		let strippedInput = raw;
+		const m = raw.match(/^@([a-zA-Z0-9_-]+)\/(\w+)\s+(.*)$/);
+		if (m) {
+			const prov = m[1].toLowerCase();
+			const typ = m[2].toLowerCase();
+			strippedInput = m[3];
+			if (prov === "openai") parsedProvider = AIProviderEnum.OPENAI;
+			if (prov === "google" || prov === "gemini")
+				parsedProvider = AIProviderEnum.GEMINI;
+			// map type
+			switch (typ) {
+				case "suggest":
+					parsedType = AIRequestTypeEnum.SUGGEST;
+					break;
+				case "explain":
+					parsedType = AIRequestTypeEnum.EXPLAIN;
+					break;
+				case "refactor":
+					parsedType = AIRequestTypeEnum.REFACTOR;
+					break;
+				case "chat":
+				default:
+					parsedType = AIRequestTypeEnum.CHAT;
+			}
+		}
+
+		const { model } = this.getModel(parsedProvider, dto.model);
+
+		// Input text is the stripped content after any @provider/type directive
+		const inputText = strippedInput.trim();
 		if (!inputText) throw new MissingPromptOrMessageError();
 
-		const prompt = buildPrompt(dto.requestType as any);
+		const prompt = buildPrompt(parsedType);
 		const chain = prompt.pipe(model);
 		const vars = {
 			input: inputText,
@@ -158,6 +187,15 @@ export class AiService {
 			isActive: true,
 		});
 		await this.interactions.insert(interaction);
+
+		// Save AI response as a new message in the same channel/thread as the input message
+		await this.messages.insert({
+			channelId: msg.channelId,
+			threadId: msg.threadId ?? null,
+			parentMessageId: dto.messageId,
+			senderId: userId || this.cls.get("profile")?.id || "system",
+			content: answer,
+		});
 
 		return { session, interaction, answer };
 	}

@@ -1,4 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
+import { AIProviderEnum } from "@utils";
 import { IsIn, IsOptional, IsString, IsUUID } from "class-validator";
 
 export class StartSessionDto {
@@ -19,11 +20,11 @@ export class StartSessionDto {
 	@ApiProperty({
 		description: "Preferred AI provider for this session",
 		required: false,
-		enum: ["openai", "google"],
+		enum: AIProviderEnum,
 	})
 	@IsOptional()
-	@IsIn(["openai", "google"])
-	provider?: "openai" | "google";
+	@IsIn([AIProviderEnum.OPENAI, AIProviderEnum.GEMINI])
+	provider?: AIProviderEnum;
 
 	@ApiProperty({
 		description: "Preferred model for this session",
