@@ -89,7 +89,7 @@ export class SocketService {
 			where: [
 				{
 					id: groupId,
-					createdAt: client.data.user.id,
+					createdBy: client.data.user.id,
 				},
 				{
 					id: groupId,
