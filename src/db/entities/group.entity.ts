@@ -4,9 +4,11 @@ import {
 	CreateDateColumn,
 	Entity,
 	Index,
+	OneToMany,
 	PrimaryGeneratedColumn,
 	UpdateDateColumn,
 } from "typeorm";
+import { UserGroupEntity } from "./user-group.entity";
 
 const { TableName, ColumnName, IndexName } = DbConstants;
 
@@ -36,4 +38,7 @@ export class GroupEntity {
 
 	@Column({ name: ColumnName.Group.isActive, type: "boolean", default: true })
 	isActive: boolean;
+
+	@OneToMany(() => UserGroupEntity, (userGroup) => userGroup.group)
+	userGroups: UserGroupEntity[];
 }

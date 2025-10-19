@@ -46,11 +46,37 @@ export class GroupService {
 	}
 
 	async findMany() {
-		return await this.groupRepo.find();
+		const userId = this.cls.get("profile.id");
+		return await this.groupRepo.find({
+			where: [
+				{
+					createdBy: userId,
+				},
+				{
+					userGroups: {
+						userId: userId,
+					},
+				},
+			],
+		});
 	}
 
 	async findOne(id: string) {
-		const group = await this.groupRepo.findOne({ where: { id } });
+		const userId = this.cls.get("profile.id");
+		const group = await this.groupRepo.findOne({
+			where: [
+				{
+					id,
+					createdBy: userId,
+				},
+				{
+					id,
+					userGroups: {
+						userId: userId,
+					},
+				},
+			],
+		});
 		if (!group) {
 			throw new GroupNotExistedError();
 		}
