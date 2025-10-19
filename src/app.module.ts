@@ -22,6 +22,7 @@ import { UserFriendModule } from "@modules/user-friend";
 import { AuditLogInterceptor } from "./interceptors";
 import { TaskModule } from "@modules/task";
 import { TodoModule } from "@modules/todo";
+import { CodeBlockModule } from "@modules/code-block";
 
 @Module({
 	imports: [
@@ -53,6 +54,7 @@ import { TodoModule } from "@modules/todo";
 		PermissionModule,
 		TaskModule,
 		TodoModule,
+		CodeBlockModule,
 	],
 	controllers: [],
 	providers: [

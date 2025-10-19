@@ -11,6 +11,7 @@ import {
 import { UserEntity } from "./user.entity";
 import { ChannelEntity } from "./channel.entity";
 import { ThreadEntity } from "./thread.entity";
+import { CodeBlockEntity } from "./code-block.entity";
 
 const { TableName, ColumnName, IndexName } = DbConstants;
 
@@ -42,6 +43,17 @@ export class MessageEntity {
 
 	@Column({ name: ColumnName.Message.content, type: "text" })
 	content: string;
+
+	@Column({
+		name: ColumnName.Message.codeBlockId,
+		type: "uuid",
+		nullable: true,
+	})
+	codeBlockId: string | null;
+
+	@ManyToOne(() => CodeBlockEntity)
+	@JoinColumn({ name: ColumnName.Message.codeBlockId })
+	codeBlock: CodeBlockEntity | null;
 
 	@CreateDateColumn({ type: "datetime", name: ColumnName.Audit.createdAt })
 	createdAt: Date;

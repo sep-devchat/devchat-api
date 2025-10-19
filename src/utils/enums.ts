@@ -72,3 +72,12 @@ export enum TodoStatusEnum {
 	IN_PROGRESS = 1,
 	DONE = 2,
 }
+
+export enum CodeExecutionStatus {
+	PENDING = 0,
+	RUNNING = 1,
+	COMPLETED = 2,
+	FAILED = 3,
+	TIMED_OUT = 4,
+	CANCELLED = 5,
+}
