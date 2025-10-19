@@ -5,7 +5,7 @@ import {
 	UpdateUserGroupRequest,
 	UserGroupQuery,
 } from "./dto";
-import { UserGroupRepository } from "@db/repositories";
+import { UserGroupRepository, UserRepository } from "@db/repositories";
 import { ClsService } from "nestjs-cls";
 import { DevChatCls, InvitationStatus, PaginationDto } from "@utils";
 import { GroupService } from "@modules/group";
@@ -28,48 +28,32 @@ export class UserGroupService {
 		private readonly groupService: GroupService,
 		private readonly userService: UserService,
 		private readonly cls: ClsService<DevChatCls>,
+		private userRepo: UserRepository,
 	) {}
 
-	async getGroupMembers(groupId: string, query: UserGroupQuery) {
-		const { page, limit } = query;
-		// Validate if group service exists
-		await this.groupService.findOne(groupId);
+	async getGroupMembers() {
+		const groupId = this.cls.get("group").id;
 
-		const [data, total] = await this.userGroupRepo.findAndCount({
-			where: { group: { id: groupId }, status: InvitationStatus.ACCEPTED },
-			relations: ["user", "addedBy", "group"],
+		return this.userRepo.find({
+			where: {
+				userGroups: {
+					groupId: groupId,
+				},
+			},
 		});
-
-		const pagination = new PaginationDto(page, limit, total);
-
-		const users: UserEntity[] = [];
-		data.map((userGroup) => users.push(userGroup.user));
-
-		return {
-			users,
-			pagination,
-		};
 	}
+
 	async updateOne(id: string | number, dto: UpdateUserGroupRequest) {}
 
-	async findMany(query: UserGroupQuery) {
-		const { page = 1, limit = 10 } = query;
-
-		const where: FindOptionsWhere<UserGroupEntity> = {};
-
-		const [data, total] = await this.userGroupRepo.findAndCount({
-			where,
-			skip: (page - 1) * limit,
-			take: limit,
-			order: { joinedAt: "DESC" },
+	async findMany() {
+		return this.userGroupRepo.find({
+			where: {
+				groupId: this.cls.get("group").id,
+			},
+			relations: {
+				user: true,
+			},
 		});
-
-		const pagination = new PaginationDto(page, limit, total);
-
-		return {
-			data,
-			pagination,
-		};
 	}
 
 	async findOne(id: string) {

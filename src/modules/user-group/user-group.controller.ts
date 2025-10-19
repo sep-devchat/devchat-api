@@ -14,7 +14,6 @@ import {
 	CreateInvitationRequest,
 	DeleteMemberRequest,
 	UpdateUserGroupRequest,
-	UserGroupQuery,
 	UserGroupResponse,
 } from "./dto";
 import {
@@ -24,9 +23,9 @@ import {
 	SwaggerApiResponse,
 } from "@utils";
 import { ApiBearerAuth, ApiOperation, ApiParam } from "@nestjs/swagger";
-import { MemberResponse } from "./dto/member.response";
 import { UpdateInvitationRequest } from "./dto/update-invitation.request";
 import { GroupGuard } from "@modules/group";
+import { UserResponse } from "@modules/user/dto";
 
 @ApiBearerAuth()
 @UseGuards(GroupGuard)
@@ -62,15 +61,12 @@ export class UserGroupController {
 	@Get()
 	@ApiOperation({ summary: "Get all members of group" })
 	@ApiParam({ name: "groupId", description: "Group ID" })
-	@SwaggerApiResponse(MemberResponse, { isArray: true, withPagination: true })
-	async getGroupMembers(
-		@Param("groupId") groupId: string,
-		@Query() query: UserGroupQuery,
-	) {
-		const data = await this.userGroupService.getGroupMembers(groupId, query);
+	@SwaggerApiResponse(UserResponse, { isArray: true })
+	async getGroupMembers() {
+		const data = await this.userGroupService.getGroupMembers();
 		return new ApiResponseDto(
-			MemberResponse.fromEntities(data.users),
-			data.pagination,
+			UserResponse.fromEntities(data),
+			null,
 			"Members retrieved successfully",
 		);
 	}
