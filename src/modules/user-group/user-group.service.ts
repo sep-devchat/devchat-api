@@ -152,18 +152,18 @@ export class UserGroupService {
 	}
 	// Invite user to a group
 	async inviteUser(request: CreateInvitationRequest) {
-		const { userId } = request;
+		const { userIdOrEmail } = request;
 		const invitedById = this.cls.get("profile").id;
 		const groupId = this.cls.get("group").id;
 
 		// Validate group and user exist
 		const group = await this.groupService.findOne(groupId);
-		const user = await this.userService.findById(userId);
+		const user = await this.userService.findByUniqueKey(userIdOrEmail);
 		const addedBy = await this.userService.findById(invitedById);
 
 		// Check if already invited/member
 		const existing = await this.userGroupRepo.findOne({
-			where: { group: { id: groupId }, user: { id: userId } },
+			where: { group: { id: groupId }, user: { id: user.id } },
 		});
 
 		if (existing) {
@@ -198,13 +198,13 @@ export class UserGroupService {
 
 	// Update invitation status (accepted/declined)
 	async updateInvitationStatus(request: UpdateInvitationRequest) {
-		const { userId, status } = request;
+		const { userIdOrEmail, status } = request;
 		const groupId = this.cls.get("group").id;
 
 		const invitation = await this.userGroupRepo.findOne({
 			where: {
 				group: { id: groupId },
-				user: { id: userId },
+				user: [{ id: userIdOrEmail }, { email: userIdOrEmail }],
 				status: InvitationStatus.PENDING,
 			},
 			relations: ["user", "group", "addedBy"],
