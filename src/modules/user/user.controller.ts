@@ -45,7 +45,7 @@ export class UserController {
 	@Post()
 	@ApiOperation({ summary: "Create a new user" })
 	@SwaggerApiMessageResponse()
-	// @SkipAuth()
+	@SkipAuth()
 	async register(@Body() dto: CreateUserRequest) {
 		await this.userService.create(dto);
 		return new ApiMessageResponseDto("User created successfully");
