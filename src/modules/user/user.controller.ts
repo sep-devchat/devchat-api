@@ -12,14 +12,17 @@ import { UserService } from "./user.service";
 import {
 	ApiMessageResponseDto,
 	ApiResponseDto,
+	FriendRequestStatus,
 	SkipAuth,
 	SwaggerApiMessageResponse,
 	SwaggerApiResponse,
 } from "@utils";
 import { CreateUserRequest } from "./dto/create-user.request";
 import { ApiBearerAuth, ApiOperation, ApiParam } from "@nestjs/swagger";
-import { UpdateUserRequest, UserQuery } from "./dto";
+import { GetFriendRequestQuery, UpdateUserRequest, UserQuery } from "./dto";
 import { UserResponse } from "./dto/user.response";
+import { FriendRequestResponseDto } from "@modules/user-friend/dto";
+import { query } from "express";
 
 @Controller("user")
 export class UserController {
@@ -42,7 +45,7 @@ export class UserController {
 	@Post()
 	@ApiOperation({ summary: "Create a new user" })
 	@SwaggerApiMessageResponse()
-	@SkipAuth()
+	// @SkipAuth()
 	async register(@Body() dto: CreateUserRequest) {
 		await this.userService.create(dto);
 		return new ApiMessageResponseDto("User created successfully");
@@ -82,6 +85,43 @@ export class UserController {
 			UserResponse.fromEntities(response.data),
 			response.pagination,
 			"Users retrieved successfully",
+		);
+	}
+
+	@Get("/:id/friend-request/sent")
+	@ApiBearerAuth()
+	@ApiOperation({ summary: "Get friend requests sent by the user" })
+	async getFriendRequests(
+		@Param("id") userId: string,
+		@Query() query: GetFriendRequestQuery,
+	) {
+		const response = await this.userService.getSentFriendRequests(
+			userId,
+			query,
+		);
+
+		return new ApiResponseDto<FriendRequestResponseDto[]>(
+			FriendRequestResponseDto.fromEntities(response),
+			null,
+			"Friend request retrieved successully",
+		);
+	}
+
+	@Get(":id/friend-requests/received")
+	@ApiBearerAuth()
+	@ApiOperation({ summary: "Get friend requests received by the user" })
+	async getReceivedFriendRequests(
+		@Param("id") userId: string,
+		@Query() query: GetFriendRequestQuery,
+	) {
+		const response = await this.userService.getReceivedFriendRequests(
+			userId,
+			query,
+		);
+		return new ApiResponseDto<FriendRequestResponseDto[]>(
+			FriendRequestResponseDto.fromEntities(response),
+			null,
+			"Received friend requests retrieved successfully",
 		);
 	}
 }

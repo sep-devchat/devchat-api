@@ -1,18 +1,28 @@
-import { UserRepository } from "@db/repositories";
+import { UserFriendRepository, UserRepository } from "@db/repositories";
 import { Injectable } from "@nestjs/common";
 import { UserExistedError } from "./errors/user-existed.error";
 import * as bcrypt from "bcryptjs";
-import { PaginationDto } from "@utils";
-import { CreateUserRequest, UpdateUserRequest, UserQuery } from "./dto";
+import { DevChatCls, FriendRequestStatus, PaginationDto } from "@utils";
+import {
+	CreateUserRequest,
+	GetFriendRequestQuery,
+	UpdateUserRequest,
+	UserQuery,
+} from "./dto";
 import { UserNotFoundError } from "./errors";
 import { randomBytes } from "crypto";
 import { sendVerificationEmail } from "src/utils/mailer";
+import { ClsService } from "nestjs-cls";
 
 const emailToken = randomBytes(32).toString("hex");
 
 @Injectable()
 export class UserService {
-	constructor(private readonly userRepo: UserRepository) {}
+	constructor(
+		private readonly userRepo: UserRepository,
+		private readonly cls: ClsService<DevChatCls>,
+		private readonly userFriendRepo: UserFriendRepository,
+	) {}
 
 	async validateBeforeCreate(dto: CreateUserRequest) {
 		const user = await this.userRepo.findOne({
@@ -122,5 +132,38 @@ export class UserService {
 		const user = await this.findByUniqueKey(id);
 		user.isActive = false;
 		await this.userRepo.save(user);
+	}
+
+	async getSentFriendRequests(userId: string, query: GetFriendRequestQuery) {
+		// const userId = this.cls.get("profile").id;
+
+		const { status } = query;
+		const friendRequests = await this.userFriendRepo.find({
+			where: {
+				senderId: userId,
+				status,
+			},
+			relations: ["sender", "receiver"],
+		});
+
+		return friendRequests;
+	}
+
+	async getReceivedFriendRequests(
+		userId: string,
+		query: GetFriendRequestQuery,
+	) {
+		// const userId = this.cls.get("profile").id;
+
+		const { status } = query;
+		const friendRequests = await this.userFriendRepo.find({
+			where: {
+				receiverId: userId,
+				status,
+			},
+			relations: ["sender", "receiver"],
+		});
+
+		return friendRequests;
 	}
 }
