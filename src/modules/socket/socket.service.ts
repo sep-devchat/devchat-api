@@ -142,11 +142,16 @@ export class SocketService {
 		const listUsers = await this.userRepo.find({
 			where: { userGroups: { groupId: message.channel.groupId } },
 		});
-		listUsers.forEach((user) =>
-			this.server
-				.to(this.constructUserRoomName(user.id))
-				.emit(Events.MESSAGE_NOTIFICATION, MessageResponse.fromEntity(message)),
-		);
+		listUsers.forEach((user) => {
+			if (user.id !== message.senderId) {
+				this.server
+					.to(this.constructUserRoomName(user.id))
+					.emit(
+						Events.MESSAGE_NOTIFICATION,
+						MessageResponse.fromEntity(message),
+					);
+			}
+		});
 	}
 
 	async sendMessage(client: Socket, payload: SendMessageRequest) {
