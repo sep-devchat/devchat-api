@@ -88,17 +88,11 @@ export class UserController {
 		);
 	}
 
-	@Get("/:id/friend-request/sent")
+	@Get("/friend-request/sent")
 	@ApiBearerAuth()
 	@ApiOperation({ summary: "Get friend requests sent by the user" })
-	async getFriendRequests(
-		@Param("id") userId: string,
-		@Query() query: GetFriendRequestQuery,
-	) {
-		const response = await this.userService.getSentFriendRequests(
-			userId,
-			query,
-		);
+	async getFriendRequests(@Query() query: GetFriendRequestQuery) {
+		const response = await this.userService.getSentFriendRequests(query);
 
 		return new ApiResponseDto<FriendRequestResponseDto[]>(
 			FriendRequestResponseDto.fromEntities(response),
@@ -107,17 +101,11 @@ export class UserController {
 		);
 	}
 
-	@Get(":id/friend-requests/received")
+	@Get("friend-requests/received")
 	@ApiBearerAuth()
 	@ApiOperation({ summary: "Get friend requests received by the user" })
-	async getReceivedFriendRequests(
-		@Param("id") userId: string,
-		@Query() query: GetFriendRequestQuery,
-	) {
-		const response = await this.userService.getReceivedFriendRequests(
-			userId,
-			query,
-		);
+	async getReceivedFriendRequests(@Query() query: GetFriendRequestQuery) {
+		const response = await this.userService.getReceivedFriendRequests(query);
 		return new ApiResponseDto<FriendRequestResponseDto[]>(
 			FriendRequestResponseDto.fromEntities(response),
 			null,

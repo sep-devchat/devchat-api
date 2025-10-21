@@ -134,8 +134,8 @@ export class UserService {
 		await this.userRepo.save(user);
 	}
 
-	async getSentFriendRequests(userId: string, query: GetFriendRequestQuery) {
-		// const userId = this.cls.get("profile").id;
+	async getSentFriendRequests(query: GetFriendRequestQuery) {
+		const userId = this.cls.get("profile").id;
 
 		const { status } = query;
 		const friendRequests = await this.userFriendRepo.find({
@@ -149,11 +149,8 @@ export class UserService {
 		return friendRequests;
 	}
 
-	async getReceivedFriendRequests(
-		userId: string,
-		query: GetFriendRequestQuery,
-	) {
-		// const userId = this.cls.get("profile").id;
+	async getReceivedFriendRequests(query: GetFriendRequestQuery) {
+		const userId = this.cls.get("profile").id;
 
 		const { status } = query;
 		const friendRequests = await this.userFriendRepo.find({
