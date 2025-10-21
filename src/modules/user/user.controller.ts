@@ -12,14 +12,17 @@ import { UserService } from "./user.service";
 import {
 	ApiMessageResponseDto,
 	ApiResponseDto,
+	FriendRequestStatus,
 	SkipAuth,
 	SwaggerApiMessageResponse,
 	SwaggerApiResponse,
 } from "@utils";
 import { CreateUserRequest } from "./dto/create-user.request";
 import { ApiBearerAuth, ApiOperation, ApiParam } from "@nestjs/swagger";
-import { UpdateUserRequest, UserQuery } from "./dto";
+import { GetFriendRequestQuery, UpdateUserRequest, UserQuery } from "./dto";
 import { UserResponse } from "./dto/user.response";
+import { FriendRequestResponseDto } from "@modules/user-friend/dto";
+import { query } from "express";
 
 @Controller("user")
 export class UserController {
@@ -82,6 +85,31 @@ export class UserController {
 			UserResponse.fromEntities(response.data),
 			response.pagination,
 			"Users retrieved successfully",
+		);
+	}
+
+	@Get("/friend-request/sent")
+	@ApiBearerAuth()
+	@ApiOperation({ summary: "Get friend requests sent by the user" })
+	async getFriendRequests(@Query() query: GetFriendRequestQuery) {
+		const response = await this.userService.getSentFriendRequests(query);
+
+		return new ApiResponseDto<FriendRequestResponseDto[]>(
+			FriendRequestResponseDto.fromEntities(response),
+			null,
+			"Friend request retrieved successully",
+		);
+	}
+
+	@Get("friend-requests/received")
+	@ApiBearerAuth()
+	@ApiOperation({ summary: "Get friend requests received by the user" })
+	async getReceivedFriendRequests(@Query() query: GetFriendRequestQuery) {
+		const response = await this.userService.getReceivedFriendRequests(query);
+		return new ApiResponseDto<FriendRequestResponseDto[]>(
+			FriendRequestResponseDto.fromEntities(response),
+			null,
+			"Received friend requests retrieved successfully",
 		);
 	}
 }

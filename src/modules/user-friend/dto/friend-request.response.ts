@@ -64,4 +64,10 @@ export class FriendRequestResponseDto {
 		}
 		return dto;
 	}
+
+	static fromEntities(
+		entities: UserFriendEntity[],
+	): FriendRequestResponseDto[] {
+		return entities.map((entity) => this.fromEntity(entity));
+	}
 }
