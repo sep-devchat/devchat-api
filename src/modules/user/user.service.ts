@@ -1,19 +1,22 @@
-import { UserGroupRepository, UserRepository } from "@db/repositories";
+import {
+	UserFriendRepository,
+	UserRepository,
+	UserGroupRepository,
+} from "@db/repositories";
 import { Injectable } from "@nestjs/common";
 import { UserExistedError } from "./errors/user-existed.error";
 import * as bcrypt from "bcryptjs";
-import { DevChatCls, InvitationStatus, PaginationDto } from "@utils";
 import {
-	CreateUserRequest,
+	GetFriendRequestQuery,
 	GroupRequestQuery,
 	UpdateUserRequest,
 	UserQuery,
+	CreateUserRequest,
 } from "./dto";
+import { DevChatCls, PaginationDto } from "@utils";
 import { UserNotFoundError } from "./errors";
 import { randomBytes } from "crypto";
-import { sendVerificationEmail } from "src/utils/mailer";
 import { ClsService } from "nestjs-cls";
-import { group } from "console";
 
 const emailToken = randomBytes(32).toString("hex");
 
@@ -21,8 +24,9 @@ const emailToken = randomBytes(32).toString("hex");
 export class UserService {
 	constructor(
 		private readonly userRepo: UserRepository,
-		private readonly cls: ClsService<DevChatCls>,
 		private readonly userGroupRepo: UserGroupRepository,
+		private readonly cls: ClsService<DevChatCls>,
+		private readonly userFriendRepo: UserFriendRepository,
 	) {}
 
 	async validateBeforeCreate(dto: CreateUserRequest) {
@@ -133,6 +137,36 @@ export class UserService {
 		const user = await this.findByUniqueKey(id);
 		user.isActive = false;
 		await this.userRepo.save(user);
+	}
+
+	async getSentFriendRequests(query: GetFriendRequestQuery) {
+		const userId = this.cls.get("profile").id;
+
+		const { status } = query;
+		const friendRequests = await this.userFriendRepo.find({
+			where: {
+				senderId: userId,
+				status,
+			},
+			relations: ["sender", "receiver"],
+		});
+
+		return friendRequests;
+	}
+
+	async getReceivedFriendRequests(query: GetFriendRequestQuery) {
+		const userId = this.cls.get("profile").id;
+
+		const { status } = query;
+		const friendRequests = await this.userFriendRepo.find({
+			where: {
+				receiverId: userId,
+				status,
+			},
+			relations: ["sender", "receiver"],
+		});
+
+		return friendRequests;
 	}
 
 	async getReceiveGroupRequests(query: GroupRequestQuery) {

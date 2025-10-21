@@ -12,5 +12,5 @@ export class GroupRequestQuery {
 	@IsEnum(InvitationStatus)
 	@IsOptional()
 	@Type(() => Number)
-	status: InvitationStatus;
+	status: InvitationStatus = InvitationStatus.PENDING;
 }
