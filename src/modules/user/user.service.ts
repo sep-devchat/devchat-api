@@ -1,18 +1,29 @@
-import { UserRepository } from "@db/repositories";
+import { UserGroupRepository, UserRepository } from "@db/repositories";
 import { Injectable } from "@nestjs/common";
 import { UserExistedError } from "./errors/user-existed.error";
 import * as bcrypt from "bcryptjs";
-import { PaginationDto } from "@utils";
-import { CreateUserRequest, UpdateUserRequest, UserQuery } from "./dto";
+import { DevChatCls, InvitationStatus, PaginationDto } from "@utils";
+import {
+	CreateUserRequest,
+	GroupRequestQuery,
+	UpdateUserRequest,
+	UserQuery,
+} from "./dto";
 import { UserNotFoundError } from "./errors";
 import { randomBytes } from "crypto";
 import { sendVerificationEmail } from "src/utils/mailer";
+import { ClsService } from "nestjs-cls";
+import { group } from "console";
 
 const emailToken = randomBytes(32).toString("hex");
 
 @Injectable()
 export class UserService {
-	constructor(private readonly userRepo: UserRepository) {}
+	constructor(
+		private readonly userRepo: UserRepository,
+		private readonly cls: ClsService<DevChatCls>,
+		private readonly userGroupRepo: UserGroupRepository,
+	) {}
 
 	async validateBeforeCreate(dto: CreateUserRequest) {
 		const user = await this.userRepo.findOne({
@@ -122,5 +133,35 @@ export class UserService {
 		const user = await this.findByUniqueKey(id);
 		user.isActive = false;
 		await this.userRepo.save(user);
+	}
+
+	async getReceiveGroupRequests(query: GroupRequestQuery) {
+		const userId = this.cls.get("profile").id;
+		const { status } = query;
+
+		const groupRequests = this.userGroupRepo.find({
+			where: {
+				userId,
+				status,
+			},
+			relations: ["user", "group", "addedBy"],
+		});
+
+		return groupRequests;
+	}
+
+	async getSentGroupRequests(query: GroupRequestQuery) {
+		const userId = this.cls.get("profile").id;
+		const { status } = query;
+
+		const groupRequests = this.userGroupRepo.find({
+			where: {
+				addedById: userId,
+				status,
+			},
+			relations: ["user", "group", "addedBy"],
+		});
+
+		return groupRequests;
 	}
 }

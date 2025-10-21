@@ -3,13 +3,18 @@ import { CreateGroupRequest, UpdateGroupRequest } from "./dto";
 import { GroupNotExistedError } from "./errors";
 import { DevChatCls } from "@utils";
 import { ClsService } from "nestjs-cls";
-import { ChannelRepository, GroupRepository } from "@db/repositories";
+import {
+	ChannelRepository,
+	GroupRepository,
+	UserGroupRepository,
+} from "@db/repositories";
 import { Transactional } from "typeorm-transactional";
 
 @Injectable()
 export class GroupService {
 	constructor(
 		private readonly groupRepo: GroupRepository,
+		private readonly userGroupRepo: UserGroupRepository,
 		private readonly channelRepo: ChannelRepository,
 		private readonly cls: ClsService<DevChatCls>,
 	) {}
@@ -31,6 +36,15 @@ export class GroupService {
 			createdBy: createdBy,
 			groupId: insertResult.identifiers[0].id,
 			createdAt: new Date(),
+		});
+
+		await this.userGroupRepo.insert({
+			groupId: group.id,
+			invitedAt: new Date(),
+			joinedAt: new Date(),
+			userId: createdBy,
+			addedById: createdBy,
+			status: 1,
 		});
 
 		return await this.groupRepo.findOne({
