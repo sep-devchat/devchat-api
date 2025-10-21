@@ -19,10 +19,11 @@ import {
 } from "@utils";
 import { CreateUserRequest } from "./dto/create-user.request";
 import { ApiBearerAuth, ApiOperation, ApiParam } from "@nestjs/swagger";
-import { GetFriendRequestQuery, UpdateUserRequest, UserQuery } from "./dto";
+import { GroupRequestQuery, UpdateUserRequest, UserQuery } from "./dto";
 import { UserResponse } from "./dto/user.response";
 import { FriendRequestResponseDto } from "@modules/user-friend/dto";
-import { query } from "express";
+import { UserGroupResponse } from "@modules/user-group/dto";
+import { GetFriendRequestQuery } from "./dto/get-friend.query";
 
 @Controller("user")
 export class UserController {
@@ -110,6 +111,34 @@ export class UserController {
 			FriendRequestResponseDto.fromEntities(response),
 			null,
 			"Received friend requests retrieved successfully",
+		);
+	}
+
+	@Get("group-requests/sent")
+	@ApiBearerAuth()
+	@ApiOperation({ summary: "Get all sent group requests" })
+	@SwaggerApiResponse(UserGroupResponse)
+	async getSentGroupRequests(@Query() query: GroupRequestQuery) {
+		const response = await this.userService.getSentGroupRequests(query);
+
+		return new ApiResponseDto<UserGroupResponse[]>(
+			UserGroupResponse.fromEntities(response),
+			null,
+			"Users retrieved successfully",
+		);
+	}
+
+	@Get("group-requests/received")
+	@ApiBearerAuth()
+	@ApiOperation({ summary: "Get all received group requests" })
+	@SwaggerApiResponse(UserGroupResponse)
+	async getReceivedGroupRequests(@Query() query: GroupRequestQuery) {
+		const response = await this.userService.getReceiveGroupRequests(query);
+
+		return new ApiResponseDto<UserGroupResponse[]>(
+			UserGroupResponse.fromEntities(response),
+			null,
+			"Users retrieved successfully",
 		);
 	}
 }

@@ -1,17 +1,21 @@
-import { UserFriendRepository, UserRepository } from "@db/repositories";
+import {
+	UserFriendRepository,
+	UserRepository,
+	UserGroupRepository,
+} from "@db/repositories";
 import { Injectable } from "@nestjs/common";
 import { UserExistedError } from "./errors/user-existed.error";
 import * as bcrypt from "bcryptjs";
-import { DevChatCls, FriendRequestStatus, PaginationDto } from "@utils";
 import {
-	CreateUserRequest,
 	GetFriendRequestQuery,
+	GroupRequestQuery,
 	UpdateUserRequest,
 	UserQuery,
+	CreateUserRequest,
 } from "./dto";
+import { DevChatCls, PaginationDto } from "@utils";
 import { UserNotFoundError } from "./errors";
 import { randomBytes } from "crypto";
-import { sendVerificationEmail } from "src/utils/mailer";
 import { ClsService } from "nestjs-cls";
 
 const emailToken = randomBytes(32).toString("hex");
@@ -20,6 +24,7 @@ const emailToken = randomBytes(32).toString("hex");
 export class UserService {
 	constructor(
 		private readonly userRepo: UserRepository,
+		private readonly userGroupRepo: UserGroupRepository,
 		private readonly cls: ClsService<DevChatCls>,
 		private readonly userFriendRepo: UserFriendRepository,
 	) {}
@@ -162,5 +167,35 @@ export class UserService {
 		});
 
 		return friendRequests;
+	}
+
+	async getReceiveGroupRequests(query: GroupRequestQuery) {
+		const userId = this.cls.get("profile").id;
+		const { status } = query;
+
+		const groupRequests = this.userGroupRepo.find({
+			where: {
+				userId,
+				status,
+			},
+			relations: ["user", "group", "addedBy"],
+		});
+
+		return groupRequests;
+	}
+
+	async getSentGroupRequests(query: GroupRequestQuery) {
+		const userId = this.cls.get("profile").id;
+		const { status } = query;
+
+		const groupRequests = this.userGroupRepo.find({
+			where: {
+				addedById: userId,
+				status,
+			},
+			relations: ["user", "group", "addedBy"],
+		});
+
+		return groupRequests;
 	}
 }

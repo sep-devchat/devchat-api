@@ -26,6 +26,9 @@ export class UserGroupEntity {
 	@Column({ name: ColumnName.UserGroup.userId })
 	userId: string;
 
+	@Column({ name: ColumnName.UserGroup.addedBy })
+	addedById: string;
+
 	@ManyToOne(() => UserEntity, (user) => user.userGroups)
 	@JoinColumn({ name: ColumnName.UserGroup.userId })
 	user: UserEntity;

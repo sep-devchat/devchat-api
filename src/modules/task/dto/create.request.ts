@@ -61,6 +61,7 @@ export class CreateTaskRequest {
 		description: "ID of the user assigned to this task",
 	})
 	@IsString()
+	@IsOptional()
 	@IsUUID()
 	assigneeId: string;
 }
