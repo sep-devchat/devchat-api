@@ -38,6 +38,7 @@ export class UserGroupService {
 			where: {
 				userGroups: {
 					groupId: groupId,
+					status: InvitationStatus.ACCEPTED,
 				},
 			},
 		});
