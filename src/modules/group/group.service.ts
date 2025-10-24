@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { CreateGroupRequest, UpdateGroupRequest } from "./dto";
 import { GroupNotExistedError } from "./errors";
-import { DevChatCls } from "@utils";
+import { DevChatCls, InvitationStatus } from "@utils";
 import { ClsService } from "nestjs-cls";
 import {
 	ChannelRepository,
@@ -69,6 +69,7 @@ export class GroupService {
 				{
 					userGroups: {
 						userId: userId,
+						status: InvitationStatus.ACCEPTED,
 					},
 				},
 			],
@@ -87,6 +88,7 @@ export class GroupService {
 					id,
 					userGroups: {
 						userId: userId,
+						status: InvitationStatus.ACCEPTED,
 					},
 				},
 			],
