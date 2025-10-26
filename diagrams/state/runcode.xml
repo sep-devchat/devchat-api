@@ -1,0 +1,73 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="State Diagram">
+    <mxGraphModel dx="1080" dy="720" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- States -->
+        <mxCell id="Queued" value="Queued&#10;The code execution request has been received and is waiting for an available runner." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="100" y="100" width="200" height="80" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="Building" value="Building&#10;The environment is being prepared (e.g., pulling a Docker image, installing dependencies)." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="400" y="100" width="220" height="80" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="Running" value="Running&#10;The code is actively being executed." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="700" y="100" width="200" height="80" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="Completed" value="Completed&#10;The execution finished successfully." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="100" width="200" height="80" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="Failed" value="Failed&#10;The execution failed due to a build error or runtime error." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="250" width="200" height="80" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="Cancelled" value="Cancelled" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="400" width="200" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Transitions -->
+        <mxCell id="t1" value="startBuild() [buildRequired]" style="endArrow=block;html=1;strokeWidth=1.5;" edge="1" parent="1" source="Queued" target="Building">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="t2" value="startExecution() [!buildRequired]" style="endArrow=block;html=1;strokeWidth=1.5;" edge="1" parent="1" source="Queued" target="Running">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="t3" value="buildSuccess()" style="endArrow=block;html=1;strokeWidth=1.5;" edge="1" parent="1" source="Building" target="Running">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="t4" value="buildFailed()" style="endArrow=block;html=1;strokeWidth=1.5;" edge="1" parent="1" source="Building" target="Failed">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="t5" value="executionSuccess()" style="endArrow=block;html=1;strokeWidth=1.5;" edge="1" parent="1" source="Running" target="Completed">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="t6" value="executionError()" style="endArrow=block;html=1;strokeWidth=1.5;" edge="1" parent="1" source="Running" target="Failed">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="t7" value="cancel()" style="endArrow=block;dashed=1;html=1;strokeColor=#999999;" edge="1" parent="1" source="Queued" target="Cancelled">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="t8" value="cancel()" style="endArrow=block;dashed=1;html=1;strokeColor=#999999;" edge="1" parent="1" source="Building" target="Cancelled">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="t9" value="cancel()" style="endArrow=block;dashed=1;html=1;strokeColor=#999999;" edge="1" parent="1" source="Running" target="Cancelled">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

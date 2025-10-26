@@ -1,0 +1,15 @@
+stateDiagram-v2
+    [*] --> Pending: User sends a message
+
+    Pending --> Sent: Message successfully sent from client to server
+    Pending --> Failed: Message failed to send (e.g., no network)
+
+    Sent --> Delivered: Message delivered to recipient's device
+    Sent --> Failed: Delivery confirmation not received
+
+    Delivered --> Read: Recipient has opened and read the message
+
+    Failed --> Pending: User retries sending the message
+
+    Read --> [*]
+    Failed --> [*]

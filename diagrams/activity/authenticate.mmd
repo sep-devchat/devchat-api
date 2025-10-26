@@ -1,0 +1,37 @@
+graph TD
+    subgraph User
+        A["Start: User requests password reset\nwith their email"] --> B{"Submits reset code\nand new password"};
+        B --> C["Receives success/error message"];
+        C --> D["End"];
+    end
+
+    subgraph DevChat API
+        E("Receives 'forgot-password' request") --> F{"Find user by email"};
+        F -- "User Found" --> G("Generate 6-digit code and expiry");
+        G --> H("Save reset token to DB");
+        H --> I("Trigger email service");
+        F -- "User Not Found" --> J["End Process Gracefully\n(to prevent email enumeration)"];
+
+        K("Receives 'reset-password' request") --> L{"Find user and token"};
+        L -- "Not Found" --> M["Send 'Invalid Code' error"];
+        L -- "Found" --> N{"Is token used or expired?"};
+        N -- "Yes" --> M;
+        N -- "No" --> O{"Is new password same as old?"};
+        O -- "Yes" --> P["Send 'Password Duplicated' error"];
+        O -- "No" --> Q("Hash new password");
+        Q --> R("Update user's password in DB");
+        R --> S("Mark reset token as used");
+        S --> T["Send 'Success' response"];
+    end
+
+    subgraph Email Service
+        U("Receives request from API") --> V("Sends email with code to user");
+    end
+
+    %% Connections
+    A --> E;
+    I --> U;
+    B --> K;
+    M --> C;
+    P --> C;
+    T --> C;

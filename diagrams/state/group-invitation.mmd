@@ -1,0 +1,29 @@
+stateDiagram-v2
+    direction LR
+    [*] --> NotAMember
+
+    state "NotAMember" as NotAMember
+    note right of NotAMember
+        The user has no pending invitation and is not a member of the group.
+    end note
+
+    state "Pending" as Pending
+    note right of Pending
+        An invitation has been sent to the user.
+    end note
+    Pending: entry / sendInvitationNotification()
+
+    state "Accepted" as Accepted
+    note right of Accepted
+        The user has accepted the invitation and is now a member.
+    end note
+    Accepted: entry / addUserToGroupRoster()
+
+    NotAMember --> Pending: inviteUser()
+    Pending --> Accepted: acceptInvite() [!isExpired]
+    Pending --> Declined: declineInvite()
+    Pending --> Cancelled: cancelInvite()
+    Accepted --> NotAMember: leaveGroup() / removeMember()
+
+    Declined --> [*]
+    Cancelled --> [*]

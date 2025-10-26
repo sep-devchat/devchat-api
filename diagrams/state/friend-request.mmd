@@ -1,0 +1,33 @@
+stateDiagram-v2
+    direction LR
+    [*] --> NotFriends
+
+    state "NotFriends" as NotFriends
+    note right of NotFriends
+        The two users have no connection or pending requests.
+    end note
+
+    state "Pending" as Pending
+    note right of Pending
+        A friend request has been sent from the requester to the recipient.
+        From the requester's view, this is "Request Sent".
+        From the recipient's view, this is "Request Received".
+    end note
+
+    state "Friends" as Friends
+    note right of Friends
+        The users are connected as friends.
+    end note
+
+    state "Blocked" as Blocked
+    note right of Blocked
+        One user has blocked the other, preventing any interaction.
+    end note
+
+    NotFriends --> Pending: sendRequest()
+    Pending --> Friends: acceptRequest()
+    Pending --> NotFriends: declineRequest() / cancelRequest()
+    Friends --> NotFriends: unfriend()
+    Friends --> Blocked: blockUser()
+    NotFriends --> Blocked: blockUser()
+    Blocked --> NotFriends: unblockUser()

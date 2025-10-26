@@ -1,0 +1,39 @@
+graph TD
+    subgraph Inviter
+        A[Start: Inviter requests to add user to group] --> B[Receives success/error message];
+    end
+
+    subgraph "DevChat API"
+        C(Receives 'inviteUser' request) --> D{Is target user valid?};
+        D -- No --> E[Send 'User Not Found' error];
+        D -- Yes --> F{Is user already in group?};
+        F -- Yes --> G[Send 'Member Existed' error];
+        F -- No --> H{Is there a pending invite?};
+        H -- Yes --> I[Send 'Already Invited' error];
+        H -- No --> J(Create UserGroup record with 'Pending' status);
+        J --> K(Send 'Invitation Sent' success response);
+
+        L(Receives 'updateInvitationStatus' request) --> M{Find pending invitation};
+        M -- Not Found --> N[Send 'Invitation Not Found' error];
+        M -- Found --> O{Is status 'Accepted'?};
+        O -- Yes --> P(Update status to 'Accepted' and set 'joinedAt' date);
+        O -- No --> Q(Update status to 'Declined');
+        P --> R[Send 'Success' response];
+        Q --> R;
+    end
+
+    subgraph "Invited User"
+        S(Receives notification) --> T{Accept or Decline Invitation?};
+        T -- Accept --> U(Sends 'Accepted' status update);
+        T -- Decline --> V(Sends 'Declined' status update);
+    end
+
+    %% Connections
+    A --> C;
+    E --> B;
+    G --> B;
+    I --> B;
+    K --> B;
+    U --> L;
+    V --> L;
+    R -- "to Inviter" --> B;

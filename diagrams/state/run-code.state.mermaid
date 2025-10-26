@@ -1,0 +1,42 @@
+stateDiagram-v2
+    [*] --> Queued
+
+    state "Queued" as Queued
+    note right of Queued
+        The code execution request has been received and is waiting for an available runner.
+    end note
+
+    state "Building" as Building
+    note right of Building
+        The environment is being prepared (e.g., pulling a Docker image, installing dependencies).
+    end note
+
+    state "Running" as Running
+    note right of Running
+        The code is actively being executed.
+    end note
+
+    state "Completed" as Completed
+    note right of Completed
+        The execution finished successfully.
+    end note
+
+    state "Failed" as Failed
+    note right of Failed
+        The execution failed due to a build error or a runtime error.
+    end note
+
+    Queued --> Building: startBuild() [buildRequired]
+    Queued --> Running: startExecution() [!buildRequired]
+    Building --> Running: buildSuccess()
+    Building --> Failed: buildFailed()
+    Running --> Completed: executionSuccess()
+    Running --> Failed: executionError()
+
+    Queued --> Cancelled: cancel()
+    Building --> Cancelled: cancel()
+    Running --> Cancelled: cancel()
+
+    Completed --> [*]
+    Failed --> [*]
+    Cancelled --> [*]

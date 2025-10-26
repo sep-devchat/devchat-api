@@ -1,0 +1,35 @@
+stateDiagram-v2
+    direction LR
+    [*] --> PendingVerification
+
+    state "PendingVerification" as PendingVerification
+    note right of PendingVerification
+        User has registered, but has not yet
+        verified their email address.
+        (isActive=false, emailVerified=false)
+    end note
+
+    state "Active" as Active
+    note right of Active
+        User is fully active and can log in.
+        (isActive=true, emailVerified=true)
+    end note
+
+    state "Suspended" as Suspended
+    note right of Suspended
+        Account access is temporarily revoked
+        by an administrator.
+        (isActive=false)
+    end note
+
+    state "Deactivated" as Deactivated
+    note right of Deactivated
+        User has chosen to close their account.
+        This is a final state before deletion.
+    end note
+
+    PendingVerification --> Active: userVerifiesEmail()
+    Active --> Suspended: adminSuspends()
+    Suspended --> Active: adminReinstates()
+    Active --> Deactivated: userDeactivates()
+    Deactivated --> [*]
