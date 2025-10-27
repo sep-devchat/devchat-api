@@ -18,11 +18,12 @@ import {
 } from "./dto";
 import { ApiResponseDto, AuditLog, SwaggerApiResponse } from "@utils";
 import { GroupGuard } from "@modules/group";
-import { ApiOperation, ApiParam } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiOperation, ApiParam } from "@nestjs/swagger";
 
 @Controller("group/:groupId/task")
 @ApiParam({ name: "groupId", description: "Group ID" })
 @UseGuards(GroupGuard)
+@ApiBearerAuth()
 export class TaskController {
 	constructor(private readonly taskService: TaskService) {}
 
