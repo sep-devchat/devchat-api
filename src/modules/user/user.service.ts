@@ -2,7 +2,6 @@ import {
 	UserFriendRepository,
 	UserRepository,
 	UserGroupRepository,
-	TaskRepository,
 } from "@db/repositories";
 import { Injectable } from "@nestjs/common";
 import { UserExistedError } from "./errors/user-existed.error";
@@ -14,11 +13,10 @@ import {
 	UserQuery,
 	CreateUserRequest,
 } from "./dto";
-import { DevChatCls, PaginationDto, TaskStatusEnum } from "@utils";
+import { DevChatCls, PaginationDto } from "@utils";
 import { UserNotFoundError } from "./errors";
 import { randomBytes } from "crypto";
 import { ClsService } from "nestjs-cls";
-import { In } from "typeorm";
 
 const emailToken = randomBytes(32).toString("hex");
 
@@ -27,7 +25,6 @@ export class UserService {
 	constructor(
 		private readonly userRepo: UserRepository,
 		private readonly userGroupRepo: UserGroupRepository,
-		private readonly taskRepo: TaskRepository,
 		private readonly cls: ClsService<DevChatCls>,
 		private readonly userFriendRepo: UserFriendRepository,
 	) {}
@@ -200,20 +197,5 @@ export class UserService {
 		});
 
 		return groupRequests;
-	}
-
-	async getTasksByGroupId(groupId: string) {
-		const userId = this.cls.get("profile").id;
-
-		const tasks = await this.taskRepo.find({
-			where: {
-				assigneeId: userId,
-				groupId: groupId,
-				status: In([TaskStatusEnum.IN_PROGRESS, TaskStatusEnum.TODO]),
-			},
-			relations: ["assignee", "creator", "group"],
-		});
-
-		return tasks;
 	}
 }
