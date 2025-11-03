@@ -24,6 +24,7 @@ import { UserResponse } from "./dto/user.response";
 import { FriendRequestResponseDto } from "@modules/user-friend/dto";
 import { UserGroupResponse } from "@modules/user-group/dto";
 import { GetFriendRequestQuery } from "./dto/get-friend.query";
+import { TaskResponse } from "@modules/task/dto";
 
 @Controller("user")
 export class UserController {
@@ -139,6 +140,22 @@ export class UserController {
 			UserGroupResponse.fromEntities(response),
 			null,
 			"Users retrieved successfully",
+		);
+	}
+
+	@Get("task/:groupId")
+	@ApiBearerAuth()
+	@ApiOperation({
+		summary: "Get all tasks belong to authorized user to a group",
+	})
+	@SwaggerApiResponse(TaskResponse, { isArray: true, withPagination: true })
+	async getTasksByGroupId(@Param("groupId") groupId: string) {
+		const response = await this.userService.getTasksByGroupId(groupId);
+
+		return new ApiResponseDto<TaskResponse[]>(
+			TaskResponse.fromEntities(response),
+			null,
+			"Tasks retrieved succe1ssfully",
 		);
 	}
 }
