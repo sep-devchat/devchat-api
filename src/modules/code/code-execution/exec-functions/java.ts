@@ -20,6 +20,7 @@ export const javaExecFunction: CodeExecutionFunction = async (code: string) => {
 		Cmd: ["javac", "Main.java"],
 		AttachStdout: true,
 		AttachStderr: true,
+		Tty: true,
 	});
 
 	console.log("Compiling Java file...");
@@ -36,7 +37,10 @@ export const javaExecFunction: CodeExecutionFunction = async (code: string) => {
 		Cmd: ["java", "Main"],
 		AttachStdout: true,
 		AttachStderr: true,
+		Tty: true,
 	});
+
+	let execInfo = await exec.inspect();
 
 	console.log("Running Java file...");
 	stream = await exec.start({
@@ -48,7 +52,7 @@ export const javaExecFunction: CodeExecutionFunction = async (code: string) => {
 	}
 	console.log("Exec finished.");
 
-	const execInfo = await exec.inspect();
+	execInfo = await exec.inspect();
 	console.log("Exec info:");
 	console.log(JSON.stringify(execInfo, null, 2));
 

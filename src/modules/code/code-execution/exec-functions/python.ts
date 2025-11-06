@@ -21,6 +21,7 @@ export const pythonExecFunction: CodeExecutionFunction = async (
 		Cmd: ["python", "script.py"],
 		AttachStdout: true,
 		AttachStderr: true,
+		Tty: true,
 	});
 
 	console.log("Starting exec...");
