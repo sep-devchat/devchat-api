@@ -9,6 +9,9 @@ import {
 	JoinRoomRequest,
 	MessageResponse,
 	SendMessageRequest,
+	FetchMessagesRequest,
+	SendDirectMessageRequest,
+	DirectMessageResponse,
 } from "./dto";
 import { SocketConstants } from "./socket.constants";
 import {
@@ -16,6 +19,7 @@ import {
 	GroupRepository,
 	MessageRepository,
 	UserRepository,
+	DirectMessageRepository,
 } from "@db/repositories";
 import {
 	DeleteMessageFailedError,
@@ -23,6 +27,7 @@ import {
 	JoinRoomFailedError,
 } from "./errors";
 import { MessageEntity } from "@db/entities";
+import { WsException } from "@nestjs/websockets";
 
 const { Events } = SocketConstants;
 
@@ -36,6 +41,7 @@ export class SocketService {
 		private readonly channelRepo: ChannelRepository,
 		private readonly messageRepo: MessageRepository,
 		private readonly userRepo: UserRepository,
+		private readonly directMessageRepo: DirectMessageRepository,
 	) {}
 
 	async authenticateSocket(client: Socket, payload: AuthenticateRequest) {
@@ -127,15 +133,39 @@ export class SocketService {
 		});
 	}
 
-	async fetchMessages(client: Socket) {
+	async fetchMessages(client: Socket, dto: FetchMessagesRequest) {
+		if (!client.data.channel)
+			throw new WsException({
+				code: "channel_not_selected_err",
+				message: "Join a channel before fetching messages",
+			});
+		const take = dto?.take && dto.take > 0 ? Math.min(dto.take, 100) : 50; // cap page size
+		const page = dto?.page && dto.page > 0 ? dto.page : 1;
+		const skip = (page - 1) * take;
 		const messages = await this.messageRepo.find({
 			where: { channelId: client.data.channel.id },
 			relations: { sender: true },
 			order: { createdAt: "DESC" },
+			take,
+			skip,
+		});
+		return MessageResponse.fromEntities(messages);
+	}
+
+	async fetchDirectMessages(client: Socket) {
+		const userId = client.data.user?.id;
+		if (!userId)
+			throw new WsException({
+				code: "user_not_set_err",
+				message: "Authenticate before fetching direct messages",
+			});
+		const messages = await this.directMessageRepo.find({
+			where: [{ fromUserId: userId }, { toUserId: userId }],
+			relations: { fromUser: true, toUser: true },
+			order: { createdAt: "DESC" },
 			take: 50,
 		});
-
-		return MessageResponse.fromEntities(messages);
+		return DirectMessageResponse.fromEntities(messages);
 	}
 
 	async createMessageNotification(message: MessageEntity) {
@@ -174,6 +204,45 @@ export class SocketService {
 
 		this.server.to(client.data.room).emit(Events.MESSAGE, resp);
 		this.createMessageNotification(message);
+	}
+
+	async sendDirectMessage(client: Socket, dto: SendDirectMessageRequest) {
+		const fromUser = client.data.user;
+		if (!fromUser)
+			throw new WsException({
+				code: "auth_required_err",
+				message: "Authenticate before sending direct messages",
+			});
+		if (fromUser.id === dto.toUserId)
+			throw new WsException({
+				code: "invalid_recipient_err",
+				message: "Cannot send a direct message to yourself",
+			});
+		const toUser = await this.userService.findById(dto.toUserId);
+		if (!toUser)
+			throw new WsException({
+				code: "recipient_not_found_err",
+				message: "Recipient user not found",
+			});
+		const insertResult = await this.directMessageRepo.insert({
+			fromUserId: fromUser.id,
+			toUserId: toUser.id,
+			content: dto.content,
+			parentMessageId: dto.parentMessageId ?? null,
+		});
+		const dm = await this.directMessageRepo.findOne({
+			where: { id: insertResult.identifiers[0].id },
+			relations: { fromUser: true, toUser: true },
+		});
+		const resp = DirectMessageResponse.fromEntity(dm!);
+		// Emit to both sender and recipient user rooms
+		this.server
+			.to(this.constructUserRoomName(fromUser.id))
+			.emit(Events.DIRECT_MESSAGE, resp);
+		this.server
+			.to(this.constructUserRoomName(toUser.id))
+			.emit(Events.DIRECT_MESSAGE, resp);
+		return resp;
 	}
 
 	async editMessage(client: Socket, dto: EditMessageRequest) {

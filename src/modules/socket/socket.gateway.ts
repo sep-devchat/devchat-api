@@ -23,6 +23,8 @@ import {
 	EditMessageRequest,
 	JoinRoomRequest,
 	SendMessageRequest,
+	FetchMessagesRequest,
+	SendDirectMessageRequest,
 } from "./dto";
 import { SocketGuard } from "./socket.guard";
 import { SkipAuth } from "@utils";
@@ -83,8 +85,11 @@ export class SocketGateway
 	}
 
 	@SubscribeMessage(Events.FETCH_MESSAGES)
-	async handleFetchMessages(@ConnectedSocket() client: Socket) {
-		return await this.socketService.fetchMessages(client);
+	async handleFetchMessages(
+		@ConnectedSocket() client: Socket,
+		@MessageBody() payload: FetchMessagesRequest,
+	) {
+		return await this.socketService.fetchMessages(client, payload);
 	}
 
 	@SubscribeMessage(Events.JOIN_ROOM)
@@ -110,5 +115,18 @@ export class SocketGateway
 		@MessageBody() id: string,
 	) {
 		return await this.socketService.deleteMessage(client, id);
+	}
+
+	@SubscribeMessage(Events.FETCH_DIRECT_MESSAGES)
+	async handleFetchDirectMessages(@ConnectedSocket() client: Socket) {
+		return await this.socketService.fetchDirectMessages(client);
+	}
+
+	@SubscribeMessage(Events.SEND_DIRECT_MESSAGE)
+	async handleSendDirectMessage(
+		@ConnectedSocket() client: Socket,
+		@MessageBody() payload: SendDirectMessageRequest,
+	) {
+		return await this.socketService.sendDirectMessage(client, payload);
 	}
 }

@@ -3,3 +3,7 @@ export * from "./join-room.request";
 export * from "./send-message.request";
 export * from "./message.response";
 export * from "./edit-message.request";
+export * from "./fetch-messages.request";
+export * from "./send-direct-message.request";
+export * from "./direct-message.response";
+export * from "./fetch-messages.request";
