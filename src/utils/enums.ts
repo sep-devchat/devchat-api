@@ -30,7 +30,7 @@ export enum FriendRequestStatus {
 	PENDING = 0,
 	ACCEPTED = 1,
 	DECLINED = 2,
-	CANCELLED = 3,
+	UNFRIEND = 3,
 }
 
 export enum TaskStatusEnum {

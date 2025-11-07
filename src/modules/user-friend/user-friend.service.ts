@@ -134,8 +134,16 @@ export class UserFriendService {
 		// This prevents unauthorized users from modifying other users’ friendships.
 		const friendRequest = await this.friendRequestRepo.findOne({
 			where: [
-				{ id: id, senderId: currentUserId },
-				{ id: id, receiverId: currentUserId },
+				{
+					id: id,
+					senderId: currentUserId,
+					status: FriendRequestStatus.ACCEPTED,
+				},
+				{
+					id: id,
+					receiverId: currentUserId,
+					status: FriendRequestStatus.ACCEPTED,
+				},
 			],
 		});
 
@@ -143,7 +151,8 @@ export class UserFriendService {
 			throw new FriendRequestNotFoundError();
 		}
 
-		friendRequest.status = FriendRequestStatus.CANCELLED;
+		friendRequest.status = FriendRequestStatus.UNFRIEND;
+		friendRequest.respondedAt = new Date();
 		await this.friendRequestRepo.save(friendRequest);
 	}
 
