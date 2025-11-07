@@ -1,5 +1,6 @@
 import { MessageEntity } from "@db/entities";
 import { Profile } from "@modules/auth/dto";
+import { ChannelResponse } from "@modules/channel/dto";
 
 export class MessageResponse {
 	id: string;
@@ -11,6 +12,7 @@ export class MessageResponse {
 	updatedAt: Date;
 	deletedAt: Date | null;
 	sender: Profile;
+	channel?: ChannelResponse;
 
 	static fromEntity(entity: MessageEntity): MessageResponse {
 		return {
@@ -23,6 +25,7 @@ export class MessageResponse {
 			updatedAt: entity.updatedAt,
 			deletedAt: entity.deletedAt,
 			sender: Profile.fromEntity(entity.sender),
+			channel: entity.channel && ChannelResponse.fromEntity(entity.channel),
 		};
 	}
 

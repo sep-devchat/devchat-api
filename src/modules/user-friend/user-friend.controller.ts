@@ -78,13 +78,15 @@ export class UserFriendController {
 	// 	return new ApiResponseDto(data);
 	// }
 
-	@Delete(":id")
+	@Put(":id")
 	@ApiParam({ name: "id", description: "User friend ID" })
 	@ApiOperation({
-		summary: "Get all user's friends",
+		summary: "Unfriend a user",
+		description:
+			"Remove an existing friendship between users. Only accepted friendships can be unfriended.",
 	})
 	async deleteOne(@Param("id") id: string) {
 		await this.userFriendService.removeFriend(id);
-		return new ApiResponseDto(null, null, "Deleted successfully");
+		return new ApiResponseDto(null, null, "Unfriend user successfully");
 	}
 }

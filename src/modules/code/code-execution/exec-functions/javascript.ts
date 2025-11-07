@@ -12,6 +12,7 @@ export const javascriptExecFunction: CodeExecutionFunction = async (
 		Cmd: ["node", "-e", code],
 		AttachStdout: true,
 		AttachStderr: true,
+		Tty: true,
 	});
 
 	console.log("Starting exec...");
@@ -22,9 +23,7 @@ export const javascriptExecFunction: CodeExecutionFunction = async (
 	let buff = Buffer.alloc(0);
 	for await (const chunk of stream) {
 		buff = Buffer.concat([buff, chunk]);
-		// process.stdout.write(chunk);
 	}
-	console.log("Exec finished.");
 
 	const execInfo = await exec.inspect();
 	console.log("Exec info:");

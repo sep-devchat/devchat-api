@@ -4,12 +4,16 @@ import { WsException } from "@nestjs/websockets";
 import { SKIP_AUTH_KEY } from "@utils";
 import { Socket } from "socket.io";
 import { SocketConstants } from "./socket.constants";
+import { SocketService } from "./socket.service";
 
 const { Events } = SocketConstants;
 
 @Injectable()
 export class SocketGuard implements CanActivate {
-	constructor(private readonly reflector: Reflector) {}
+	constructor(
+		private readonly reflector: Reflector,
+		private readonly socketService: SocketService,
+	) {}
 
 	async canActivate(context: ExecutionContext) {
 		const skip =
@@ -24,6 +28,9 @@ export class SocketGuard implements CanActivate {
 		const exp = client.data.exp;
 		const now = Math.floor(Date.now() / 1000);
 		if (exp && exp < now) {
+			client.leave(
+				this.socketService.constructUserRoomName(client.data.user.id),
+			);
 			client.emit(Events.REQUEST_AUTHENTICATION);
 			throw new WsException("Unauthorized: Token expired");
 		}

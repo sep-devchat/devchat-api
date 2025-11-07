@@ -1,15 +1,20 @@
 import { Injectable } from "@nestjs/common";
 import { CreateGroupRequest, UpdateGroupRequest } from "./dto";
 import { GroupNotExistedError } from "./errors";
-import { DevChatCls } from "@utils";
+import { DevChatCls, InvitationStatus } from "@utils";
 import { ClsService } from "nestjs-cls";
-import { ChannelRepository, GroupRepository } from "@db/repositories";
+import {
+	ChannelRepository,
+	GroupRepository,
+	UserGroupRepository,
+} from "@db/repositories";
 import { Transactional } from "typeorm-transactional";
 
 @Injectable()
 export class GroupService {
 	constructor(
 		private readonly groupRepo: GroupRepository,
+		private readonly userGroupRepo: UserGroupRepository,
 		private readonly channelRepo: ChannelRepository,
 		private readonly cls: ClsService<DevChatCls>,
 	) {}
@@ -33,6 +38,15 @@ export class GroupService {
 			createdAt: new Date(),
 		});
 
+		await this.userGroupRepo.insert({
+			groupId: group.id,
+			invitedAt: new Date(),
+			joinedAt: new Date(),
+			userId: createdBy,
+			addedById: createdBy,
+			status: 1,
+		});
+
 		return await this.groupRepo.findOne({
 			where: { id: insertResult.identifiers[0].id },
 		});
@@ -46,11 +60,39 @@ export class GroupService {
 	}
 
 	async findMany() {
-		return await this.groupRepo.find();
+		const userId = this.cls.get("profile.id");
+		return await this.groupRepo.find({
+			where: [
+				{
+					createdBy: userId,
+				},
+				{
+					userGroups: {
+						userId: userId,
+						status: InvitationStatus.ACCEPTED,
+					},
+				},
+			],
+		});
 	}
 
 	async findOne(id: string) {
-		const group = await this.groupRepo.findOne({ where: { id } });
+		const userId = this.cls.get("profile.id");
+		const group = await this.groupRepo.findOne({
+			where: [
+				{
+					id,
+					createdBy: userId,
+				},
+				{
+					id,
+					userGroups: {
+						userId: userId,
+						status: InvitationStatus.ACCEPTED,
+					},
+				},
+			],
+		});
 		if (!group) {
 			throw new GroupNotExistedError();
 		}

@@ -16,11 +16,20 @@ export class UserGroupEntity {
 	@PrimaryGeneratedColumn("uuid", { name: ColumnName.UserGroup.id })
 	id: string;
 
-	@ManyToOne(() => GroupEntity)
+	@Column({ name: ColumnName.UserGroup.groupId })
+	groupId: string;
+
+	@ManyToOne(() => GroupEntity, (group) => group.userGroups)
 	@JoinColumn({ name: ColumnName.UserGroup.groupId })
 	group: GroupEntity;
 
-	@ManyToOne(() => UserEntity)
+	@Column({ name: ColumnName.UserGroup.userId })
+	userId: string;
+
+	@Column({ name: ColumnName.UserGroup.addedBy })
+	addedById: string;
+
+	@ManyToOne(() => UserEntity, (user) => user.userGroups)
 	@JoinColumn({ name: ColumnName.UserGroup.userId })
 	user: UserEntity;
 

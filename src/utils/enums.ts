@@ -30,7 +30,7 @@ export enum FriendRequestStatus {
 	PENDING = 0,
 	ACCEPTED = 1,
 	DECLINED = 2,
-	CANCELLED = 3,
+	UNFRIEND = 3,
 }
 
 export enum TaskStatusEnum {
@@ -71,6 +71,15 @@ export enum TodoStatusEnum {
 	TODO = 0,
 	IN_PROGRESS = 1,
 	DONE = 2,
+}
+
+export enum CodeExecutionStatus {
+	PENDING = 0,
+	RUNNING = 1,
+	COMPLETED = 2,
+	FAILED = 3,
+	TIMED_OUT = 4,
+	CANCELLED = 5,
 }
 
 export enum AIProviderEnum {

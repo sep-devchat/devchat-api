@@ -5,11 +5,13 @@ import {
 	Entity,
 	Index,
 	JoinColumn,
+	OneToMany,
 	OneToOne,
 	PrimaryGeneratedColumn,
 	UpdateDateColumn,
 } from "typeorm";
 import { AdminRoleEntity } from "./admin-role.entity";
+import { UserGroupEntity } from "./user-group.entity";
 
 const { TableName, ColumnName, IndexName } = DbConstants;
 
@@ -71,4 +73,7 @@ export class UserEntity {
 	@OneToOne(() => AdminRoleEntity)
 	@JoinColumn({ name: ColumnName.AdminRole.id })
 	adminRoleId: string | null;
+
+	@OneToMany(() => UserGroupEntity, (userGroup) => userGroup.user)
+	userGroups: UserGroupEntity[];
 }

@@ -16,3 +16,4 @@ export * from "./permission.repository";
 export * from "./audit-log.repository";
 export * from "./task.repository";
 export * from "./todo.repository";
+export * from "./code-block.repoistory";

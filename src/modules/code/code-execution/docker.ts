@@ -62,6 +62,7 @@ export class Docker {
 			AttachStdout: true,
 			AttachStderr: true,
 			Tty: true,
+			Env: ["FORCE_COLOR=0", "NO_COLOR=1"],
 			WorkingDir: this.containerWorkingDir,
 			HostConfig: runId
 				? {

@@ -18,6 +18,7 @@ import {
 	AuditLogRepository,
 	TaskRepository,
 	TodoRepository,
+	CodeBlockRepository,
 	AiSessionRepository,
 	AiInteractionRepository,
 } from "./repositories";
@@ -38,6 +39,7 @@ const repositories = [
 	AuditLogRepository,
 	TaskRepository,
 	TodoRepository,
+	CodeBlockRepository,
 	AiSessionRepository,
 	AiInteractionRepository,
 ];

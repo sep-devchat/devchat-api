@@ -10,5 +10,6 @@ export const SocketConstants = {
 		FETCH_MESSAGES: "fetch_messages",
 		EDIT_MESSAGE: "edit_message",
 		DELETE_MESSAGE: "delete_message",
+		MESSAGE_NOTIFICATION: "message_notification",
 	},
 };

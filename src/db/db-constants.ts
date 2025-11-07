@@ -19,6 +19,7 @@ export const DbConstants = {
 		AuditLog: "audit_log",
 		Task: "task",
 		Todo: "todo",
+		CodeBlock: "code_block",
 		AiSession: "ai_session",
 		AiInteraction: "ai_interaction",
 	},
@@ -46,6 +47,7 @@ export const DbConstants = {
 			content: "content",
 			parentMessageId: "parent_message_id",
 			isFirstThreadMessage: "is_first_thread_message",
+			codeBlockId: "code_block_id",
 		},
 		UserMessageDelete: {
 			id: "user_message_delete_id",
@@ -157,6 +159,17 @@ export const DbConstants = {
 			priority: "priority",
 			status: "status",
 			dueDate: "due_date",
+		},
+		CodeBlock: {
+			id: "code_block_id",
+			userId: "user_id",
+			title: "title",
+			description: "description",
+			language: "language",
+			code: "code",
+			executionResult: "execution_result",
+			executionStatus: "execution_status",
+			executedAt: "executed_at",
 		},
 		AiSession: {
 			id: "ai_session_id",

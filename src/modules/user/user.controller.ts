@@ -12,14 +12,19 @@ import { UserService } from "./user.service";
 import {
 	ApiMessageResponseDto,
 	ApiResponseDto,
+	FriendRequestStatus,
 	SkipAuth,
 	SwaggerApiMessageResponse,
 	SwaggerApiResponse,
 } from "@utils";
 import { CreateUserRequest } from "./dto/create-user.request";
 import { ApiBearerAuth, ApiOperation, ApiParam } from "@nestjs/swagger";
-import { UpdateUserRequest, UserQuery } from "./dto";
+import { GroupRequestQuery, UpdateUserRequest, UserQuery } from "./dto";
 import { UserResponse } from "./dto/user.response";
+import { FriendRequestResponseDto } from "@modules/user-friend/dto";
+import { UserGroupResponse } from "@modules/user-group/dto";
+import { GetFriendRequestQuery } from "./dto/get-friend.query";
+import { TaskResponse } from "@modules/task/dto";
 
 @Controller("user")
 export class UserController {
@@ -82,6 +87,75 @@ export class UserController {
 			UserResponse.fromEntities(response.data),
 			response.pagination,
 			"Users retrieved successfully",
+		);
+	}
+
+	@Get("/friend-request/sent")
+	@ApiBearerAuth()
+	@ApiOperation({ summary: "Get friend requests sent by the user" })
+	async getFriendRequests(@Query() query: GetFriendRequestQuery) {
+		const response = await this.userService.getSentFriendRequests(query);
+
+		return new ApiResponseDto<FriendRequestResponseDto[]>(
+			FriendRequestResponseDto.fromEntities(response),
+			null,
+			"Friend request retrieved successully",
+		);
+	}
+
+	@Get("friend-requests/received")
+	@ApiBearerAuth()
+	@ApiOperation({ summary: "Get friend requests received by the user" })
+	async getReceivedFriendRequests(@Query() query: GetFriendRequestQuery) {
+		const response = await this.userService.getReceivedFriendRequests(query);
+		return new ApiResponseDto<FriendRequestResponseDto[]>(
+			FriendRequestResponseDto.fromEntities(response),
+			null,
+			"Received friend requests retrieved successfully",
+		);
+	}
+
+	@Get("group-requests/sent")
+	@ApiBearerAuth()
+	@ApiOperation({ summary: "Get all sent group requests" })
+	@SwaggerApiResponse(UserGroupResponse)
+	async getSentGroupRequests(@Query() query: GroupRequestQuery) {
+		const response = await this.userService.getSentGroupRequests(query);
+
+		return new ApiResponseDto<UserGroupResponse[]>(
+			UserGroupResponse.fromEntities(response),
+			null,
+			"Users retrieved successfully",
+		);
+	}
+
+	@Get("group-requests/received")
+	@ApiBearerAuth()
+	@ApiOperation({ summary: "Get all received group requests" })
+	@SwaggerApiResponse(UserGroupResponse)
+	async getReceivedGroupRequests(@Query() query: GroupRequestQuery) {
+		const response = await this.userService.getReceiveGroupRequests(query);
+
+		return new ApiResponseDto<UserGroupResponse[]>(
+			UserGroupResponse.fromEntities(response),
+			null,
+			"Users retrieved successfully",
+		);
+	}
+
+	@Get("task/:groupId")
+	@ApiBearerAuth()
+	@ApiOperation({
+		summary: "Get all tasks belong to authorized user to a group",
+	})
+	@SwaggerApiResponse(TaskResponse, { isArray: true, withPagination: true })
+	async getTasksByGroupId(@Param("groupId") groupId: string) {
+		const response = await this.userService.getTasksByGroupId(groupId);
+
+		return new ApiResponseDto<TaskResponse[]>(
+			TaskResponse.fromEntities(response),
+			null,
+			"Tasks retrieved succe1ssfully",
 		);
 	}
 }
