@@ -7,5 +7,6 @@ import { UserModule } from "@modules/user";
 @Module({
 	providers: [SocketService, SocketGateway],
 	imports: [UserModule, AuthModule],
+	exports: [SocketService],
 })
 export class SocketModule {}

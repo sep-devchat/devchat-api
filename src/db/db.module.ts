@@ -19,6 +19,7 @@ import {
 	TaskRepository,
 	TodoRepository,
 	CodeBlockRepository,
+	DirectMessageRepository,
 } from "./repositories";
 
 const repositories = [
@@ -38,6 +39,7 @@ const repositories = [
 	TaskRepository,
 	TodoRepository,
 	CodeBlockRepository,
+	DirectMessageRepository,
 ];
 
 @Module({
