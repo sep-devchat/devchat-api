@@ -14,3 +14,4 @@ export * from "./audit-log.entity";
 export * from "./task.entity";
 export * from "./todo.entity";
 export * from "./code-block.entity";
+export * from "./direct-message.entity";

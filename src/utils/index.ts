@@ -11,3 +11,4 @@ export * from "./mailer";
 export * from "./permission.decorator";
 export * from "./audit.decorator";
 export * from "./list-entities-with-pagination";
+export * from "./socket-rooms";

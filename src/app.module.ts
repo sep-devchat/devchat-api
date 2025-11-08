@@ -7,6 +7,7 @@ import { UserModule } from "@modules/user";
 import { ClsModule } from "nestjs-cls";
 import { GitHubModule } from "@providers/github";
 import { SocketModule } from "@modules/socket";
+import { MessageModule } from "./modules/message";
 import { ConfigModule } from "@nestjs/config";
 import { CloudinaryModule } from "@providers/cloudinary";
 import { AttachmentModule } from "@modules/attachment";
@@ -42,6 +43,7 @@ import { CodeBlockModule } from "@modules/code-block";
 		UserModule,
 		UserFriendModule,
 		SocketModule,
+		MessageModule,
 		CloudinaryModule,
 		AttachmentModule,
 		UploadModule,

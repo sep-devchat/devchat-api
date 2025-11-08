@@ -3,26 +3,16 @@ import { InvalidTokenError } from "@modules/auth/errors";
 import { UserService } from "@modules/user";
 import { Injectable } from "@nestjs/common";
 import { Server, Socket } from "socket.io";
-import {
-	AuthenticateRequest,
-	EditMessageRequest,
-	JoinRoomRequest,
-	MessageResponse,
-	SendMessageRequest,
-} from "./dto";
+import { AuthenticateRequest, JoinRoomRequest } from "./dto";
 import { SocketConstants } from "./socket.constants";
+import { ChannelRepository, GroupRepository } from "@db/repositories";
+import { JoinRoomFailedError } from "./errors";
+import { MessageEntity } from "@db/entities"; // kept for potential future use
 import {
-	ChannelRepository,
-	GroupRepository,
-	MessageRepository,
-	UserRepository,
-} from "@db/repositories";
-import {
-	DeleteMessageFailedError,
-	EditMessageFailedError,
-	JoinRoomFailedError,
-} from "./errors";
-import { MessageEntity } from "@db/entities";
+	constructRoomName as buildRoomName,
+	constructUserRoomName as buildUserRoomName,
+} from "@utils";
+import { WsException } from "@nestjs/websockets";
 
 const { Events } = SocketConstants;
 
@@ -34,8 +24,6 @@ export class SocketService {
 		private readonly userService: UserService,
 		private readonly groupRepo: GroupRepository,
 		private readonly channelRepo: ChannelRepository,
-		private readonly messageRepo: MessageRepository,
-		private readonly userRepo: UserRepository,
 	) {}
 
 	async authenticateSocket(client: Socket, payload: AuthenticateRequest) {
@@ -74,11 +62,11 @@ export class SocketService {
 
 	// A function to construct room names
 	constructRoomName(groupId: string, channelId: string) {
-		return `group_${groupId}:channel_${channelId}`;
+		return buildRoomName(groupId, channelId);
 	}
 
 	constructUserRoomName(userId: string) {
-		return `user:${userId}`;
+		return buildUserRoomName(userId);
 	}
 
 	async joinRoom(client: Socket, payload: JoinRoomRequest) {
@@ -125,92 +113,5 @@ export class SocketService {
 			groupId,
 			channelId,
 		});
-	}
-
-	async fetchMessages(client: Socket) {
-		const messages = await this.messageRepo.find({
-			where: { channelId: client.data.channel.id },
-			relations: { sender: true },
-			order: { createdAt: "DESC" },
-			take: 50,
-		});
-
-		return MessageResponse.fromEntities(messages);
-	}
-
-	async createMessageNotification(message: MessageEntity) {
-		const listUsers = await this.userRepo.find({
-			where: { userGroups: { groupId: message.channel.groupId } },
-		});
-		listUsers.forEach((user) => {
-			if (user.id !== message.senderId) {
-				this.server
-					.to(this.constructUserRoomName(user.id))
-					.emit(
-						Events.MESSAGE_NOTIFICATION,
-						MessageResponse.fromEntity(message),
-					);
-			}
-		});
-	}
-
-	async sendMessage(client: Socket, payload: SendMessageRequest) {
-		const insertResult = await this.messageRepo.insert({
-			channelId: client.data.channel.id,
-			threadId: payload.threadId,
-			parentMessageId: payload.parentMessageId,
-			senderId: client.data.user.id,
-			content: payload.content,
-		});
-
-		const message = await this.messageRepo.findOne({
-			where: { id: insertResult.identifiers[0].id },
-			relations: { sender: true, channel: { group: true } },
-		});
-
-		console.log(message);
-
-		const resp = MessageResponse.fromEntity(message);
-
-		this.server.to(client.data.room).emit(Events.MESSAGE, resp);
-		this.createMessageNotification(message);
-	}
-
-	async editMessage(client: Socket, dto: EditMessageRequest) {
-		const message = await this.messageRepo.findOne({
-			where: { id: dto.messageId },
-			relations: { sender: true, channel: { group: true } },
-		});
-
-		if (!message) throw new EditMessageFailedError("Message not found");
-
-		if (message.senderId !== client.data.user.id)
-			throw new EditMessageFailedError("You can only edit your own messages");
-
-		message.content = dto.content;
-		message.updatedAt = new Date();
-
-		await this.messageRepo.save(message);
-
-		this.server
-			.to(client.data.room)
-			.emit(Events.EDIT_MESSAGE, MessageResponse.fromEntity(message));
-	}
-
-	async deleteMessage(client: Socket, id: string) {
-		const message = await this.messageRepo.findOne({
-			where: { id: id },
-			relations: { sender: true, channel: { group: true } },
-		});
-
-		if (!message) throw new DeleteMessageFailedError("Message not found");
-
-		if (message.senderId !== client.data.user.id)
-			throw new DeleteMessageFailedError(
-				"You can only delete your own messages",
-			);
-
-		await this.messageRepo.delete(message.id);
-		this.server.to(client.data.room).emit(Events.DELETE_MESSAGE, id);
 	}
 }
