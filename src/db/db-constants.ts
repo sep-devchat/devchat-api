@@ -20,6 +20,7 @@ export const DbConstants = {
 		Task: "task",
 		Todo: "todo",
 		CodeBlock: "code_block",
+		DirectMessage: "direct_message",
 		AiSession: "ai_session",
 		AiInteraction: "ai_interaction",
 	},
@@ -170,6 +171,13 @@ export const DbConstants = {
 			executionResult: "execution_result",
 			executionStatus: "execution_status",
 			executedAt: "executed_at",
+		},
+		DirectMessage: {
+			id: "direct_message_id",
+			fromUserId: "from_user_id",
+			toUserId: "to_user_id",
+			content: "content",
+			parentMessageId: "parent_message_id",
 		},
 		AiSession: {
 			id: "ai_session_id",

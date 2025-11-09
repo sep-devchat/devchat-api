@@ -19,6 +19,7 @@ import {
 	TaskRepository,
 	TodoRepository,
 	CodeBlockRepository,
+	DirectMessageRepository,
 	AiSessionRepository,
 	AiInteractionRepository,
 } from "./repositories";
@@ -40,6 +41,7 @@ const repositories = [
 	TaskRepository,
 	TodoRepository,
 	CodeBlockRepository,
+	DirectMessageRepository,
 	AiSessionRepository,
 	AiInteractionRepository,
 ];

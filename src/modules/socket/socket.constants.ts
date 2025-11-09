@@ -11,5 +11,8 @@ export const SocketConstants = {
 		EDIT_MESSAGE: "edit_message",
 		DELETE_MESSAGE: "delete_message",
 		MESSAGE_NOTIFICATION: "message_notification",
+		FETCH_DIRECT_MESSAGES: "fetch_direct_messages",
+		SEND_DIRECT_MESSAGE: "send_direct_message",
+		DIRECT_MESSAGE: "direct_message",
 	},
 };

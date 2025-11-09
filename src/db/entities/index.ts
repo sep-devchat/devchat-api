@@ -14,5 +14,6 @@ export * from "./audit-log.entity";
 export * from "./task.entity";
 export * from "./todo.entity";
 export * from "./code-block.entity";
+export * from "./direct-message.entity";
 export * from "./ai-session.entity";
 export * from "./ai-interaction.entity";
