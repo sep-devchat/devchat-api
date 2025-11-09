@@ -30,6 +30,33 @@ export class AiService {
 		private readonly cls: ClsService<DevChatCls>,
 	) {}
 
+	listProviders() {
+		const providers = [] as {
+			provider: AIProviderEnum;
+			label: string;
+			available: boolean;
+			configuredModel?: string | null;
+			fallbackModel?: string | null;
+		}[];
+		// OPENAI
+		providers.push({
+			provider: AIProviderEnum.OPENAI,
+			label: "OpenAI",
+			available: !!Env.OPENAI_API_KEY,
+			configuredModel: Env.OPENAI_MODEL || null,
+			fallbackModel: "gpt-4o-mini",
+		});
+		// GEMINI (Google)
+		providers.push({
+			provider: AIProviderEnum.GEMINI,
+			label: "Google Gemini",
+			available: !!Env.GOOGLE_API_KEY,
+			configuredModel: Env.GOOGLE_MODEL || null,
+			fallbackModel: "gemini-1.5-flash",
+		});
+		return providers;
+	}
+
 	private getModel(
 		provider?: ModelProvider,
 		modelOverride?: string,
@@ -92,36 +119,45 @@ export class AiService {
 		interaction: AiInteractionEntity;
 		answer: string;
 	}> {
-		const userId = this.cls.get("profile")?.id ?? null;
-		let session: AiSessionEntity | null = null;
-		if (dto.sessionId) {
-			session = await this.sessions.findOne({ where: { id: dto.sessionId } });
-		}
-		if (!session) {
-			session = await this.startSession({
-				sessionType: "chat",
-				provider: undefined,
-				model: dto.model,
-			});
-		}
-
 		// Resolve input message and parse provider/requestType from its content
 		if (!dto.messageId) {
 			throw new MissingPromptOrMessageError();
 		}
 		const msg = await this.messages.findOne({ where: { id: dto.messageId } });
 		if (!msg) throw new MessageNotFoundError(dto.messageId);
+
+		// Determine user context: prefer current CLS user, fallback to message sender
+		const userId = this.cls.get("profile")?.id ?? msg.senderId ?? null;
+
+		// Ensure we have a session; when invoked via socket there is no CLS request context,
+		// so we must create the session with explicit user/channel/thread from the message.
+		let session: AiSessionEntity | null = null;
+		if (dto.sessionId) {
+			session = await this.sessions.findOne({ where: { id: dto.sessionId } });
+		}
+		if (!session) {
+			const newSession = this.sessions.create({
+				userId: userId!,
+				channelId: msg.channelId ?? null,
+				threadId: msg.threadId ?? null,
+				sessionType: "chat",
+				startedAt: new Date(),
+				endedAt: null,
+				status: "active",
+			});
+			session = await this.sessions.save(newSession);
+		}
 		const raw = (msg.content || "").trim();
 		// Pattern: @<provider>/<requestType> rest of message
 		// provider: openai|gemini (map gemini->AIProviderEnum.GEMINI), requestType matches AIRequestTypeEnum
 		let parsedProvider: ModelProvider | undefined;
 		let parsedType: AIRequestTypeEnum = AIRequestTypeEnum.CHAT;
 		let strippedInput = raw;
-		const m = raw.match(/^@([a-zA-Z0-9_-]+)\/(\w+)\s+(.*)$/);
+		const m = raw.match(/^@([a-zA-Z0-9_-]+)\/(\w+)(?:\s+(.*))?$/);
 		if (m) {
 			const prov = m[1].toLowerCase();
 			const typ = m[2].toLowerCase();
-			strippedInput = m[3];
+			strippedInput = m[3] ?? "";
 			if (prov === "openai") parsedProvider = AIProviderEnum.OPENAI;
 			if (prov === "google" || prov === "gemini")
 				parsedProvider = AIProviderEnum.GEMINI;
@@ -188,15 +224,7 @@ export class AiService {
 		});
 		await this.interactions.insert(interaction);
 
-		// Save AI response as a new message in the same channel/thread as the input message
-		await this.messages.insert({
-			channelId: msg.channelId,
-			threadId: msg.threadId ?? null,
-			parentMessageId: dto.messageId,
-			senderId: userId || this.cls.get("profile")?.id || "system",
-			content: answer,
-		});
-
+		// Do NOT insert AI answer message here anymore; let SocketService handle broadcast & persistence
 		return { session, interaction, answer };
 	}
 }

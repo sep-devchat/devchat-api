@@ -1,7 +1,12 @@
-import { Body, Controller, Post } from "@nestjs/common";
+import { Body, Controller, Get, Post } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { AiService } from "./ai.service";
-import { AskDto, AskResponseDto, StartSessionDto } from "./dto";
+import {
+	AskDto,
+	AskResponseDto,
+	StartSessionDto,
+	AiProviderInfoDto,
+} from "./dto";
 import { ApiResponseDto, SwaggerApiResponse } from "@utils";
 import { AuditLog } from "@utils";
 import { AiInteractionEntity } from "@db/entities";
@@ -11,6 +16,18 @@ import { AiInteractionEntity } from "@db/entities";
 @Controller("ai")
 export class AiController {
 	constructor(private readonly ai: AiService) {}
+
+	@Get("providers")
+	@ApiOperation({ summary: "List available AI providers" })
+	@SwaggerApiResponse(AiProviderInfoDto)
+	async listProviders() {
+		const providers = this.ai.listProviders();
+		return new ApiResponseDto(
+			providers,
+			null,
+			"Successfully retrieved AI providers",
+		);
+	}
 
 	@Post("session")
 	@ApiOperation({ summary: "Start a new AI session" })

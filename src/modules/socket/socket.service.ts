@@ -23,6 +23,7 @@ import {
 	JoinRoomFailedError,
 } from "./errors";
 import { MessageEntity } from "@db/entities";
+import { AiService } from "@modules/ai";
 
 const { Events } = SocketConstants;
 
@@ -36,6 +37,7 @@ export class SocketService {
 		private readonly channelRepo: ChannelRepository,
 		private readonly messageRepo: MessageRepository,
 		private readonly userRepo: UserRepository,
+		private readonly aiService: AiService,
 	) {}
 
 	async authenticateSocket(client: Socket, payload: AuthenticateRequest) {
@@ -174,6 +176,48 @@ export class SocketService {
 
 		this.server.to(client.data.room).emit(Events.MESSAGE, resp);
 		this.createMessageNotification(message);
+
+		// If mentions AI provider, call AiService and send the AI answer as a new message
+		const isAiMention =
+			payload.content.includes("@openai") ||
+			payload.content.includes("@gemini");
+		if (isAiMention) {
+			try {
+				const { answer } = await this.aiService.ask({
+					messageId: insertResult.identifiers[0].id,
+				});
+				const aiSender = await this.userRepo.findOne({
+					where: {
+						username: payload.content.includes("@openai")
+							? "openai-bot"
+							: "gemini-bot",
+					},
+				});
+				// persist AI answer as a message in same channel/thread, parented to original
+				const aiInsert = await this.messageRepo.insert({
+					channelId: client.data.channel.id,
+					threadId: payload.threadId ?? null,
+					parentMessageId: insertResult.identifiers[0].id,
+					senderId: aiSender?.id || "system", // or a system/ai user id if available
+					content: answer,
+				});
+				const aiMsg = await this.messageRepo.findOne({
+					where: { id: aiInsert.identifiers[0].id },
+					relations: { sender: true, channel: { group: true } },
+				});
+				if (aiMsg) {
+					const aiResp = MessageResponse.fromEntity(aiMsg);
+					this.server.to(client.data.room).emit(Events.MESSAGE, aiResp);
+					this.createMessageNotification(aiMsg);
+				}
+			} catch (err) {
+				console.error(
+					"Failed to process AI mention for message",
+					insertResult.identifiers[0].id,
+					err,
+				);
+			}
+		}
 	}
 
 	async editMessage(client: Socket, dto: EditMessageRequest) {
