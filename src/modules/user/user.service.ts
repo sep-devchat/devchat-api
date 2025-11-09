@@ -14,7 +14,12 @@ import {
 	UserQuery,
 	CreateUserRequest,
 } from "./dto";
-import { DevChatCls, PaginationDto, TaskStatusEnum } from "@utils";
+import {
+	DevChatCls,
+	PaginationDto,
+	sendVerificationEmail,
+	TaskStatusEnum,
+} from "@utils";
 import { UserNotFoundError } from "./errors";
 import { randomBytes } from "crypto";
 import { ClsService } from "nestjs-cls";
@@ -65,7 +70,7 @@ export class UserService {
 			emailVerificationToken: emailToken,
 		});
 
-		// await sendVerificationEmail(user.email, emailToken);
+		await sendVerificationEmail(user.email, emailToken);
 
 		return await this.userRepo.insert(user);
 	}
