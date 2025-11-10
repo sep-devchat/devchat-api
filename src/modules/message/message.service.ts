@@ -158,12 +158,25 @@ export class MessageService {
 			const { answer } = await this.aiService.ask({
 				messageId: parentMessageId,
 			});
+			// Determine which AI provider was mentioned and map to a system AI user id.
+			// Expect environment variables OPENAI_USER_ID / GEMINI_USER_ID to hold user IDs of
+			// dedicated AI accounts. Fallback to original sender if not configured so flow still works.
+			let aiUserId: string | undefined;
+			const aiUser = await this.userRepo.findOne({
+				where: {
+					username: payload.content.includes("@openai")
+						? "openai-bot"
+						: "gemini-bot",
+				},
+			});
+			aiUserId = aiUser?.id || client.data.user.id;
+
 			// persist AI answer as a message in same channel/thread, parented to original
 			const aiInsert = await this.messageRepo.insert({
 				channelId: client.data.channel.id,
 				threadId: payload.threadId ?? null,
 				parentMessageId,
-				senderId: client.data.user.id, // TODO: replace with a dedicated AI/system user if available
+				senderId: aiUserId,
 				content: answer,
 			});
 			const aiMsg = await this.messageRepo.findOne({
