@@ -10,7 +10,7 @@ import {
 	UserFriendRepository,
 } from "@db/repositories";
 import { ClsService } from "nestjs-cls";
-import { DevChatCls, PaginationDto, FriendRequestStatus } from "@utils";
+import { DevChatCls, PaginationDto } from "@utils";
 import { FindOptionsWhere, ILike, Or } from "typeorm";
 import { FriendRequestEntity } from "@db/entities/friend-request.entity";
 import {
@@ -41,7 +41,7 @@ export class FriendRequestService {
 		// Check if target user exists
 		await this.userService.findById(toUserId);
 
-		// Check if they are already friends
+		// Check if they are already friends (check both directions since only one record exists)
 		const friendship = await this.userFriendRepo.findOne({
 			where: [
 				{
@@ -59,18 +59,16 @@ export class FriendRequestService {
 			throw new AlreadyFriendsError();
 		}
 
-		// Check if friend request already exists (pending or accepted)
+		// Check if friend request already exists
 		const existingRequest = await this.repo.findOne({
 			where: [
 				{
 					fromUserId,
 					toUserId,
-					status: FriendRequestStatus.PENDING,
 				},
 				{
 					fromUserId: toUserId,
 					toUserId: fromUserId,
-					status: FriendRequestStatus.PENDING,
 				},
 			],
 		});
@@ -89,7 +87,6 @@ export class FriendRequestService {
 			fromUserId: userId,
 			toUserId: dto.toUserId,
 			message: dto.message,
-			status: FriendRequestStatus.PENDING,
 			updatedAt: new Date(),
 			createdBy: userId,
 		});
@@ -107,17 +104,12 @@ export class FriendRequestService {
 		const existingFriendRequest = await this.findOne(id);
 		const userId = this.cls.get("profile").id;
 
-		// Only allow the recipient to update the status
-		// if (existingFriendRequest.toUserId !== userId) {
-		// 	throw new FriendRequestNotFoundError();
-		// }
-
-		// If accepting the request, create friendship
-		if (dto.status === FriendRequestStatus.ACCEPTED) {
-			await this.createFriendship(
-				existingFriendRequest.fromUserId,
-				existingFriendRequest.toUserId,
-			);
+		// Only allow the sender or recipient to update
+		if (
+			existingFriendRequest.fromUserId !== userId &&
+			existingFriendRequest.toUserId !== userId
+		) {
+			throw new FriendRequestNotFoundError();
 		}
 
 		await this.repo.update(id, {
@@ -132,19 +124,25 @@ export class FriendRequestService {
 		});
 	}
 
-	private async createFriendship(userId1: string, userId2: string) {
-		// Create bidirectional friendship records
-		const friendship1 = this.userFriendRepo.create({
-			userId: userId1,
-			friendId: userId2,
+	private async createFriendship(fromUserId: string, toUserId: string) {
+		this.logger.log(
+			`Creating single friendship record with accepting user ${toUserId} as userId and sender ${fromUserId} as friendId`,
+		);
+
+		// Create only one record where accepting user is userId and sender is friendId
+		const friendship = this.userFriendRepo.create({
+			userId: toUserId, // The user who accepted the request
+			friendId: fromUserId, // The user who sent the request
+			createdAt: new Date(),
 		});
 
-		await this.userFriendRepo.insert(friendship1);
+		await this.userFriendRepo.save(friendship);
+		this.logger.log(`Single friendship record created successfully`);
 	}
 
 	async findMany(query: FriendRequestQuery) {
 		const userId = this.cls.get("profile").id;
-		const { page, limit, status, fromUserId, toUserId, search, type } = query;
+		const { page, limit, fromUserId, toUserId, search, type } = query;
 
 		// Build where conditions based on type
 		let where: FindOptionsWhere<FriendRequestEntity>[] = [];
@@ -159,10 +157,6 @@ export class FriendRequestService {
 		}
 
 		// Apply additional filters
-		if (status !== undefined) {
-			where = where.map((condition) => ({ ...condition, status }));
-		}
-
 		if (fromUserId) {
 			where = where.map((condition) => ({ ...condition, fromUserId }));
 		}
@@ -250,11 +244,6 @@ export class FriendRequestService {
 			throw new FriendRequestNotFoundError();
 		}
 
-		// Only allow deletion of pending requests
-		if (existingFriendRequest.status !== FriendRequestStatus.PENDING) {
-			throw new FriendRequestNotFoundError();
-		}
-
 		await this.repo.delete(id);
 
 		return { message: "Friend request deleted successfully" };
@@ -270,34 +259,22 @@ export class FriendRequestService {
 			throw new FriendRequestNotFoundError();
 		}
 
-		// Only allow canceling pending requests
-		if (existingFriendRequest.status !== FriendRequestStatus.PENDING) {
-			throw new FriendRequestNotFoundError();
-		}
-
 		this.logger.log(
 			`Canceling friend request ${id} from user ${userId} to ${existingFriendRequest.toUserId}`,
 		);
 
-		await this.repo.update(id, {
-			status: FriendRequestStatus.UNFRIEND,
-			updatedAt: new Date(),
-		});
+		await this.repo.delete(id);
 
 		this.logger.log(`Friend request ${id} cancelled successfully`);
 
-		return await this.repo.findOne({
-			where: { id },
-			relations: ["fromUser", "toUser"],
-		});
+		return { message: "Friend request cancelled successfully" };
 	}
-	async getPendingRequestsCount() {
+	async getRequestsCount() {
 		const userId = this.cls.get("profile").id;
 
 		return await this.repo.count({
 			where: {
 				toUserId: userId,
-				status: FriendRequestStatus.PENDING,
 			},
 		});
 	}
@@ -312,26 +289,21 @@ export class FriendRequestService {
 			throw new FriendRequestNotFoundError();
 		}
 
-		// Only allow accepting pending requests
-		if (existingFriendRequest.status !== FriendRequestStatus.PENDING) {
-			throw new FriendRequestNotFoundError();
-		}
-
 		this.logger.log(
 			`Accepting friend request ${id} between users ${existingFriendRequest.fromUserId} and ${userId}`,
 		);
 
 		try {
 			// Create bidirectional friendship
-			await this.createFriendship(userId, existingFriendRequest.fromUserId);
+			await this.createFriendship(existingFriendRequest.fromUserId, userId);
 
-			// Update friend request status to accepted
-			const updatedRequest = await this.updateOne(id, {
-				status: FriendRequestStatus.ACCEPTED,
-			});
+			// Delete the friend request record
+			await this.repo.delete(id);
 
-			this.logger.log(`Friend request ${id} accepted and friendship created`);
-			return updatedRequest;
+			this.logger.log(
+				`Friend request ${id} accepted, friendship created, and request deleted`,
+			);
+			return { message: "Friend request accepted successfully" };
 		} catch (error) {
 			this.logger.error(
 				`Failed to accept friend request ${id}: ${error.message}`,
@@ -349,42 +321,14 @@ export class FriendRequestService {
 			throw new FriendRequestNotFoundError();
 		}
 
-		// Only allow declining pending requests
-		if (existingFriendRequest.status !== FriendRequestStatus.PENDING) {
-			throw new FriendRequestNotFoundError();
-		}
-
 		this.logger.log(
 			`Declining friend request ${id} between users ${existingFriendRequest.fromUserId} and ${userId}`,
 		);
 
-		// Clean up any existing friendship (edge case)
-		await this.removeFriendship(existingFriendRequest.fromUserId, userId);
+		// Simply delete the friend request record
+		await this.repo.delete(id);
 
-		// Update friend request status to declined
-		const updatedRequest = await this.updateOne(id, {
-			status: FriendRequestStatus.DECLINED,
-		});
-
-		this.logger.log(`Friend request ${id} declined`);
-		return updatedRequest;
-	}
-
-	private async removeFriendship(fromUserId: string, toUserId: string) {
-		try {
-			// Remove bidirectional friendship records if they exist
-			await this.userFriendRepo.delete([
-				{ userId: fromUserId, friendId: toUserId },
-				{ userId: toUserId, friendId: fromUserId },
-			]);
-
-			this.logger.log(
-				`Removed any existing friendship between ${fromUserId} and ${toUserId}`,
-			);
-		} catch (error) {
-			this.logger.warn(
-				`No friendship to remove between ${fromUserId} and ${toUserId}: ${error.message}`,
-			);
-		}
+		this.logger.log(`Friend request ${id} declined and deleted`);
+		return { message: "Friend request declined successfully" };
 	}
 }

@@ -10,7 +10,7 @@ import {
 	GroupInvitationRepository,
 } from "@db/repositories";
 import { ClsService } from "nestjs-cls";
-import { DevChatCls, InvitationStatus, PaginationDto } from "@utils";
+import { DevChatCls, PaginationDto } from "@utils";
 import { GroupService } from "@modules/group";
 import { UserService } from "@modules/user/user.service";
 import { MemberNotFoundError } from "./errors";
@@ -73,7 +73,6 @@ export class UserGroupService {
 			where: {
 				userGroups: {
 					groupId: groupId,
-					status: InvitationStatus.ACCEPTED,
 				},
 			},
 		});
@@ -182,7 +181,6 @@ export class UserGroupService {
 		const count = await this.userGroupRepo.count({
 			where: {
 				group: { id: groupId },
-				status: InvitationStatus.ACCEPTED,
 			},
 		});
 		this.logger.log(`Group ${groupId} has ${count} members`);
@@ -199,15 +197,14 @@ export class UserGroupService {
 		});
 
 		if (existing) {
-			if (existing.status === InvitationStatus.ACCEPTED) {
-				this.logger.warn(
-					`User ${userId} is already a member of group ${groupId}`,
-				);
-				return existing;
-			}
+			// if (existing.status === InvitationStatus.ACCEPTED) {
+			// 	this.logger.warn(
+			// 		`User ${userId} is already a member of group ${groupId}`,
+			// 	);
+			// 	return existing;
+			// }
 
-			// Update existing record to accepted
-			existing.status = InvitationStatus.ACCEPTED;
+			// Update existing record
 			existing.joinedAt = new Date();
 			existing.addedById = addedById;
 			return await this.userGroupRepo.save(existing);
@@ -218,7 +215,6 @@ export class UserGroupService {
 			userId,
 			groupId,
 			addedById,
-			status: InvitationStatus.ACCEPTED,
 			joinedAt: new Date(),
 			invitedAt: new Date(),
 		});
@@ -245,7 +241,6 @@ export class UserGroupService {
 					userId,
 					groupId,
 					addedById: addedBy.id,
-					status: InvitationStatus.ACCEPTED,
 					joinedAt: new Date(),
 					invitedAt: new Date(),
 				});

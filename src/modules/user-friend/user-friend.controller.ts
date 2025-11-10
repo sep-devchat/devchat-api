@@ -16,8 +16,7 @@ import {
 } from "@nestjs/swagger";
 import { UserResponse } from "@modules/user/dto";
 
-@Controller("user/friends")
-@ApiTags("User Friend")
+@Controller("friends")
 @ApiBearerAuth()
 export class UserFriendController {
 	constructor(private readonly userFriendService: UserFriendService) {}
@@ -29,12 +28,11 @@ export class UserFriendController {
 			"Get paginated list of current user's friends with optional search",
 	})
 	@SwaggerApiResponse(UserResponse, { isArray: true, withPagination: true })
-	@ApiBearerAuth()
 	async getAllFriends(@Query() query: UserFriendQuery) {
 		const { friends, pagination } =
 			await this.userFriendService.getAllFriends(query);
 		return new ApiResponseDto(
-			UserResponse.fromEntities(friends),
+			friends,
 			pagination,
 			"Friends retrieved successfully",
 		);

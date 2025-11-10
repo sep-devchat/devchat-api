@@ -1,15 +1,6 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
-import { FriendRequestStatus } from "@utils";
 import { Type } from "class-transformer";
-import {
-	IsEnum,
-	IsOptional,
-	IsString,
-	IsUUID,
-	Min,
-	Max,
-	IsInt,
-} from "class-validator";
+import { IsOptional, IsString, IsUUID, Min, Max, IsInt } from "class-validator";
 
 export class FriendRequestQuery {
 	@ApiPropertyOptional({
@@ -37,17 +28,6 @@ export class FriendRequestQuery {
 	@Min(1)
 	@Max(100)
 	limit: number = 10;
-
-	@ApiPropertyOptional({
-		example: FriendRequestStatus.PENDING,
-		description:
-			"Filter by friend request status (0-Pending, 1-Accepted, 2-Declined, 3-Unfriend)",
-		enum: FriendRequestStatus,
-	})
-	@IsOptional()
-	@Type(() => Number)
-	@IsEnum(FriendRequestStatus)
-	status?: FriendRequestStatus;
 
 	@ApiPropertyOptional({
 		example: "123e4567-e89b-12d3-a456-426614174000",

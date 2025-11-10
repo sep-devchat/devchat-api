@@ -29,9 +29,6 @@ export class FriendRequestEntity {
 	@ManyToOne(() => UserEntity)
 	toUser: UserEntity;
 
-	@Column({ name: ColumnName.FriendRequest.status })
-	status: number;
-
 	@Column({ name: ColumnName.FriendRequest.message, nullable: true })
 	message?: string;
 

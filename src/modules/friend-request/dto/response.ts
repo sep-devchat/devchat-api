@@ -1,7 +1,6 @@
 import { FriendRequestEntity } from "@db/entities";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { UserResponse } from "@modules/user/dto";
-import { FriendRequestStatus } from "@utils";
 
 export class FriendRequestResponse {
 	@ApiProperty({
@@ -27,13 +26,6 @@ export class FriendRequestResponse {
 		description: "Optional message sent with the friend request",
 	})
 	message?: string;
-
-	@ApiProperty({
-		example: FriendRequestStatus.PENDING,
-		description: "Friend request status (0-Pending, 1-Accepted, 2-Declined)",
-		enum: FriendRequestStatus,
-	})
-	status: FriendRequestStatus;
 
 	@ApiProperty({
 		example: "123e4567-e89b-12d3-a456-426614174000",
@@ -71,7 +63,6 @@ export class FriendRequestResponse {
 			fromUserId: entity.fromUserId,
 			toUserId: entity.toUserId,
 			message: entity.message,
-			status: entity.status as FriendRequestStatus,
 			createdBy: entity.createdBy,
 			fromUser: entity.fromUser
 				? UserResponse.fromEntity(entity.fromUser)

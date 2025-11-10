@@ -6,7 +6,7 @@ import {
 	UserRepository,
 } from "@db/repositories";
 import { ClsService } from "nestjs-cls";
-import { DevChatCls, FriendRequestStatus, PaginationDto } from "@utils";
+import { DevChatCls, PaginationDto } from "@utils";
 import { FindOptionsWhere, ILike } from "typeorm";
 import { UserFriendEntity } from "@db/entities";
 import { FriendshipNotFoundError, UserNotFoundError } from "./errors";
@@ -43,26 +43,8 @@ export class UserFriendService {
 			throw new FriendshipNotFoundError();
 		}
 
-		// Remove the bidirectional friendship records
-		await this.userFriendRepo.delete([
-			{ userId, friendId },
-			{ userId: friendId, friendId: userId },
-		]);
-
-		// Update any existing friend request to UNFRIEND status
-		const friendRequest = await this.friendRequestRepo.findOne({
-			where: [
-				{ fromUserId: userId, toUserId: friendId },
-				{ fromUserId: friendId, toUserId: userId },
-			],
-		});
-
-		if (friendRequest) {
-			await this.friendRequestRepo.update(friendRequest.id, {
-				status: FriendRequestStatus.UNFRIEND,
-				updatedAt: new Date(),
-			});
-		}
+		// Remove the single friendship record we found
+		await this.userFriendRepo.remove(friendship);
 
 		return { message: "Successfully unfriended user" };
 	}
@@ -254,12 +236,10 @@ export class UserFriendService {
 				{
 					fromUserId: userId,
 					toUserId: friendId,
-					status: FriendRequestStatus.PENDING,
 				},
 				{
 					fromUserId: friendId,
 					toUserId: userId,
-					status: FriendRequestStatus.PENDING,
 				},
 			],
 			relations: ["fromUser", "toUser"],

@@ -19,18 +19,17 @@ import {
 } from "@utils";
 import { CreateUserRequest } from "./dto/create-user.request";
 import { ApiBearerAuth, ApiOperation, ApiParam } from "@nestjs/swagger";
-import {
-	GroupRequestQuery,
-	UpdateUserRequest,
-	UserQuery,
-	FriendWithMutualsResponse,
-} from "./dto";
+import { UpdateUserRequest, UserQuery, FriendWithMutualsResponse } from "./dto";
 import { UserResponse } from "./dto/user.response";
 import { UserFriendQuery } from "@modules/user-friend/dto";
 import { UserGroupResponse } from "@modules/user-group/dto";
 import { GetFriendRequestQuery } from "./dto/get-friend.query";
 import { TaskResponse } from "@modules/task/dto";
 import { FriendRequestResponse } from "@modules/friend-request/dto";
+import {
+	GroupInvitationQuery,
+	GroupInvitationResponse,
+} from "@modules/group-invitation/dto";
 
 @Controller("user")
 export class UserController {
@@ -176,31 +175,37 @@ export class UserController {
 		);
 	}
 
-	@Get("group-requests/sent")
+	@Get("group-invitations/sent")
 	@ApiBearerAuth()
-	@ApiOperation({ summary: "Get all sent group requests" })
-	@SwaggerApiResponse(UserGroupResponse)
-	async getSentGroupRequests(@Query() query: GroupRequestQuery) {
-		const response = await this.userService.getSentGroupRequests(query);
+	@ApiOperation({ summary: "Get all sent group invitations" })
+	@SwaggerApiResponse(GroupInvitationResponse, {
+		isArray: true,
+		withPagination: true,
+	})
+	async getSentGroupInvitations(@Query() query: GroupInvitationQuery) {
+		const response = await this.userService.getSentGroupInvitations(query);
 
-		return new ApiResponseDto<UserGroupResponse[]>(
-			UserGroupResponse.fromEntities(response),
-			null,
-			"Users retrieved successfully",
+		return new ApiResponseDto(
+			GroupInvitationResponse.fromEntities(response.data),
+			response.pagination,
+			"Sent group invitations retrieved successfully",
 		);
 	}
 
-	@Get("group-requests/received")
+	@Get("group-invitations/received")
 	@ApiBearerAuth()
-	@ApiOperation({ summary: "Get all received group requests" })
-	@SwaggerApiResponse(UserGroupResponse)
-	async getReceivedGroupRequests(@Query() query: GroupRequestQuery) {
-		const response = await this.userService.getReceiveGroupRequests(query);
+	@ApiOperation({ summary: "Get all received group invitations" })
+	@SwaggerApiResponse(GroupInvitationResponse, {
+		isArray: true,
+		withPagination: true,
+	})
+	async getReceivedGroupInvitations(@Query() query: GroupInvitationQuery) {
+		const response = await this.userService.getReceivedGroupInvitations(query);
 
-		return new ApiResponseDto<UserGroupResponse[]>(
-			UserGroupResponse.fromEntities(response),
-			null,
-			"Users retrieved successfully",
+		return new ApiResponseDto(
+			GroupInvitationResponse.fromEntities(response.data),
+			response.pagination,
+			"Received group invitations retrieved successfully",
 		);
 	}
 

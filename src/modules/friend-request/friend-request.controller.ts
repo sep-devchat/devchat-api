@@ -58,9 +58,9 @@ export class FriendRequestController {
 	@Put(":id")
 	@ApiParam({ name: "id", description: "Friend Request ID" })
 	@ApiOperation({
-		summary: "Update friend request status",
+		summary: "Update friend request",
 		description:
-			"Accept, decline, or update a friend request. Only the recipient can update the status.",
+			"Update friend request message. Only the sender or recipient can update.",
 	})
 	@SwaggerApiResponse(FriendRequestResponse)
 	@AuditLog({
@@ -102,19 +102,19 @@ export class FriendRequestController {
 		);
 	}
 
-	@Get("pending/count")
+	@Get("count")
 	@ApiOperation({
-		summary: "Get pending friend requests count",
+		summary: "Get friend requests count",
 		description:
-			"Get the count of pending friend requests received by the current user",
+			"Get the count of friend requests received by the current user",
 	})
 	@SwaggerApiResponse(Number)
-	async getPendingRequestsCount() {
-		const count = await this.friendRequestService.getPendingRequestsCount();
+	async getRequestsCount() {
+		const count = await this.friendRequestService.getRequestsCount();
 		return new ApiResponseDto(
 			{ count },
 			null,
-			"Pending friend requests count retrieved successfully",
+			"Friend requests count retrieved successfully",
 		);
 	}
 
@@ -140,9 +140,9 @@ export class FriendRequestController {
 	@ApiOperation({
 		summary: "Accept a friend request",
 		description:
-			"Accept a pending friend request. Only the recipient can accept.",
+			"Accept a friend request. Creates friendship and deletes the request. Only the recipient can accept.",
 	})
-	@SwaggerApiResponse(FriendRequestResponse)
+	@SwaggerApiMessageResponse()
 	@AuditLog({
 		action: "FRIEND_REQUEST_ACCEPT",
 		entityType: "FriendRequest",
@@ -152,11 +152,7 @@ export class FriendRequestController {
 	})
 	async acceptFriendRequest(@Param("id") id: string) {
 		const response = await this.friendRequestService.acceptFriendRequest(id);
-		return new ApiResponseDto(
-			FriendRequestResponse.fromEntity(response),
-			null,
-			"Friend request accepted successfully",
-		);
+		return new ApiMessageResponseDto(response.message);
 	}
 
 	@Patch(":id/decline")
@@ -164,9 +160,9 @@ export class FriendRequestController {
 	@ApiOperation({
 		summary: "Decline a friend request",
 		description:
-			"Decline a pending friend request. Only the recipient can decline.",
+			"Decline a friend request. Deletes the request. Only the recipient can decline.",
 	})
-	@SwaggerApiResponse(FriendRequestResponse)
+	@SwaggerApiMessageResponse()
 	@AuditLog({
 		action: "FRIEND_REQUEST_DECLINE",
 		entityType: "FriendRequest",
@@ -176,11 +172,7 @@ export class FriendRequestController {
 	})
 	async declineFriendRequest(@Param("id") id: string) {
 		const response = await this.friendRequestService.declineFriendRequest(id);
-		return new ApiResponseDto(
-			FriendRequestResponse.fromEntity(response),
-			null,
-			"Friend request declined successfully",
-		);
+		return new ApiMessageResponseDto(response.message);
 	}
 
 	@Delete(":id")
@@ -188,7 +180,7 @@ export class FriendRequestController {
 	@ApiOperation({
 		summary: "Delete a friend request",
 		description:
-			"Delete a pending friend request. Only the sender can delete their own pending requests.",
+			"Delete a friend request. Only the sender can delete their own requests.",
 	})
 	@SwaggerApiMessageResponse()
 	@AuditLog({
@@ -200,5 +192,24 @@ export class FriendRequestController {
 	async deleteFriendRequest(@Param("id") id: string) {
 		await this.friendRequestService.deleteOne(id);
 		return new ApiMessageResponseDto("Friend request deleted successfully");
+	}
+
+	@Patch(":id/cancel")
+	@ApiParam({ name: "id", description: "Friend Request ID" })
+	@ApiOperation({
+		summary: "Cancel a friend request",
+		description:
+			"Cancel a friend request. Deletes the request. Only the sender can cancel.",
+	})
+	@SwaggerApiMessageResponse()
+	@AuditLog({
+		action: "FRIEND_REQUEST_CANCEL",
+		entityType: "FriendRequest",
+		entity: FriendRequestEntity,
+		entityIdParam: "id",
+	})
+	async cancelFriendRequest(@Param("id") id: string) {
+		const response = await this.friendRequestService.cancelFriendRequest(id);
+		return new ApiMessageResponseDto(response.message);
 	}
 }

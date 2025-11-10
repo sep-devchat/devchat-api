@@ -1,12 +1,5 @@
-import { GroupInvitationStatus } from "@utils";
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import {
-	IsEnum,
-	IsOptional,
-	IsString,
-	IsUUID,
-	MaxLength,
-} from "class-validator";
+import { ApiPropertyOptional } from "@nestjs/swagger";
+import { IsOptional, IsString, IsUUID, MaxLength } from "class-validator";
 
 export class UpdateGroupInvitationRequest {
 	@ApiPropertyOptional({
@@ -33,13 +26,4 @@ export class UpdateGroupInvitationRequest {
 	@IsString()
 	@MaxLength(255)
 	message?: string;
-
-	@ApiProperty({
-		example: GroupInvitationStatus.PENDING,
-		description:
-			"Group invitation status (0-Pending, 1-Accepted, 2-Declined, 3-Cancelled)",
-		enum: GroupInvitationStatus,
-	})
-	@IsEnum(GroupInvitationStatus)
-	status: GroupInvitationStatus;
 }

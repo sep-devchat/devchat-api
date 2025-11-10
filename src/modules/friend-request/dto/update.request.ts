@@ -1,12 +1,5 @@
-import { FriendRequestStatus } from "@utils";
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import {
-	IsEnum,
-	IsOptional,
-	IsString,
-	IsUUID,
-	MaxLength,
-} from "class-validator";
+import { ApiPropertyOptional } from "@nestjs/swagger";
+import { IsOptional, IsString, IsUUID, MaxLength } from "class-validator";
 
 export class UpdateFriendRequestRequest {
 	@ApiPropertyOptional({
@@ -25,12 +18,4 @@ export class UpdateFriendRequestRequest {
 	@IsString()
 	@MaxLength(255)
 	message?: string;
-
-	@ApiProperty({
-		example: FriendRequestStatus.PENDING,
-		description: "Friend request status (0-Pending, 1-Accepted, 2-Declined)",
-		enum: FriendRequestStatus,
-	})
-	@IsEnum(FriendRequestStatus)
-	status: FriendRequestStatus;
 }

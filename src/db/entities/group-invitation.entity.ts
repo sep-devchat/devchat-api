@@ -37,9 +37,6 @@ export class GroupInvitationEntity {
 	@ManyToOne(() => GroupEntity)
 	group: GroupEntity;
 
-	@Column({ name: ColumnName.GroupInvitation.status })
-	status: number;
-
 	@Column({ name: ColumnName.GroupInvitation.message, nullable: true })
 	message?: string;
 

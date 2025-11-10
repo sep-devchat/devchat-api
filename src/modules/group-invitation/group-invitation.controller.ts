@@ -60,9 +60,9 @@ export class GroupInvitationController {
 	@Put(":id")
 	@ApiParam({ name: "id", description: "Group Invitation ID" })
 	@ApiOperation({
-		summary: "Update group invitation status",
+		summary: "Update group invitation",
 		description:
-			"Accept, decline, or update a group invitation. Only the recipient can update the status.",
+			"Update group invitation message. Only the sender or recipient can update.",
 	})
 	@SwaggerApiResponse(GroupInvitationResponse)
 	@AuditLog({
@@ -104,20 +104,19 @@ export class GroupInvitationController {
 		);
 	}
 
-	@Get("pending/count")
+	@Get("count")
 	@ApiOperation({
-		summary: "Get pending group invitations count",
+		summary: "Get group invitations count",
 		description:
-			"Get the count of pending group invitations received by the current user",
+			"Get the count of group invitations received by the current user",
 	})
 	@SwaggerApiResponse(Number)
-	async getPendingInvitationsCount() {
-		const count =
-			await this.groupInvitationService.getPendingInvitationsCount();
+	async getInvitationsCount() {
+		const count = await this.groupInvitationService.getInvitationsCount();
 		return new ApiResponseDto(
 			{ count },
 			null,
-			"Pending group invitations count retrieved successfully",
+			"Group invitations count retrieved successfully",
 		);
 	}
 
@@ -166,9 +165,9 @@ export class GroupInvitationController {
 	@ApiOperation({
 		summary: "Accept a group invitation",
 		description:
-			"Accept a pending group invitation. Only the recipient can accept.",
+			"Accept a group invitation. Creates membership and deletes the invitation. Only the recipient can accept.",
 	})
-	@SwaggerApiResponse(GroupInvitationResponse)
+	@SwaggerApiMessageResponse()
 	@AuditLog({
 		action: "GROUP_INVITATION_ACCEPT",
 		entityType: "GroupInvitation",
@@ -176,13 +175,9 @@ export class GroupInvitationController {
 		entityIdParam: "id",
 		captureResponse: true,
 	})
-	async acceptGroupInvitation(@Param("id") id: string) {
+	async acceptInvitation(@Param("id") id: string) {
 		const response = await this.groupInvitationService.acceptInvitation(id);
-		return new ApiResponseDto(
-			GroupInvitationResponse.fromEntity(response),
-			null,
-			"Group invitation accepted successfully",
-		);
+		return new ApiMessageResponseDto(response.message);
 	}
 
 	@Patch(":id/decline")
@@ -190,9 +185,9 @@ export class GroupInvitationController {
 	@ApiOperation({
 		summary: "Decline a group invitation",
 		description:
-			"Decline a pending group invitation. Only the recipient can decline.",
+			"Decline a group invitation. Deletes the invitation. Only the recipient can decline.",
 	})
-	@SwaggerApiResponse(GroupInvitationResponse)
+	@SwaggerApiMessageResponse()
 	@AuditLog({
 		action: "GROUP_INVITATION_DECLINE",
 		entityType: "GroupInvitation",
@@ -200,13 +195,9 @@ export class GroupInvitationController {
 		entityIdParam: "id",
 		captureResponse: true,
 	})
-	async declineGroupInvitation(@Param("id") id: string) {
+	async declineInvitation(@Param("id") id: string) {
 		const response = await this.groupInvitationService.declineInvitation(id);
-		return new ApiResponseDto(
-			GroupInvitationResponse.fromEntity(response),
-			null,
-			"Group invitation declined successfully",
-		);
+		return new ApiMessageResponseDto(response.message);
 	}
 
 	@Patch(":id/cancel")
@@ -214,23 +205,18 @@ export class GroupInvitationController {
 	@ApiOperation({
 		summary: "Cancel a group invitation",
 		description:
-			"Cancel a pending group invitation. Only the sender can cancel their own invitations.",
+			"Cancel a group invitation. Deletes the invitation. Only the sender can cancel.",
 	})
-	@SwaggerApiResponse(GroupInvitationResponse)
+	@SwaggerApiMessageResponse()
 	@AuditLog({
 		action: "GROUP_INVITATION_CANCEL",
 		entityType: "GroupInvitation",
 		entity: GroupInvitationEntity,
 		entityIdParam: "id",
-		captureResponse: true,
 	})
 	async cancelGroupInvitation(@Param("id") id: string) {
 		const response = await this.groupInvitationService.cancelInvitation(id);
-		return new ApiResponseDto(
-			GroupInvitationResponse.fromEntity(response),
-			null,
-			"Group invitation cancelled successfully",
-		);
+		return new ApiMessageResponseDto(response.message);
 	}
 
 	@Delete(":id")
@@ -238,7 +224,7 @@ export class GroupInvitationController {
 	@ApiOperation({
 		summary: "Delete a group invitation",
 		description:
-			"Delete a pending group invitation. Only the sender can delete their own pending invitations.",
+			"Delete a group invitation. Only the sender can delete their own invitations.",
 	})
 	@SwaggerApiMessageResponse()
 	@AuditLog({

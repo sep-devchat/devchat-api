@@ -1,15 +1,6 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import {
-	IsEnum,
-	IsOptional,
-	IsString,
-	IsUUID,
-	Min,
-	Max,
-	IsInt,
-} from "class-validator";
-import { GroupInvitationStatus } from "@utils";
+import { IsOptional, IsString, IsUUID, Min, Max, IsInt } from "class-validator";
 
 export class GroupInvitationQuery {
 	@ApiPropertyOptional({
@@ -37,17 +28,6 @@ export class GroupInvitationQuery {
 	@Min(1)
 	@Max(100)
 	limit: number = 10;
-
-	@ApiPropertyOptional({
-		example: GroupInvitationStatus.PENDING,
-		description:
-			"Filter by group invitation status (0-Pending, 1-Accepted, 2-Declined, 3-Cancelled)",
-		enum: GroupInvitationStatus,
-	})
-	@IsOptional()
-	@Type(() => Number)
-	@IsEnum(GroupInvitationStatus)
-	status?: GroupInvitationStatus;
 
 	@ApiPropertyOptional({
 		example: "123e4567-e89b-12d3-a456-426614174000",

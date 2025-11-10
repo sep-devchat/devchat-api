@@ -11,12 +11,7 @@ import {
 	GroupRepository,
 } from "@db/repositories";
 import { ClsService } from "nestjs-cls";
-import {
-	DevChatCls,
-	PaginationDto,
-	GroupInvitationStatus,
-	InvitationStatus,
-} from "@utils";
+import { DevChatCls, PaginationDto } from "@utils";
 import { FindOptionsWhere, ILike } from "typeorm";
 import { GroupInvitationEntity } from "@db/entities/group-invitation.entity";
 import {
@@ -63,7 +58,6 @@ export class GroupInvitationService {
 			where: {
 				userId: toUserId,
 				groupId: groupId,
-				status: InvitationStatus.ACCEPTED,
 			},
 		});
 
@@ -71,12 +65,11 @@ export class GroupInvitationService {
 			throw new AlreadyGroupMemberError();
 		}
 
-		// Check if group invitation already exists (pending)
+		// Check if group invitation already exists
 		const existingInvitation = await this.repo.findOne({
 			where: {
 				toUserId,
 				groupId,
-				status: GroupInvitationStatus.PENDING,
 			},
 		});
 
@@ -99,7 +92,7 @@ export class GroupInvitationService {
 			toUserId: dto.toUserId,
 			groupId: dto.groupId,
 			message: dto.message,
-			status: GroupInvitationStatus.PENDING,
+			updatedAt: new Date(),
 			createdBy: userId,
 		});
 
@@ -120,28 +113,15 @@ export class GroupInvitationService {
 		const existingInvitation = await this.findOne(id);
 		const userId = this.cls.get("profile").id;
 
-		this.logger.log(`Updating invitation ${id} to status: ${dto.status}`);
-
-		// Only allow the recipient to update the status
-		if (existingInvitation.toUserId !== userId) {
-			this.logger.warn(
-				`User ${userId} tried to update invitation ${id} but is not the recipient`,
-			);
+		// Only allow the sender or recipient to update
+		if (
+			existingInvitation.fromUserId !== userId &&
+			existingInvitation.toUserId !== userId
+		) {
 			throw new GroupInvitationNotFoundError();
 		}
 
-		// If accepting the invitation, add user to group
-		if (dto.status === GroupInvitationStatus.ACCEPTED) {
-			this.logger.log(
-				`Adding user ${existingInvitation.toUserId} to group ${existingInvitation.groupId}`,
-			);
-
-			await this.addUserToGroup(
-				existingInvitation.toUserId,
-				existingInvitation.groupId,
-				existingInvitation.fromUserId,
-			);
-		}
+		this.logger.log(`Updating invitation ${id} message`);
 
 		await this.repo.update(id, {
 			...dto,
@@ -164,39 +144,22 @@ export class GroupInvitationService {
 	) {
 		this.logger.log(`Adding user ${userId} to group ${groupId}`);
 
-		// Check if user group record already exists and update it
-		const existingUserGroup = await this.userGroupRepo.findOne({
-			where: { userId, groupId },
+		// Create only one membership record
+		const userGroup = this.userGroupRepo.create({
+			userId,
+			groupId,
+			addedById: addedBy,
+			joinedAt: new Date(),
+			invitedAt: new Date(),
 		});
 
-		if (existingUserGroup) {
-			// Update existing record to accepted
-			await this.userGroupRepo.update(existingUserGroup.id, {
-				status: InvitationStatus.ACCEPTED,
-				addedById: addedBy,
-				joinedAt: new Date(),
-			});
-			this.logger.log(`Updated existing user-group record for user ${userId}`);
-		} else {
-			// Create new user group record
-			const userGroup = this.userGroupRepo.create({
-				userId,
-				groupId,
-				status: InvitationStatus.ACCEPTED,
-				addedById: addedBy,
-				joinedAt: new Date(),
-				invitedAt: new Date(),
-			});
-
-			await this.userGroupRepo.save(userGroup);
-			this.logger.log(`Created new user-group record for user ${userId}`);
-		}
+		await this.userGroupRepo.save(userGroup);
+		this.logger.log(`Created group membership record for user ${userId}`);
 	}
 
 	async findMany(query: GroupInvitationQuery) {
 		const userId = this.cls.get("profile").id;
-		const { page, limit, status, fromUserId, toUserId, groupId, search, type } =
-			query;
+		const { page, limit, fromUserId, toUserId, groupId, search, type } = query;
 
 		// Build where conditions based on type
 		let where: FindOptionsWhere<GroupInvitationEntity>[] = [];
@@ -211,10 +174,6 @@ export class GroupInvitationService {
 		}
 
 		// Apply additional filters
-		if (status !== undefined) {
-			where = where.map((condition) => ({ ...condition, status }));
-		}
-
 		if (fromUserId) {
 			where = where.map((condition) => ({ ...condition, fromUserId }));
 		}
@@ -302,11 +261,6 @@ export class GroupInvitationService {
 			throw new GroupInvitationNotFoundError();
 		}
 
-		// Only allow deletion of pending invitations
-		if (existingInvitation.status !== GroupInvitationStatus.PENDING) {
-			throw new GroupInvitationNotFoundError();
-		}
-
 		await this.repo.delete(id);
 
 		return { message: "Group invitation deleted successfully" };
@@ -322,15 +276,11 @@ export class GroupInvitationService {
 			throw new GroupInvitationNotFoundError();
 		}
 
-		await this.repo.update(id, {
-			status: GroupInvitationStatus.CANCELLED,
-			updatedAt: new Date(),
-		});
+		this.logger.log(`Canceling group invitation ${id}`);
+		await this.repo.delete(id);
+		this.logger.log(`Group invitation ${id} cancelled successfully`);
 
-		return await this.repo.findOne({
-			where: { id },
-			relations: ["fromUser", "toUser", "group"],
-		});
+		return { message: "Group invitation cancelled successfully" };
 	}
 
 	async removeUserFromGroup(userId: string, groupId: string) {
@@ -342,17 +292,11 @@ export class GroupInvitationService {
 			groupId,
 		});
 
-		// Update any existing group invitation to CANCELLED status
-		await this.repo.update(
-			{
-				toUserId: userId,
-				groupId,
-			},
-			{
-				status: GroupInvitationStatus.CANCELLED,
-				updatedAt: new Date(),
-			},
-		);
+		// Delete any existing group invitation
+		await this.repo.delete({
+			toUserId: userId,
+			groupId,
+		});
 
 		this.logger.log(
 			`Successfully removed user ${userId} from group ${groupId}`,
@@ -361,29 +305,23 @@ export class GroupInvitationService {
 		return { message: "Successfully removed user from group" };
 	}
 
-	async getPendingInvitationsCount() {
+	async getInvitationsCount() {
 		const userId = this.cls.get("profile").id;
 
 		return await this.repo.count({
 			where: {
 				toUserId: userId,
-				status: GroupInvitationStatus.PENDING,
 			},
 		});
 	}
 
 	async getInvitationsByGroup(groupId: string, query: GroupInvitationQuery) {
-		const { page, limit, status } = query;
+		const { page, limit } = query;
 
 		// Build where conditions
 		const where: FindOptionsWhere<GroupInvitationEntity> = {
 			groupId,
 		};
-
-		// Apply status filter
-		if (status !== undefined) {
-			where.status = status;
-		}
 
 		const [data, total] = await this.repo.findAndCount({
 			where,
@@ -416,17 +354,27 @@ export class GroupInvitationService {
 			throw new GroupInvitationNotFoundError();
 		}
 
-		// Only allow accepting pending invitations
-		if (existingInvitation.status !== GroupInvitationStatus.PENDING) {
-			this.logger.warn(
-				`Invitation ${id} is not in pending status: ${existingInvitation.status}`,
+		try {
+			// Add user to group
+			await this.addUserToGroup(
+				existingInvitation.toUserId,
+				existingInvitation.groupId,
+				existingInvitation.fromUserId,
 			);
-			throw new GroupInvitationNotFoundError();
-		}
 
-		return await this.updateOne(id, {
-			status: GroupInvitationStatus.ACCEPTED,
-		});
+			// Delete the invitation record
+			await this.repo.delete(id);
+
+			this.logger.log(
+				`Invitation ${id} accepted, membership created, and invitation deleted`,
+			);
+			return { message: "Group invitation accepted successfully" };
+		} catch (error) {
+			this.logger.error(
+				`Failed to accept group invitation ${id}: ${error.message}`,
+			);
+			throw error;
+		}
 	}
 
 	async declineInvitation(id: string) {
@@ -443,16 +391,10 @@ export class GroupInvitationService {
 			throw new GroupInvitationNotFoundError();
 		}
 
-		// Only allow declining pending invitations
-		if (existingInvitation.status !== GroupInvitationStatus.PENDING) {
-			this.logger.warn(
-				`Invitation ${id} is not in pending status: ${existingInvitation.status}`,
-			);
-			throw new GroupInvitationNotFoundError();
-		}
+		// Simply delete the invitation record
+		await this.repo.delete(id);
 
-		return await this.updateOne(id, {
-			status: GroupInvitationStatus.DECLINED,
-		});
+		this.logger.log(`Group invitation ${id} declined and deleted`);
+		return { message: "Group invitation declined successfully" };
 	}
 }
