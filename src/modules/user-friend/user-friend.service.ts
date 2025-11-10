@@ -1,183 +1,375 @@
-import { Injectable } from "@nestjs/common";
-import { UpdateUserFriendRequest, UserFriendQuery } from "./dto";
-import { UserFriendRepository } from "@db/repositories";
+import { Injectable, Logger } from "@nestjs/common";
+import { UserFriendQuery } from "./dto";
+import {
+	UserFriendRepository,
+	FriendRequestRepository,
+	UserRepository,
+} from "@db/repositories";
 import { ClsService } from "nestjs-cls";
 import { DevChatCls, FriendRequestStatus, PaginationDto } from "@utils";
-import { UserService } from "@modules/user/user.service";
-import { SendFriendRequestDto } from "./dto/send-friend.request";
-import {
-	AlreadyFriendError,
-	AlreadyPendingRequestError,
-	FriendRequestNotFoundError,
-	InvalidFriendRequestStatusError,
-	OnlyReceiverError,
-	SendToYourSelfError,
-} from "./errors";
-import { UserEntity } from "@db/entities";
+import { FindOptionsWhere, ILike } from "typeorm";
+import { UserFriendEntity } from "@db/entities";
+import { FriendshipNotFoundError, UserNotFoundError } from "./errors";
 
 @Injectable()
 export class UserFriendService {
+	private readonly logger = new Logger(UserFriendService.name);
+
 	constructor(
-		private readonly friendRequestRepo: UserFriendRepository,
+		private readonly userFriendRepo: UserFriendRepository,
+		private readonly friendRequestRepo: FriendRequestRepository,
+		private readonly userRepo: UserRepository,
 		private readonly cls: ClsService<DevChatCls>,
-		private readonly userService: UserService,
 	) {}
 
-	async validateBeforeCreate(senderId: string, receiverId: string) {
-		if (senderId === receiverId) {
-			throw new SendToYourSelfError();
+	async unfriend(friendId: string) {
+		const userId = this.cls.get("profile").id;
+
+		// Verify the friend user exists
+		const friendUser = await this.userRepo.findOne({ where: { id: friendId } });
+		if (!friendUser) {
+			throw new UserNotFoundError();
 		}
 
-		// Validate if receiver exist
-		await this.userService.findById(receiverId);
-
-		// Validate if a sender and receiver are friend
-		const existingFriendship = await this.friendRequestRepo.findOne({
+		// Verify they are actually friends
+		const friendship = await this.userFriendRepo.findOne({
 			where: [
-				{
-					senderId: senderId,
-					receiverId: receiverId,
-					status: FriendRequestStatus.ACCEPTED,
-				},
-				{
-					senderId: receiverId,
-					receiverId: senderId,
-					status: FriendRequestStatus.ACCEPTED,
-				},
+				{ userId, friendId },
+				{ userId: friendId, friendId: userId },
 			],
 		});
 
-		if (existingFriendship) {
-			throw new AlreadyFriendError();
+		if (!friendship) {
+			throw new FriendshipNotFoundError();
 		}
 
-		const pendingRequestBefore = await this.friendRequestRepo.findOne({
-			where: [
-				{
-					senderId: senderId,
-					receiverId: receiverId,
-					status: FriendRequestStatus.PENDING,
-				},
-				{
-					senderId: receiverId,
-					receiverId: senderId,
-					status: FriendRequestStatus.PENDING,
-				},
-			],
-		});
+		// Remove the bidirectional friendship records
+		await this.userFriendRepo.delete([
+			{ userId, friendId },
+			{ userId: friendId, friendId: userId },
+		]);
 
-		if (pendingRequestBefore) {
-			throw new AlreadyPendingRequestError();
-		}
-	}
-
-	async sendFriendRequest(dto: SendFriendRequestDto) {
-		const senderId = this.cls.get("profile").id;
-
-		const { receiverId, message } = dto;
-
-		// Validate before create
-		await this.validateBeforeCreate(senderId, receiverId);
-
-		const entity = this.friendRequestRepo.create({
-			senderId,
-			receiverId,
-			message: message ?? null,
-			status: FriendRequestStatus.PENDING,
-		});
-
-		await this.friendRequestRepo.insert(entity);
-		return this.friendRequestRepo.findOne({
-			where: { id: entity.id },
-			relations: ["sender", "receiver"],
-		});
-	}
-
-	// This function will do accept or declined friend request
-	async updateFriendRequest(id: string, request: UpdateUserFriendRequest) {
-		const { status } = request;
-		const currentUserId = this.cls.get("profile").id;
-
+		// Update any existing friend request to UNFRIEND status
 		const friendRequest = await this.friendRequestRepo.findOne({
 			where: [
-				{ id: id, senderId: currentUserId },
-				{ id: id, receiverId: currentUserId },
+				{ fromUserId: userId, toUserId: friendId },
+				{ fromUserId: friendId, toUserId: userId },
 			],
 		});
 
-		if (status === FriendRequestStatus.PENDING) {
-			throw new InvalidFriendRequestStatusError();
+		if (friendRequest) {
+			await this.friendRequestRepo.update(friendRequest.id, {
+				status: FriendRequestStatus.UNFRIEND,
+				updatedAt: new Date(),
+			});
 		}
 
-		if (!friendRequest) {
-			throw new FriendRequestNotFoundError();
-		}
-
-		// Make sure that only receiver to use this service
-		// if (
-		// 	(status === FriendRequestStatus.ACCEPTED ||
-		// 		status === FriendRequestStatus.DECLINED) &&
-		// 	friendRequest.receiverId !== currentUserId
-		// ) {
-		// 	throw new OnlyReceiverError();
-		// }
-
-		friendRequest.status = status;
-		friendRequest.respondedAt = new Date();
-		return await this.friendRequestRepo.save(friendRequest);
-	}
-
-	async removeFriend(id: string) {
-		const currentUserId = this.cls.get("profile").id;
-
-		// Ensure that only users involved in the friendship (either sender or receiver) can perform this action.
-		// This prevents unauthorized users from modifying other users’ friendships.
-		const friendRequest = await this.friendRequestRepo.findOne({
-			where: [
-				{
-					id: id,
-					senderId: currentUserId,
-					status: FriendRequestStatus.ACCEPTED,
-				},
-				{
-					id: id,
-					receiverId: currentUserId,
-					status: FriendRequestStatus.ACCEPTED,
-				},
-			],
-		});
-
-		if (!friendRequest) {
-			throw new FriendRequestNotFoundError();
-		}
-
-		friendRequest.status = FriendRequestStatus.UNFRIEND;
-		friendRequest.respondedAt = new Date();
-		await this.friendRequestRepo.save(friendRequest);
+		return { message: "Successfully unfriended user" };
 	}
 
 	async getAllFriends(query: UserFriendQuery) {
-		const { page, limit } = query;
-		const currentUserId = this.cls.get("profile").id;
+		try {
+			this.logger.log(
+				`Starting getAllFriends with query: ${JSON.stringify(query)}`,
+			);
 
-		const [data, total] = await this.friendRequestRepo.findAndCount({
+			const profile = this.cls.get("profile");
+			this.logger.log(`CLS profile: ${JSON.stringify(profile)}`);
+
+			if (!profile || !profile.id) {
+				this.logger.error("No user profile found in CLS context");
+				throw new Error("User not found in context");
+			}
+
+			const userId = this.cls.get("profile").id;
+			this.logger.log(`Extracted userId: ${userId}`);
+			const { page, limit, search } = query;
+
+			// Build where conditions
+			const where: FindOptionsWhere<UserFriendEntity>[] = [
+				{ userId },
+				{ friendId: userId },
+			];
+
+			const findOptions = {
+				where,
+				relations: ["user", "friend"],
+				skip: (page - 1) * limit,
+				take: limit,
+				order: { createdAt: "DESC" as const },
+			};
+
+			// Handle search if provided
+			if (search) {
+				const searchConditions = [
+					{
+						userId,
+						friend: { username: ILike(`%${search}%`) },
+					},
+					{
+						userId,
+						friend: { firstName: ILike(`%${search}%`) },
+					},
+					{
+						userId,
+						friend: { lastName: ILike(`%${search}%`) },
+					},
+					{
+						friendId: userId,
+						user: { username: ILike(`%${search}%`) },
+					},
+					{
+						friendId: userId,
+						user: { firstName: ILike(`%${search}%`) },
+					},
+					{
+						friendId: userId,
+						user: { lastName: ILike(`%${search}%`) },
+					},
+				];
+
+				this.logger.log(
+					`Finding friends with search conditions: ${JSON.stringify(searchConditions)}`,
+				);
+				this.logger.log(`User ID from CLS: ${userId}`);
+
+				let data, total;
+				try {
+					[data, total] = await this.userFriendRepo.findAndCount({
+						where: searchConditions,
+						relations: findOptions.relations,
+						skip: findOptions.skip,
+						take: findOptions.take,
+						order: findOptions.order,
+					});
+					this.logger.log(
+						`Found ${total} total friends, returned ${data.length} items`,
+					);
+					this.logger.log(
+						`Raw data from query: ${JSON.stringify(data, null, 2)}`,
+					);
+				} catch (dbError) {
+					this.logger.error(`Database query failed: ${dbError.message}`);
+					this.logger.error(
+						`Query was: ${JSON.stringify(searchConditions, null, 2)}`,
+					);
+					throw dbError;
+				}
+
+				const pagination = new PaginationDto(page, limit, total);
+
+				// Extract the friend users from the relationship records
+				const friends = data.map((friendship) => {
+					const friend =
+						friendship.userId === userId ? friendship.friend : friendship.user;
+
+					this.logger.log(
+						`Processing friendship: ${JSON.stringify({
+							friendshipId: friendship.id,
+							userId: friendship.userId,
+							friendId: friendship.friendId,
+							friendName: friend.username,
+							friendFullName: `${friend.firstName} ${friend.lastName}`,
+						})}`,
+					);
+
+					// Return the friend (not the current user)
+					return friend;
+				});
+
+				return { friends, pagination };
+			}
+
+			// Regular find without search
+			this.logger.log(
+				`Finding all friends for user ${userId} with options: ${JSON.stringify(findOptions)}`,
+			);
+			this.logger.log(`User ID from CLS: ${userId}`);
+
+			let data, total;
+			try {
+				[data, total] = await this.userFriendRepo.findAndCount(findOptions);
+				this.logger.log(
+					`Found ${total} total friends, returned ${data.length} items`,
+				);
+				this.logger.log(
+					`Raw data from query: ${JSON.stringify(data, null, 2)}`,
+				);
+			} catch (dbError) {
+				this.logger.error(`Database query failed: ${dbError.message}`);
+				this.logger.error(`Query was: ${JSON.stringify(findOptions, null, 2)}`);
+				throw dbError;
+			}
+
+			const pagination = new PaginationDto(page, limit, total);
+
+			// Extract the friend users from the relationship records
+			const friends = data.map((friendship) => {
+				const friend =
+					friendship.userId === userId ? friendship.friend : friendship.user;
+
+				this.logger.log(
+					`Processing friendship: ${JSON.stringify({
+						friendshipId: friendship.id,
+						userId: friendship.userId,
+						friendId: friendship.friendId,
+						friendName: friend.username,
+						friendFullName: `${friend.firstName} ${friend.lastName}`,
+					})}`,
+				);
+
+				// Return the friend (not the current user)
+				return friend;
+			});
+
+			return { friends, pagination };
+		} catch (error) {
+			this.logger.error(`Error in getAllFriends: ${error.message}`);
+			this.logger.error(`Stack trace: ${error.stack}`);
+			throw error;
+		}
+	}
+
+	async getFriendshipStatus(friendId: string) {
+		const userId = this.cls.get("profile").id;
+
+		// Check if they are friends
+		const friendship = await this.userFriendRepo.findOne({
 			where: [
-				{ senderId: currentUserId, status: FriendRequestStatus.ACCEPTED },
-				{ receiverId: currentUserId, status: FriendRequestStatus.ACCEPTED },
+				{ userId, friendId },
+				{ userId: friendId, friendId: userId },
 			],
-			relations: ["sender", "receiver"],
-			skip: (page - 1) * limit,
-			take: limit,
-			order: { createdAt: "DESC" },
 		});
-		const pagination = new PaginationDto(page, limit, total);
-		const friends: UserEntity[] = data.map((uf) =>
-			currentUserId === uf.senderId ? uf.receiver : uf.sender,
+
+		if (friendship) {
+			return {
+				status: "friends",
+				since: friendship.createdAt,
+			};
+		}
+
+		// Check if there's a pending friend request
+		const friendRequest = await this.friendRequestRepo.findOne({
+			where: [
+				{
+					fromUserId: userId,
+					toUserId: friendId,
+					status: FriendRequestStatus.PENDING,
+				},
+				{
+					fromUserId: friendId,
+					toUserId: userId,
+					status: FriendRequestStatus.PENDING,
+				},
+			],
+			relations: ["fromUser", "toUser"],
+		});
+
+		if (friendRequest) {
+			return {
+				status: "pending",
+				direction: friendRequest.fromUserId === userId ? "sent" : "received",
+				requestId: friendRequest.id,
+				since: friendRequest.createdAt,
+			};
+		}
+
+		return { status: "none" };
+	}
+
+	async getFriendsCount() {
+		const userId = this.cls.get("profile").id;
+
+		return await this.userFriendRepo.count({
+			where: [{ userId }, { friendId: userId }],
+		});
+	}
+
+	async getMutualFriends(targetUserId: string) {
+		const userId = this.cls.get("profile").id;
+
+		// Verify target user exists
+		const targetUser = await this.userRepo.findOne({
+			where: { id: targetUserId },
+		});
+		if (!targetUser) {
+			throw new UserNotFoundError();
+		}
+
+		// Get current user's friends
+		const userFriends = await this.userFriendRepo.find({
+			where: [{ userId }, { friendId: userId }],
+			relations: ["user", "friend"],
+		});
+
+		// Get target user's friends
+		const targetFriends = await this.userFriendRepo.find({
+			where: [{ userId: targetUserId }, { friendId: targetUserId }],
+			relations: ["user", "friend"],
+		});
+
+		// Extract friend IDs for current user
+		const userFriendIds = new Set(
+			userFriends.map((friendship) =>
+				friendship.userId === userId ? friendship.friendId : friendship.userId,
+			),
 		);
 
+		// Extract friend IDs for target user
+		const targetFriendIds = new Set(
+			targetFriends.map((friendship) =>
+				friendship.userId === targetUserId
+					? friendship.friendId
+					: friendship.userId,
+			),
+		);
+
+		// Find mutual friend IDs
+		const mutualFriendIds = [...userFriendIds].filter((id) =>
+			targetFriendIds.has(id),
+		);
+
+		// Get mutual friends data
+		const mutualFriends = [];
+		for (const friendId of mutualFriendIds) {
+			const friend = await this.userRepo.findOne({ where: { id: friendId } });
+			if (friend) {
+				mutualFriends.push(friend);
+			}
+		}
+
 		return {
-			friends,
-			pagination,
+			mutualFriends,
+			count: mutualFriends.length,
 		};
+	}
+
+	async checkIfFriends(friendId: string): Promise<boolean> {
+		const userId = this.cls.get("profile").id;
+
+		const friendship = await this.userFriendRepo.findOne({
+			where: [
+				{ userId, friendId },
+				{ userId: friendId, friendId: userId },
+			],
+		});
+
+		return !!friendship;
+	}
+
+	async findFriendsByIds(friendIds: string[]) {
+		const userId = this.cls.get("profile").id;
+
+		const friendships = await this.userFriendRepo.find({
+			where: friendIds.flatMap((friendId) => [
+				{ userId, friendId },
+				{ userId: friendId, friendId: userId },
+			]),
+			relations: ["user", "friend"],
+		});
+
+		return friendships.map((friendship) =>
+			friendship.userId === userId ? friendship.friend : friendship.user,
+		);
 	}
 }

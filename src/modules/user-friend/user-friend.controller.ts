@@ -1,92 +1,116 @@
-import {
-	Controller,
-	Param,
-	Body,
-	Query,
-	Post,
-	Get,
-	Put,
-	Delete,
-} from "@nestjs/common";
+import { Controller, Param, Query, Get, Delete } from "@nestjs/common";
 import { UserFriendService } from "./user-friend.service";
-import {
-	FriendRequestResponseDto,
-	SendFriendRequestDto,
-	UpdateUserFriendRequest,
-	UserFriendQuery,
-} from "./dto";
+import { UserFriendQuery } from "./dto";
 import {
 	ApiResponseDto,
+	ApiMessageResponseDto,
 	SwaggerApiMessageResponse,
 	SwaggerApiResponse,
+	AuditLog,
 } from "@utils";
-import { ApiBearerAuth, ApiOperation, ApiParam } from "@nestjs/swagger";
+import {
+	ApiBearerAuth,
+	ApiOperation,
+	ApiParam,
+	ApiTags,
+} from "@nestjs/swagger";
 import { UserResponse } from "@modules/user/dto";
-import { UserFriendEntity } from "@db/entities";
 
-@Controller("user-friend")
+@Controller("user/friends")
+@ApiTags("User Friend")
 @ApiBearerAuth()
 export class UserFriendController {
 	constructor(private readonly userFriendService: UserFriendService) {}
 
-	@Post()
-	@ApiOperation({
-		summary: "Send friend request to a user",
-	})
-	@SwaggerApiResponse(FriendRequestResponseDto)
-	async createOne(@Body() dto: SendFriendRequestDto) {
-		const friendRequest = await this.userFriendService.sendFriendRequest(dto);
-		return new ApiResponseDto(
-			FriendRequestResponseDto.fromEntity(friendRequest),
-			null,
-			"Created successfully",
-		);
-	}
-
-	@Put(":id")
-	@ApiParam({ name: "id", description: "User friend ID" })
-	@ApiOperation({
-		summary: "Update user friend request status like accepted or declined",
-	})
-	@SwaggerApiMessageResponse()
-	async updateOne(
-		@Param("id") id: string,
-		@Body() request: UpdateUserFriendRequest,
-	) {
-		await this.userFriendService.updateFriendRequest(id, request);
-		return new ApiResponseDto(null, null, "Updated successfully");
-	}
-
 	@Get()
 	@ApiOperation({
 		summary: "Get all user's friends",
+		description:
+			"Get paginated list of current user's friends with optional search",
 	})
-	@SwaggerApiResponse(UserResponse)
-	async findMany(@Query() query: UserFriendQuery) {
-		const data = await this.userFriendService.getAllFriends(query);
-		const { friends, pagination } = data;
+	@SwaggerApiResponse(UserResponse, { isArray: true, withPagination: true })
+	@ApiBearerAuth()
+	async getAllFriends(@Query() query: UserFriendQuery) {
+		const { friends, pagination } =
+			await this.userFriendService.getAllFriends(query);
 		return new ApiResponseDto(
 			UserResponse.fromEntities(friends),
 			pagination,
-			"Retrieved friends successfully",
+			"Friends retrieved successfully",
 		);
 	}
 
-	// @Get(":id")
-	// async findOne(@Param("id") id: string) {
-	// 	const data = await this.userFriendService.findOne(id);
-	// 	return new ApiResponseDto(data);
-	// }
+	@Get("count")
+	@ApiOperation({
+		summary: "Get friends count",
+		description: "Get the total number of friends for the current user",
+	})
+	@SwaggerApiResponse(Number)
+	async getFriendsCount() {
+		const count = await this.userFriendService.getFriendsCount();
+		return new ApiResponseDto(
+			{ count },
+			null,
+			"Friends count retrieved successfully",
+		);
+	}
 
-	@Put(":id")
-	@ApiParam({ name: "id", description: "User friend ID" })
+	@Get(":friendId/status")
+	@ApiParam({
+		name: "friendId",
+		description: "User ID to check friendship status with",
+	})
+	@ApiOperation({
+		summary: "Get friendship status",
+		description:
+			"Check the friendship status between current user and another user",
+	})
+	async getFriendshipStatus(@Param("friendId") friendId: string) {
+		const status = await this.userFriendService.getFriendshipStatus(friendId);
+		return new ApiResponseDto(
+			status,
+			null,
+			"Friendship status retrieved successfully",
+		);
+	}
+
+	@Get(":userId/mutual")
+	@ApiParam({
+		name: "userId",
+		description: "User ID to find mutual friends with",
+	})
+	@ApiOperation({
+		summary: "Get mutual friends",
+		description:
+			"Get list of mutual friends between current user and another user",
+	})
+	@SwaggerApiResponse(UserResponse, { isArray: true })
+	async getMutualFriends(@Param("userId") userId: string) {
+		const { mutualFriends, count } =
+			await this.userFriendService.getMutualFriends(userId);
+		return new ApiResponseDto(
+			{
+				friends: UserResponse.fromEntities(mutualFriends),
+				count,
+			},
+			null,
+			"Mutual friends retrieved successfully",
+		);
+	}
+
+	@Delete(":friendId")
+	@ApiParam({ name: "friendId", description: "Friend User ID to unfriend" })
 	@ApiOperation({
 		summary: "Unfriend a user",
-		description:
-			"Remove an existing friendship between users. Only accepted friendships can be unfriended.",
+		description: "Remove friendship relationship with another user",
 	})
-	async deleteOne(@Param("id") id: string) {
-		await this.userFriendService.removeFriend(id);
-		return new ApiResponseDto(null, null, "Unfriend user successfully");
+	@SwaggerApiMessageResponse()
+	@AuditLog({
+		action: "UNFRIEND",
+		entityType: "UserFriend",
+	})
+	async unfriend(@Param("friendId") friendId: string) {
+		await this.userFriendService.unfriend(friendId);
+		return new ApiMessageResponseDto("Successfully unfriended user");
 	}
 }

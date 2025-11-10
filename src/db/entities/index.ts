@@ -15,3 +15,5 @@ export * from "./task.entity";
 export * from "./todo.entity";
 export * from "./code-block.entity";
 export * from "./direct-message.entity";
+export * from "./friend-request.entity";
+export * from "./group-invitation.entity";

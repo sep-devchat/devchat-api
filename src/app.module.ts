@@ -24,6 +24,8 @@ import { AuditLogInterceptor } from "./interceptors";
 import { TaskModule } from "@modules/task";
 import { TodoModule } from "@modules/todo";
 import { CodeBlockModule } from "@modules/code-block";
+import { FriendRequestModule } from "@modules/friend-request";
+import { GroupInvitationModule } from "@modules/group-invitation";
 
 @Module({
 	imports: [
@@ -57,6 +59,8 @@ import { CodeBlockModule } from "@modules/code-block";
 		TaskModule,
 		TodoModule,
 		CodeBlockModule,
+		FriendRequestModule,
+		GroupInvitationModule,
 	],
 	controllers: [],
 	providers: [

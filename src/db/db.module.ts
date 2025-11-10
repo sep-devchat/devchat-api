@@ -20,6 +20,8 @@ import {
 	TodoRepository,
 	CodeBlockRepository,
 	DirectMessageRepository,
+	FriendRequestRepository,
+	GroupInvitationRepository,
 } from "./repositories";
 
 const repositories = [
@@ -40,6 +42,8 @@ const repositories = [
 	TodoRepository,
 	CodeBlockRepository,
 	DirectMessageRepository,
+	FriendRequestRepository,
+	GroupInvitationRepository,
 ];
 
 @Module({
