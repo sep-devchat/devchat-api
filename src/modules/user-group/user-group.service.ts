@@ -254,4 +254,32 @@ export class UserGroupService {
 		);
 		return result;
 	}
+
+	async leaveGroup(groupId: string) {
+		const userId = this.cls.get("profile").id; // Get current user from CLS
+
+		this.logger.log(`User ${userId} attempting to leave group ${groupId}`);
+
+		// Validate that the group exists
+		await this.groupService.findOne(groupId);
+
+		// Check if user is actually a member
+		const member = await this.userGroupRepo.findOne({
+			where: {
+				groupId: groupId,
+				userId: userId,
+			},
+			relations: ["user", "group"],
+		});
+
+		if (!member) {
+			throw new MemberNotFoundError();
+		}
+
+		// Remove the membership
+		const result = await this.userGroupRepo.remove(member);
+
+		this.logger.log(`User ${userId} successfully left group ${groupId}`);
+		return result;
+	}
 }

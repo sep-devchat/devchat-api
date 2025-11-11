@@ -155,36 +155,72 @@ export class UserService {
 		await this.userRepo.save(user);
 	}
 
-	async getSentFriendRequests() {
+	async getSentFriendRequests(search?: string) {
 		const userId = this.cls.get("profile").id;
 
-		const where: FindOptionsWhere<FriendRequestEntity> = {
-			fromUserId: userId,
-		};
+		let where:
+			| FindOptionsWhere<FriendRequestEntity>[]
+			| FindOptionsWhere<FriendRequestEntity>;
 
-		const friendRequests = await this.friendRequestRepo.find({
+		if (search) {
+			const searchPattern = `%${search}%`;
+			where = [
+				{
+					fromUserId: userId,
+					toUser: { firstName: ILike(searchPattern) },
+				},
+				{
+					fromUserId: userId,
+					toUser: { lastName: ILike(searchPattern) },
+				},
+				{
+					fromUserId: userId,
+					toUser: { username: ILike(searchPattern) },
+				},
+			];
+		} else {
+			where = { fromUserId: userId };
+		}
+
+		return this.friendRequestRepo.find({
 			where,
 			relations: ["fromUser", "toUser"],
 			order: { createdAt: "DESC" },
 		});
-
-		return friendRequests;
 	}
 
-	async getReceivedFriendRequests() {
+	async getReceivedFriendRequests(search?: string) {
 		const userId = this.cls.get("profile").id;
 
-		const where: FindOptionsWhere<FriendRequestEntity> = {
-			toUserId: userId,
-		};
+		let where:
+			| FindOptionsWhere<FriendRequestEntity>[]
+			| FindOptionsWhere<FriendRequestEntity>;
 
-		const friendRequests = await this.friendRequestRepo.find({
+		if (search) {
+			const searchPattern = `%${search}%`;
+			where = [
+				{
+					toUserId: userId,
+					fromUser: { firstName: ILike(searchPattern) },
+				},
+				{
+					toUserId: userId,
+					fromUser: { lastName: ILike(searchPattern) },
+				},
+				{
+					toUserId: userId,
+					fromUser: { username: ILike(searchPattern) },
+				},
+			];
+		} else {
+			where = { toUserId: userId };
+		}
+
+		return this.friendRequestRepo.find({
 			where,
 			relations: ["fromUser", "toUser"],
 			order: { createdAt: "DESC" },
 		});
-
-		return friendRequests;
 	}
 
 	async getAllFriendsWithMutuals(query: UserFriendQuery) {
@@ -453,36 +489,52 @@ export class UserService {
 		});
 	}
 
-	async getReceivedGroupInvitations() {
+	async getReceivedGroupInvitations(search?: string) {
 		const userId = this.cls.get("profile").id;
 
-		const where: FindOptionsWhere<GroupInvitationEntity> = {
-			toUserId: userId,
-		};
+		let where:
+			| FindOptionsWhere<GroupInvitationEntity>[]
+			| FindOptionsWhere<GroupInvitationEntity>;
 
-		const groupInvitations = await this.groupInvitationRepo.find({
+		if (search) {
+			const searchPattern = `%${search}%`;
+			where = {
+				toUserId: userId,
+				group: { name: ILike(searchPattern) },
+			};
+		} else {
+			where = { toUserId: userId };
+		}
+
+		return this.groupInvitationRepo.find({
 			where,
 			relations: ["fromUser", "toUser", "group"],
 			order: { createdAt: "DESC" },
 		});
-
-		return groupInvitations;
 	}
 
-	async getSentGroupInvitations() {
+	async getSentGroupInvitations(search?: string) {
 		const userId = this.cls.get("profile").id;
 
-		const where: FindOptionsWhere<GroupInvitationEntity> = {
-			fromUserId: userId,
-		};
+		let where:
+			| FindOptionsWhere<GroupInvitationEntity>[]
+			| FindOptionsWhere<GroupInvitationEntity>;
 
-		const groupInvitations = await this.groupInvitationRepo.find({
+		if (search) {
+			const searchPattern = `%${search}%`;
+			where = {
+				fromUserId: userId,
+				group: { name: ILike(searchPattern) },
+			};
+		} else {
+			where = { fromUserId: userId };
+		}
+
+		return this.groupInvitationRepo.find({
 			where,
 			relations: ["fromUser", "toUser", "group"],
 			order: { createdAt: "DESC" },
 		});
-
-		return groupInvitations;
 	}
 
 	async getTasksByGroupId(groupId: string) {

@@ -19,7 +19,13 @@ import {
 } from "@utils";
 import { CreateUserRequest } from "./dto/create-user.request";
 import { ApiBearerAuth, ApiOperation, ApiParam } from "@nestjs/swagger";
-import { UpdateUserRequest, UserQuery, FriendWithMutualsResponse } from "./dto";
+import {
+	UpdateUserRequest,
+	UserQuery,
+	FriendWithMutualsResponse,
+	FriendRequestSearchQuery,
+	GroupInvitationSearchQuery,
+} from "./dto";
 import { UserResponse } from "./dto/user.response";
 import { UserFriendQuery } from "@modules/user-friend/dto";
 import { UserGroupResponse } from "@modules/user-group/dto";
@@ -96,8 +102,8 @@ export class UserController {
 	@ApiBearerAuth()
 	@ApiOperation({ summary: "Get friend requests sent by the user" })
 	@SwaggerApiResponse(FriendRequestResponse, { isArray: true })
-	async getSentFriendRequests() {
-		const response = await this.userService.getSentFriendRequests();
+	async getSentFriendRequests(@Query() query: FriendRequestSearchQuery) {
+		const response = await this.userService.getSentFriendRequests(query.search);
 
 		return new ApiResponseDto<FriendRequestResponse[]>(
 			FriendRequestResponse.fromEntities(response),
@@ -110,8 +116,10 @@ export class UserController {
 	@ApiBearerAuth()
 	@ApiOperation({ summary: "Get friend requests received by the user" })
 	@SwaggerApiResponse(FriendRequestResponse, { isArray: true })
-	async getReceivedFriendRequests() {
-		const response = await this.userService.getReceivedFriendRequests();
+	async getReceivedFriendRequests(@Query() query: FriendRequestSearchQuery) {
+		const response = await this.userService.getReceivedFriendRequests(
+			query.search,
+		);
 		return new ApiResponseDto<FriendRequestResponse[]>(
 			FriendRequestResponse.fromEntities(response),
 			null,
@@ -176,8 +184,10 @@ export class UserController {
 	@ApiBearerAuth()
 	@ApiOperation({ summary: "Get all sent group invitations" })
 	@SwaggerApiResponse(GroupInvitationResponse, { isArray: true })
-	async getSentGroupInvitations() {
-		const response = await this.userService.getSentGroupInvitations();
+	async getSentGroupInvitations(@Query() query: GroupInvitationSearchQuery) {
+		const response = await this.userService.getSentGroupInvitations(
+			query.search,
+		);
 
 		return new ApiResponseDto(
 			GroupInvitationResponse.fromEntities(response),
@@ -190,8 +200,12 @@ export class UserController {
 	@ApiBearerAuth()
 	@ApiOperation({ summary: "Get all received group invitations" })
 	@SwaggerApiResponse(GroupInvitationResponse, { isArray: true })
-	async getReceivedGroupInvitations() {
-		const response = await this.userService.getReceivedGroupInvitations();
+	async getReceivedGroupInvitations(
+		@Query() query: GroupInvitationSearchQuery,
+	) {
+		const response = await this.userService.getReceivedGroupInvitations(
+			query.search,
+		);
 
 		return new ApiResponseDto(
 			GroupInvitationResponse.fromEntities(response),

@@ -19,6 +19,7 @@ import {
 import {
 	ApiMessageResponseDto,
 	ApiResponseDto,
+	AuditLog,
 	SwaggerApiMessageResponse,
 	SwaggerApiResponse,
 } from "@utils";
@@ -122,5 +123,19 @@ export class UserGroupController {
 			null,
 			"Member details retrieved successfully",
 		);
+	}
+
+	@Post("leave")
+	@ApiOperation({ summary: "Leave group" })
+	@ApiParam({ name: "groupId", description: "Group ID" })
+	@SwaggerApiMessageResponse()
+	@AuditLog({
+		action: "GROUP_LEAVE",
+		entityType: "UserGroup",
+		entityIdParam: "groupId",
+	})
+	async leaveGroup(@Param("groupId") groupId: string) {
+		await this.userGroupService.leaveGroup(groupId);
+		return new ApiMessageResponseDto("Successfully left the group");
 	}
 }
