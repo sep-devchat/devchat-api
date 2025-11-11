@@ -21,6 +21,7 @@ export const DbConstants = {
 		Todo: "todo",
 		CodeBlock: "code_block",
 		DirectMessage: "direct_message",
+		Notification: "notification",
 		AiSession: "ai_session",
 		AiInteraction: "ai_interaction",
 	},
@@ -179,6 +180,14 @@ export const DbConstants = {
 			content: "content",
 			parentMessageId: "parent_message_id",
 		},
+		Notification: {
+			id: "notification_id",
+			toUserId: "to_user_id",
+			title: "notification_title",
+			content: "notification_content",
+			notificationSource: "notification_source",
+			isRead: "is_read",
+		},
 		AiSession: {
 			id: "ai_session_id",
 			userId: "user_id",
@@ -229,6 +238,9 @@ export const DbConstants = {
 		},
 		Todo: {
 			userId: "idx_todo_normal_userId",
+		},
+		Notification: {
+			userId: "idx_notification_normal_toUserId",
 		},
 		AiSession: {
 			userId: "idx_ai_session_normal_userId",

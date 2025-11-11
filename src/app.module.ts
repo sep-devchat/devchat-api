@@ -24,6 +24,7 @@ import { AuditLogInterceptor } from "./interceptors";
 import { TaskModule } from "@modules/task";
 import { TodoModule } from "@modules/todo";
 import { CodeBlockModule } from "@modules/code-block";
+import { NotificationModule } from "@modules/notification";
 import { AiModule } from "@modules/ai/ai.module";
 
 @Module({
@@ -58,6 +59,7 @@ import { AiModule } from "@modules/ai/ai.module";
 		TaskModule,
 		TodoModule,
 		CodeBlockModule,
+		NotificationModule,
 		AiModule,
 	],
 	controllers: [],

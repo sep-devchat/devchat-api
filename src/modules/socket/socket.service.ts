@@ -7,12 +7,9 @@ import { AuthenticateRequest, JoinRoomRequest } from "./dto";
 import { SocketConstants } from "./socket.constants";
 import { ChannelRepository, GroupRepository } from "@db/repositories";
 import { JoinRoomFailedError } from "./errors";
-import { MessageEntity } from "@db/entities"; // kept for potential future use
-import {
-	constructRoomName as buildRoomName,
-	constructUserRoomName as buildUserRoomName,
-} from "@utils";
-import { WsException } from "@nestjs/websockets";
+import { constructRoomName, constructUserRoomName } from "@utils";
+import { NotificationEntity } from "@db/entities";
+import { NotificationResponse } from "@modules/notification/dto";
 
 const { Events } = SocketConstants;
 
@@ -44,7 +41,7 @@ export class SocketService {
 				new Date(decoded.exp * 1000).toISOString(),
 			);
 			// Notify client of successful authentication
-			client.join(this.constructUserRoomName(user.id));
+			client.join(constructUserRoomName(user.id));
 			client.emit(Events.SOCKET_READY);
 		} catch (err) {
 			if (!err.message)
@@ -58,15 +55,6 @@ export class SocketService {
 
 		// Clear the timeout set for authentication
 		clearTimeout(client.data.timeout);
-	}
-
-	// A function to construct room names
-	constructRoomName(groupId: string, channelId: string) {
-		return buildRoomName(groupId, channelId);
-	}
-
-	constructUserRoomName(userId: string) {
-		return buildUserRoomName(userId);
 	}
 
 	async joinRoom(client: Socket, payload: JoinRoomRequest) {
@@ -100,7 +88,7 @@ export class SocketService {
 			await client.leave(client.data.room);
 		}
 
-		const room = this.constructRoomName(groupId, channelId);
+		const room = constructRoomName(groupId, channelId);
 		await client.join(room);
 
 		// Store for future usage
@@ -113,5 +101,11 @@ export class SocketService {
 			groupId,
 			channelId,
 		});
+	}
+
+	sendNotification(notification: NotificationEntity) {
+		this.server
+			.to(constructUserRoomName(notification.toUserId))
+			.emit(Events.NOTIFICATION, NotificationResponse.fromEntity(notification));
 	}
 }

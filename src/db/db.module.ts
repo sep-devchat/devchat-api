@@ -20,6 +20,7 @@ import {
 	TodoRepository,
 	CodeBlockRepository,
 	DirectMessageRepository,
+	NotificationRepository,
 	AiSessionRepository,
 	AiInteractionRepository,
 } from "./repositories";
@@ -42,6 +43,7 @@ const repositories = [
 	TodoRepository,
 	CodeBlockRepository,
 	DirectMessageRepository,
+	NotificationRepository,
 	AiSessionRepository,
 	AiInteractionRepository,
 ];
