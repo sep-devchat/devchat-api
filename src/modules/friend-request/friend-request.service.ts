@@ -142,29 +142,15 @@ export class FriendRequestService {
 
 	async findMany(query: FriendRequestQuery) {
 		const userId = this.cls.get("profile").id;
-		const { page, limit, fromUserId, toUserId, search, type } = query;
+		const { page, limit, search } = query;
 
 		// Build where conditions based on type
 		let where: FindOptionsWhere<FriendRequestEntity>[] = [];
 
-		if (type === "sent") {
-			where = [{ fromUserId: userId }];
-		} else if (type === "received") {
-			where = [{ toUserId: userId }];
-		} else {
-			// type === "all"
-			where = [{ fromUserId: userId }, { toUserId: userId }];
-		}
+		// type === "all"
+		where = [{ fromUserId: userId }, { toUserId: userId }];
 
 		// Apply additional filters
-		if (fromUserId) {
-			where = where.map((condition) => ({ ...condition, fromUserId }));
-		}
-
-		if (toUserId) {
-			where = where.map((condition) => ({ ...condition, toUserId }));
-		}
-
 		const findOptions = {
 			where,
 			relations: ["fromUser", "toUser"],
@@ -182,15 +168,7 @@ export class FriendRequestService {
 				},
 				{
 					...condition,
-					fromUser: { displayName: ILike(`%${search}%`) },
-				},
-				{
-					...condition,
 					toUser: { username: ILike(`%${search}%`) },
-				},
-				{
-					...condition,
-					toUser: { displayName: ILike(`%${search}%`) },
 				},
 			]);
 

@@ -102,22 +102,6 @@ export class FriendRequestController {
 		);
 	}
 
-	@Get("count")
-	@ApiOperation({
-		summary: "Get friend requests count",
-		description:
-			"Get the count of friend requests received by the current user",
-	})
-	@SwaggerApiResponse(Number)
-	async getRequestsCount() {
-		const count = await this.friendRequestService.getRequestsCount();
-		return new ApiResponseDto(
-			{ count },
-			null,
-			"Friend requests count retrieved successfully",
-		);
-	}
-
 	@Get(":id")
 	@ApiParam({ name: "id", description: "Friend Request ID" })
 	@ApiOperation({
@@ -192,24 +176,5 @@ export class FriendRequestController {
 	async deleteFriendRequest(@Param("id") id: string) {
 		await this.friendRequestService.deleteOne(id);
 		return new ApiMessageResponseDto("Friend request deleted successfully");
-	}
-
-	@Patch(":id/cancel")
-	@ApiParam({ name: "id", description: "Friend Request ID" })
-	@ApiOperation({
-		summary: "Cancel a friend request",
-		description:
-			"Cancel a friend request. Deletes the request. Only the sender can cancel.",
-	})
-	@SwaggerApiMessageResponse()
-	@AuditLog({
-		action: "FRIEND_REQUEST_CANCEL",
-		entityType: "FriendRequest",
-		entity: FriendRequestEntity,
-		entityIdParam: "id",
-	})
-	async cancelFriendRequest(@Param("id") id: string) {
-		const response = await this.friendRequestService.cancelFriendRequest(id);
-		return new ApiMessageResponseDto(response.message);
 	}
 }

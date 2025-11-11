@@ -104,22 +104,6 @@ export class GroupInvitationController {
 		);
 	}
 
-	@Get("count")
-	@ApiOperation({
-		summary: "Get group invitations count",
-		description:
-			"Get the count of group invitations received by the current user",
-	})
-	@SwaggerApiResponse(Number)
-	async getInvitationsCount() {
-		const count = await this.groupInvitationService.getInvitationsCount();
-		return new ApiResponseDto(
-			{ count },
-			null,
-			"Group invitations count retrieved successfully",
-		);
-	}
-
 	@Get("group/:groupId")
 	@ApiParam({ name: "groupId", description: "Group ID" })
 	@ApiOperation({
@@ -197,25 +181,6 @@ export class GroupInvitationController {
 	})
 	async declineInvitation(@Param("id") id: string) {
 		const response = await this.groupInvitationService.declineInvitation(id);
-		return new ApiMessageResponseDto(response.message);
-	}
-
-	@Patch(":id/cancel")
-	@ApiParam({ name: "id", description: "Group Invitation ID" })
-	@ApiOperation({
-		summary: "Cancel a group invitation",
-		description:
-			"Cancel a group invitation. Deletes the invitation. Only the sender can cancel.",
-	})
-	@SwaggerApiMessageResponse()
-	@AuditLog({
-		action: "GROUP_INVITATION_CANCEL",
-		entityType: "GroupInvitation",
-		entity: GroupInvitationEntity,
-		entityIdParam: "id",
-	})
-	async cancelGroupInvitation(@Param("id") id: string) {
-		const response = await this.groupInvitationService.cancelInvitation(id);
 		return new ApiMessageResponseDto(response.message);
 	}
 

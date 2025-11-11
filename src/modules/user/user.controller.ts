@@ -26,10 +26,7 @@ import { UserGroupResponse } from "@modules/user-group/dto";
 import { GetFriendRequestQuery } from "./dto/get-friend.query";
 import { TaskResponse } from "@modules/task/dto";
 import { FriendRequestResponse } from "@modules/friend-request/dto";
-import {
-	GroupInvitationQuery,
-	GroupInvitationResponse,
-} from "@modules/group-invitation/dto";
+import { GroupInvitationResponse } from "@modules/group-invitation/dto";
 
 @Controller("user")
 export class UserController {
@@ -99,8 +96,8 @@ export class UserController {
 	@ApiBearerAuth()
 	@ApiOperation({ summary: "Get friend requests sent by the user" })
 	@SwaggerApiResponse(FriendRequestResponse, { isArray: true })
-	async getSentFriendRequests(@Query() query: GetFriendRequestQuery) {
-		const response = await this.userService.getSentFriendRequests(query);
+	async getSentFriendRequests() {
+		const response = await this.userService.getSentFriendRequests();
 
 		return new ApiResponseDto<FriendRequestResponse[]>(
 			FriendRequestResponse.fromEntities(response),
@@ -113,8 +110,8 @@ export class UserController {
 	@ApiBearerAuth()
 	@ApiOperation({ summary: "Get friend requests received by the user" })
 	@SwaggerApiResponse(FriendRequestResponse, { isArray: true })
-	async getReceivedFriendRequests(@Query() query: GetFriendRequestQuery) {
-		const response = await this.userService.getReceivedFriendRequests(query);
+	async getReceivedFriendRequests() {
+		const response = await this.userService.getReceivedFriendRequests();
 		return new ApiResponseDto<FriendRequestResponse[]>(
 			FriendRequestResponse.fromEntities(response),
 			null,
@@ -122,72 +119,69 @@ export class UserController {
 		);
 	}
 
-	@Get("friends-with-mutuals")
-	@ApiBearerAuth()
-	@ApiOperation({ summary: "Get all current user friends with mutual friends" })
-	@SwaggerApiResponse(FriendWithMutualsResponse, {
-		isArray: true,
-		withPagination: true,
-	})
-	async getAllFriendsWithMutuals(@Query() query: UserFriendQuery) {
-		const response = await this.userService.getAllFriendsWithMutuals(query);
-		return new ApiResponseDto<FriendWithMutualsResponse[]>(
-			FriendWithMutualsResponse.fromFriendsWithMutuals(response.friends),
-			response.pagination,
-			"Friends with mutuals retrieved successfully",
-		);
-	}
+	// @Get("friends-with-mutuals")
+	// @ApiBearerAuth()
+	// @ApiOperation({ summary: "Get all current user friends with mutual friends" })
+	// @SwaggerApiResponse(FriendWithMutualsResponse, {
+	// 	isArray: true,
+	// 	withPagination: true,
+	// })
+	// async getAllFriendsWithMutuals(@Query() query: UserFriendQuery) {
+	// 	const response = await this.userService.getAllFriendsWithMutuals(query);
+	// 	return new ApiResponseDto<FriendWithMutualsResponse[]>(
+	// 		FriendWithMutualsResponse.fromFriendsWithMutuals(response.friends),
+	// 		response.pagination,
+	// 		"Friends with mutuals retrieved successfully",
+	// 	);
+	// }
 
-	@Get("friendship/status/:friendId")
-	@ApiBearerAuth()
-	@ApiOperation({ summary: "Get friendship status with another user" })
-	@ApiParam({ name: "friendId", description: "Friend User ID" })
-	async getFriendshipStatus(@Param("friendId") friendId: string) {
-		const response = await this.userService.getFriendshipStatus(friendId);
-		return new ApiResponseDto(
-			response,
-			null,
-			"Friendship status retrieved successfully",
-		);
-	}
+	// @Get("friendship/status/:friendId")
+	// @ApiBearerAuth()
+	// @ApiOperation({ summary: "Get friendship status with another user" })
+	// @ApiParam({ name: "friendId", description: "Friend User ID" })
+	// async getFriendshipStatus(@Param("friendId") friendId: string) {
+	// 	const response = await this.userService.getFriendshipStatus(friendId);
+	// 	return new ApiResponseDto(
+	// 		response,
+	// 		null,
+	// 		"Friendship status retrieved successfully",
+	// 	);
+	// }
 
-	@Get("friends/count")
-	@ApiBearerAuth()
-	@ApiOperation({ summary: "Get current user friends count" })
-	async getFriendsCount() {
-		const count = await this.userService.getFriendsCount();
-		return new ApiResponseDto(
-			{ count },
-			null,
-			"Friends count retrieved successfully",
-		);
-	}
+	// @Get("friends/count")
+	// @ApiBearerAuth()
+	// @ApiOperation({ summary: "Get current user friends count" })
+	// async getFriendsCount() {
+	// 	const count = await this.userService.getFriendsCount();
+	// 	return new ApiResponseDto(
+	// 		{ count },
+	// 		null,
+	// 		"Friends count retrieved successfully",
+	// 	);
+	// }
 
-	@Get("friend-requests/pending/count")
-	@ApiBearerAuth()
-	@ApiOperation({ summary: "Get pending friend requests count" })
-	async getPendingFriendRequestsCount() {
-		const count = await this.userService.getPendingFriendRequestsCount();
-		return new ApiResponseDto(
-			{ count },
-			null,
-			"Pending friend requests count retrieved successfully",
-		);
-	}
+	// @Get("friend-requests/pending/count")
+	// @ApiBearerAuth()
+	// @ApiOperation({ summary: "Get pending friend requests count" })
+	// async getPendingFriendRequestsCount() {
+	// 	const count = await this.userService.getPendingFriendRequestsCount();
+	// 	return new ApiResponseDto(
+	// 		{ count },
+	// 		null,
+	// 		"Pending friend requests count retrieved successfully",
+	// 	);
+	// }
 
 	@Get("group-invitations/sent")
 	@ApiBearerAuth()
 	@ApiOperation({ summary: "Get all sent group invitations" })
-	@SwaggerApiResponse(GroupInvitationResponse, {
-		isArray: true,
-		withPagination: true,
-	})
-	async getSentGroupInvitations(@Query() query: GroupInvitationQuery) {
-		const response = await this.userService.getSentGroupInvitations(query);
+	@SwaggerApiResponse(GroupInvitationResponse, { isArray: true })
+	async getSentGroupInvitations() {
+		const response = await this.userService.getSentGroupInvitations();
 
 		return new ApiResponseDto(
-			GroupInvitationResponse.fromEntities(response.data),
-			response.pagination,
+			GroupInvitationResponse.fromEntities(response),
+			null,
 			"Sent group invitations retrieved successfully",
 		);
 	}
@@ -195,16 +189,13 @@ export class UserController {
 	@Get("group-invitations/received")
 	@ApiBearerAuth()
 	@ApiOperation({ summary: "Get all received group invitations" })
-	@SwaggerApiResponse(GroupInvitationResponse, {
-		isArray: true,
-		withPagination: true,
-	})
-	async getReceivedGroupInvitations(@Query() query: GroupInvitationQuery) {
-		const response = await this.userService.getReceivedGroupInvitations(query);
+	@SwaggerApiResponse(GroupInvitationResponse, { isArray: true })
+	async getReceivedGroupInvitations() {
+		const response = await this.userService.getReceivedGroupInvitations();
 
 		return new ApiResponseDto(
-			GroupInvitationResponse.fromEntities(response.data),
-			response.pagination,
+			GroupInvitationResponse.fromEntities(response),
+			null,
 			"Received group invitations retrieved successfully",
 		);
 	}

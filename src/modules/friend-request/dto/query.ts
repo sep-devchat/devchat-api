@@ -30,37 +30,10 @@ export class FriendRequestQuery {
 	limit: number = 10;
 
 	@ApiPropertyOptional({
-		example: "123e4567-e89b-12d3-a456-426614174000",
-		description: "Filter by user who sent the request",
-	})
-	@IsOptional()
-	@IsUUID()
-	fromUserId?: string;
-
-	@ApiPropertyOptional({
-		example: "123e4567-e89b-12d3-a456-426614174000",
-		description: "Filter by user who received the request",
-	})
-	@IsOptional()
-	@IsUUID()
-	toUserId?: string;
-
-	@ApiPropertyOptional({
 		example: "john",
 		description: "Search by username or display name",
 	})
 	@IsOptional()
 	@IsString()
 	search?: string;
-
-	@ApiPropertyOptional({
-		example: "sent",
-		description:
-			"Filter requests: 'sent' (requests I sent), 'received' (requests I received), 'all' (both)",
-		enum: ["sent", "received", "all"],
-		default: "all",
-	})
-	@IsOptional()
-	@IsString()
-	type: "sent" | "received" | "all" = "all";
 }

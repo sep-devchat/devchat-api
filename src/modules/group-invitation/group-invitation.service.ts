@@ -159,32 +159,13 @@ export class GroupInvitationService {
 
 	async findMany(query: GroupInvitationQuery) {
 		const userId = this.cls.get("profile").id;
-		const { page, limit, fromUserId, toUserId, groupId, search, type } = query;
+		const { page, limit, search } = query;
 
 		// Build where conditions based on type
 		let where: FindOptionsWhere<GroupInvitationEntity>[] = [];
 
-		if (type === "sent") {
-			where = [{ fromUserId: userId }];
-		} else if (type === "received") {
-			where = [{ toUserId: userId }];
-		} else {
-			// type === "all"
-			where = [{ fromUserId: userId }, { toUserId: userId }];
-		}
-
-		// Apply additional filters
-		if (fromUserId) {
-			where = where.map((condition) => ({ ...condition, fromUserId }));
-		}
-
-		if (toUserId) {
-			where = where.map((condition) => ({ ...condition, toUserId }));
-		}
-
-		if (groupId) {
-			where = where.map((condition) => ({ ...condition, groupId }));
-		}
+		// type === "all"
+		where = [{ fromUserId: userId }, { toUserId: userId }];
 
 		const findOptions = {
 			where,

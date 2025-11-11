@@ -28,7 +28,6 @@ import { ClsService } from "nestjs-cls";
 import { In, FindOptionsWhere, ILike } from "typeorm";
 import { FriendRequestEntity } from "@db/entities/friend-request.entity";
 import { GroupInvitationEntity, UserFriendEntity } from "@db/entities";
-import { GroupInvitationQuery } from "@modules/group-invitation/dto";
 
 const emailToken = randomBytes(32).toString("hex");
 
@@ -156,9 +155,8 @@ export class UserService {
 		await this.userRepo.save(user);
 	}
 
-	async getSentFriendRequests(query: GetFriendRequestQuery) {
+	async getSentFriendRequests() {
 		const userId = this.cls.get("profile").id;
-		const { status } = query;
 
 		const where: FindOptionsWhere<FriendRequestEntity> = {
 			fromUserId: userId,
@@ -173,7 +171,7 @@ export class UserService {
 		return friendRequests;
 	}
 
-	async getReceivedFriendRequests(query: GetFriendRequestQuery) {
+	async getReceivedFriendRequests() {
 		const userId = this.cls.get("profile").id;
 
 		const where: FindOptionsWhere<FriendRequestEntity> = {
@@ -455,114 +453,36 @@ export class UserService {
 		});
 	}
 
-	async getReceivedGroupInvitations(query: GroupInvitationQuery) {
+	async getReceivedGroupInvitations() {
 		const userId = this.cls.get("profile").id;
-		const { page, limit, groupId, search, type } = query;
 
-		// Build where conditions for received invitations
 		const where: FindOptionsWhere<GroupInvitationEntity> = {
 			toUserId: userId,
 		};
 
-		// Apply groupId filter if provided
-		if (groupId) {
-			where.groupId = groupId;
-		}
-
-		const findOptions = {
+		const groupInvitations = await this.groupInvitationRepo.find({
 			where,
 			relations: ["fromUser", "toUser", "group"],
-			skip: (page - 1) * limit,
-			take: limit,
-			order: { createdAt: "DESC" as const },
-		};
+			order: { createdAt: "DESC" },
+		});
 
-		// Handle search if provided
-		if (search) {
-			const searchConditions = [
-				{
-					...where,
-					fromUser: { username: ILike(`%${search}%`) },
-				},
-				{
-					...where,
-					group: { name: ILike(`%${search}%`) },
-				},
-			];
-
-			const [data, total] = await this.groupInvitationRepo.findAndCount({
-				where: searchConditions,
-				relations: findOptions.relations,
-				skip: findOptions.skip,
-				take: findOptions.take,
-				order: findOptions.order,
-			});
-
-			const pagination = new PaginationDto(page, limit, total);
-			return { data, pagination };
-		}
-
-		// Regular find without search
-		const [data, total] =
-			await this.groupInvitationRepo.findAndCount(findOptions);
-		const pagination = new PaginationDto(page, limit, total);
-
-		return { data, pagination };
+		return groupInvitations;
 	}
 
-	async getSentGroupInvitations(query: GroupInvitationQuery) {
+	async getSentGroupInvitations() {
 		const userId = this.cls.get("profile").id;
-		const { page, limit, groupId, search, type } = query;
 
-		// Build where conditions for sent invitations
 		const where: FindOptionsWhere<GroupInvitationEntity> = {
 			fromUserId: userId,
 		};
 
-		// Apply groupId filter if provided
-		if (groupId) {
-			where.groupId = groupId;
-		}
-
-		const findOptions = {
+		const groupInvitations = await this.groupInvitationRepo.find({
 			where,
 			relations: ["fromUser", "toUser", "group"],
-			skip: (page - 1) * limit,
-			take: limit,
-			order: { createdAt: "DESC" as const },
-		};
+			order: { createdAt: "DESC" },
+		});
 
-		// Handle search if provided
-		if (search) {
-			const searchConditions = [
-				{
-					...where,
-					toUser: { username: ILike(`%${search}%`) },
-				},
-				{
-					...where,
-					group: { name: ILike(`%${search}%`) },
-				},
-			];
-
-			const [data, total] = await this.groupInvitationRepo.findAndCount({
-				where: searchConditions,
-				relations: findOptions.relations,
-				skip: findOptions.skip,
-				take: findOptions.take,
-				order: findOptions.order,
-			});
-
-			const pagination = new PaginationDto(page, limit, total);
-			return { data, pagination };
-		}
-
-		// Regular find without search
-		const [data, total] =
-			await this.groupInvitationRepo.findAndCount(findOptions);
-		const pagination = new PaginationDto(page, limit, total);
-
-		return { data, pagination };
+		return groupInvitations;
 	}
 
 	async getTasksByGroupId(groupId: string) {
