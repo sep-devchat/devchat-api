@@ -24,6 +24,7 @@ import { AuditLogInterceptor } from "./interceptors";
 import { TaskModule } from "@modules/task";
 import { TodoModule } from "@modules/todo";
 import { CodeBlockModule } from "@modules/code-block";
+import { NotificationModule } from "@modules/notification";
 
 @Module({
 	imports: [
@@ -57,6 +58,7 @@ import { CodeBlockModule } from "@modules/code-block";
 		TaskModule,
 		TodoModule,
 		CodeBlockModule,
+		NotificationModule,
 	],
 	controllers: [],
 	providers: [

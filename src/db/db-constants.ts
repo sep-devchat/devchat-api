@@ -17,6 +17,7 @@ export const DbConstants = {
 		Todo: "todo",
 		CodeBlock: "code_block",
 		DirectMessage: "direct_message",
+		Notification: "notification",
 	},
 	ColumnName: {
 		User: {
@@ -173,6 +174,14 @@ export const DbConstants = {
 			content: "content",
 			parentMessageId: "parent_message_id",
 		},
+		Notification: {
+			id: "notification_id",
+			toUserId: "to_user_id",
+			title: "notification_title",
+			content: "notification_content",
+			notificationSource: "notification_source",
+			isRead: "is_read",
+		},
 	},
 	IndexName: {
 		User: {
@@ -203,6 +212,9 @@ export const DbConstants = {
 		},
 		Todo: {
 			userId: "idx_todo_normal_userId",
+		},
+		Notification: {
+			userId: "idx_notification_normal_toUserId",
 		},
 	},
 };
