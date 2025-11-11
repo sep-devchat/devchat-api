@@ -21,6 +21,8 @@ import {
 	CodeBlockRepository,
 	DirectMessageRepository,
 	NotificationRepository,
+	AiSessionRepository,
+	AiInteractionRepository,
 } from "./repositories";
 
 const repositories = [
@@ -42,6 +44,8 @@ const repositories = [
 	CodeBlockRepository,
 	DirectMessageRepository,
 	NotificationRepository,
+	AiSessionRepository,
+	AiInteractionRepository,
 ];
 
 @Module({

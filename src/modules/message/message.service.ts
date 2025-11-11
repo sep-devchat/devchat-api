@@ -17,6 +17,7 @@ import { AuthService } from "@modules/auth";
 import { UserService } from "@modules/user";
 import { MessageEntity } from "@db/entities";
 import { constructUserRoomName } from "@utils";
+import { AiService } from "@modules/ai";
 import { Socket } from "socket.io";
 import { SocketConstants } from "@modules/socket/socket.constants";
 
@@ -30,6 +31,7 @@ export class MessageService {
 		private readonly userRepo: UserRepository,
 		private readonly authService: AuthService,
 		private readonly userService: UserService,
+		private readonly aiService: AiService,
 	) {}
 
 	async fetchMessages(client: Socket, dto: FetchMessagesRequest) {
@@ -127,6 +129,73 @@ export class MessageService {
 
 		server.to(client.data.room).emit(Events.MESSAGE, resp);
 		this.createMessageNotification(message!, server);
+
+		// Delegate AI mention handling to helper
+		await this.maybeProcessAiMentionAndRespond(
+			client,
+			payload,
+			server,
+			insertResult.identifiers[0].id,
+		);
+	}
+
+	/**
+	 * If the message mentions an AI provider (@openai or @gemini), run inference and
+	 * send the AI's answer as a new message in the same channel/thread, parented to the original.
+	 */
+	private async maybeProcessAiMentionAndRespond(
+		client: Socket,
+		payload: SendMessageRequest,
+		server: Socket["server"],
+		parentMessageId: string,
+	): Promise<void> {
+		const isAiMention =
+			payload.content.includes("@openai") ||
+			payload.content.includes("@gemini");
+		if (!isAiMention) return;
+
+		try {
+			const { answer } = await this.aiService.ask({
+				messageId: parentMessageId,
+			});
+			// Determine which AI provider was mentioned and map to a system AI user id.
+			// Expect environment variables OPENAI_USER_ID / GEMINI_USER_ID to hold user IDs of
+			// dedicated AI accounts. Fallback to original sender if not configured so flow still works.
+			let aiUserId: string | undefined;
+			const aiUser = await this.userRepo.findOne({
+				where: {
+					username: payload.content.includes("@openai")
+						? "openai-bot"
+						: "gemini-bot",
+				},
+			});
+			aiUserId = aiUser?.id || client.data.user.id;
+
+			// persist AI answer as a message in same channel/thread, parented to original
+			const aiInsert = await this.messageRepo.insert({
+				channelId: client.data.channel.id,
+				threadId: payload.threadId ?? null,
+				parentMessageId,
+				senderId: aiUserId,
+				content: answer,
+			});
+			const aiMsg = await this.messageRepo.findOne({
+				where: { id: aiInsert.identifiers[0].id },
+				relations: { sender: true, channel: { group: true } },
+			});
+			if (aiMsg) {
+				const aiResp = MessageResponse.fromEntity(aiMsg);
+				server.to(client.data.room).emit(Events.MESSAGE, aiResp);
+				this.createMessageNotification(aiMsg, server);
+			}
+		} catch (err) {
+			// Swallow AI failures to avoid breaking the user send flow
+			console.error(
+				"[MessageService] AI processing failed for message",
+				parentMessageId,
+				err,
+			);
+		}
 	}
 
 	async sendDirectMessage(

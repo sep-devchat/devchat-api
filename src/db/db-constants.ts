@@ -1,3 +1,7 @@
+import { response } from "express";
+import { start } from "repl";
+import { threadId } from "worker_threads";
+
 export const DbConstants = {
 	TableName: {
 		User: "user",
@@ -18,6 +22,8 @@ export const DbConstants = {
 		CodeBlock: "code_block",
 		DirectMessage: "direct_message",
 		Notification: "notification",
+		AiSession: "ai_session",
+		AiInteraction: "ai_interaction",
 	},
 	ColumnName: {
 		User: {
@@ -182,6 +188,26 @@ export const DbConstants = {
 			notificationSource: "notification_source",
 			isRead: "is_read",
 		},
+		AiSession: {
+			id: "ai_session_id",
+			userId: "user_id",
+			channelId: "channel_id",
+			threadId: "thread_id",
+			sessionType: "session_type",
+			startedAt: "started_at",
+			endedAt: "ended_at",
+			status: "status",
+		},
+		AiInteraction: {
+			id: "ai_interaction_id",
+			sessionId: "ai_session_id",
+			userId: "user_id",
+			messageId: "message_id",
+			aiResponse: "ai_response",
+			model: "ai_model",
+			contextData: "context_data",
+			responseTime: "response_time",
+		},
 	},
 	IndexName: {
 		User: {
@@ -215,6 +241,17 @@ export const DbConstants = {
 		},
 		Notification: {
 			userId: "idx_notification_normal_toUserId",
+		},
+		AiSession: {
+			userId: "idx_ai_session_normal_userId",
+			channelId: "idx_ai_session_normal_channelId",
+			threadId: "idx_ai_session_normal_threadId",
+			status: "idx_ai_session_normal_status",
+		},
+		AiInteraction: {
+			sessionId: "idx_ai_interaction_normal_sessionId",
+			userId: "idx_ai_interaction_normal_userId",
+			messageId: "idx_ai_interaction_normal_messageId",
 		},
 	},
 };
