@@ -18,4 +18,6 @@ export * from "./task.repository";
 export * from "./todo.repository";
 export * from "./code-block.repository";
 export * from "./direct-message.repository";
+export * from "./friend-request.repository";
+export * from "./group-invitation.repository";
 export * from "./notification.repository";

@@ -19,12 +19,20 @@ import {
 } from "@utils";
 import { CreateUserRequest } from "./dto/create-user.request";
 import { ApiBearerAuth, ApiOperation, ApiParam } from "@nestjs/swagger";
-import { GroupRequestQuery, UpdateUserRequest, UserQuery } from "./dto";
+import {
+	UpdateUserRequest,
+	UserQuery,
+	FriendWithMutualsResponse,
+	FriendRequestSearchQuery,
+	GroupInvitationSearchQuery,
+} from "./dto";
 import { UserResponse } from "./dto/user.response";
-import { FriendRequestResponseDto } from "@modules/user-friend/dto";
+import { UserFriendQuery } from "@modules/user-friend/dto";
 import { UserGroupResponse } from "@modules/user-group/dto";
 import { GetFriendRequestQuery } from "./dto/get-friend.query";
 import { TaskResponse } from "@modules/task/dto";
+import { FriendRequestResponse } from "@modules/friend-request/dto";
+import { GroupInvitationResponse } from "@modules/group-invitation/dto";
 
 @Controller("user")
 export class UserController {
@@ -90,56 +98,119 @@ export class UserController {
 		);
 	}
 
-	@Get("/friend-request/sent")
+	@Get("friend-requests/sent")
 	@ApiBearerAuth()
 	@ApiOperation({ summary: "Get friend requests sent by the user" })
-	async getFriendRequests(@Query() query: GetFriendRequestQuery) {
-		const response = await this.userService.getSentFriendRequests(query);
+	@SwaggerApiResponse(FriendRequestResponse, { isArray: true })
+	async getSentFriendRequests(@Query() query: FriendRequestSearchQuery) {
+		const response = await this.userService.getSentFriendRequests(query.search);
 
-		return new ApiResponseDto<FriendRequestResponseDto[]>(
-			FriendRequestResponseDto.fromEntities(response),
+		return new ApiResponseDto<FriendRequestResponse[]>(
+			FriendRequestResponse.fromEntities(response),
 			null,
-			"Friend request retrieved successully",
+			"Sent friend requests retrieved successfully",
 		);
 	}
 
 	@Get("friend-requests/received")
 	@ApiBearerAuth()
 	@ApiOperation({ summary: "Get friend requests received by the user" })
-	async getReceivedFriendRequests(@Query() query: GetFriendRequestQuery) {
-		const response = await this.userService.getReceivedFriendRequests(query);
-		return new ApiResponseDto<FriendRequestResponseDto[]>(
-			FriendRequestResponseDto.fromEntities(response),
+	@SwaggerApiResponse(FriendRequestResponse, { isArray: true })
+	async getReceivedFriendRequests(@Query() query: FriendRequestSearchQuery) {
+		const response = await this.userService.getReceivedFriendRequests(
+			query.search,
+		);
+		return new ApiResponseDto<FriendRequestResponse[]>(
+			FriendRequestResponse.fromEntities(response),
 			null,
 			"Received friend requests retrieved successfully",
 		);
 	}
 
-	@Get("group-requests/sent")
-	@ApiBearerAuth()
-	@ApiOperation({ summary: "Get all sent group requests" })
-	@SwaggerApiResponse(UserGroupResponse)
-	async getSentGroupRequests(@Query() query: GroupRequestQuery) {
-		const response = await this.userService.getSentGroupRequests(query);
+	// @Get("friends-with-mutuals")
+	// @ApiBearerAuth()
+	// @ApiOperation({ summary: "Get all current user friends with mutual friends" })
+	// @SwaggerApiResponse(FriendWithMutualsResponse, {
+	// 	isArray: true,
+	// 	withPagination: true,
+	// })
+	// async getAllFriendsWithMutuals(@Query() query: UserFriendQuery) {
+	// 	const response = await this.userService.getAllFriendsWithMutuals(query);
+	// 	return new ApiResponseDto<FriendWithMutualsResponse[]>(
+	// 		FriendWithMutualsResponse.fromFriendsWithMutuals(response.friends),
+	// 		response.pagination,
+	// 		"Friends with mutuals retrieved successfully",
+	// 	);
+	// }
 
-		return new ApiResponseDto<UserGroupResponse[]>(
-			UserGroupResponse.fromEntities(response),
+	// @Get("friendship/status/:friendId")
+	// @ApiBearerAuth()
+	// @ApiOperation({ summary: "Get friendship status with another user" })
+	// @ApiParam({ name: "friendId", description: "Friend User ID" })
+	// async getFriendshipStatus(@Param("friendId") friendId: string) {
+	// 	const response = await this.userService.getFriendshipStatus(friendId);
+	// 	return new ApiResponseDto(
+	// 		response,
+	// 		null,
+	// 		"Friendship status retrieved successfully",
+	// 	);
+	// }
+
+	// @Get("friends/count")
+	// @ApiBearerAuth()
+	// @ApiOperation({ summary: "Get current user friends count" })
+	// async getFriendsCount() {
+	// 	const count = await this.userService.getFriendsCount();
+	// 	return new ApiResponseDto(
+	// 		{ count },
+	// 		null,
+	// 		"Friends count retrieved successfully",
+	// 	);
+	// }
+
+	// @Get("friend-requests/pending/count")
+	// @ApiBearerAuth()
+	// @ApiOperation({ summary: "Get pending friend requests count" })
+	// async getPendingFriendRequestsCount() {
+	// 	const count = await this.userService.getPendingFriendRequestsCount();
+	// 	return new ApiResponseDto(
+	// 		{ count },
+	// 		null,
+	// 		"Pending friend requests count retrieved successfully",
+	// 	);
+	// }
+
+	@Get("group-invitations/sent")
+	@ApiBearerAuth()
+	@ApiOperation({ summary: "Get all sent group invitations" })
+	@SwaggerApiResponse(GroupInvitationResponse, { isArray: true })
+	async getSentGroupInvitations(@Query() query: GroupInvitationSearchQuery) {
+		const response = await this.userService.getSentGroupInvitations(
+			query.search,
+		);
+
+		return new ApiResponseDto(
+			GroupInvitationResponse.fromEntities(response),
 			null,
-			"Users retrieved successfully",
+			"Sent group invitations retrieved successfully",
 		);
 	}
 
-	@Get("group-requests/received")
+	@Get("group-invitations/received")
 	@ApiBearerAuth()
-	@ApiOperation({ summary: "Get all received group requests" })
-	@SwaggerApiResponse(UserGroupResponse)
-	async getReceivedGroupRequests(@Query() query: GroupRequestQuery) {
-		const response = await this.userService.getReceiveGroupRequests(query);
+	@ApiOperation({ summary: "Get all received group invitations" })
+	@SwaggerApiResponse(GroupInvitationResponse, { isArray: true })
+	async getReceivedGroupInvitations(
+		@Query() query: GroupInvitationSearchQuery,
+	) {
+		const response = await this.userService.getReceivedGroupInvitations(
+			query.search,
+		);
 
-		return new ApiResponseDto<UserGroupResponse[]>(
-			UserGroupResponse.fromEntities(response),
+		return new ApiResponseDto(
+			GroupInvitationResponse.fromEntities(response),
 			null,
-			"Users retrieved successfully",
+			"Received group invitations retrieved successfully",
 		);
 	}
 

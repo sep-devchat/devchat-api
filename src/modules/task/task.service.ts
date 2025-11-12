@@ -105,7 +105,7 @@ export class TaskService {
 			where.dueDate = LessThan(new Date());
 		}
 
-		let findOptions = {
+		const findOptions = {
 			where,
 			relations: ["assignee", "creator", "group"],
 			skip: (page - 1) * limit,

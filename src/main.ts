@@ -5,7 +5,6 @@ import helmet from "helmet";
 import { initializeTransactionalContext } from "typeorm-transactional";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import * as cookieParser from "cookie-parser";
-
 async function bootstrap() {
 	initializeTransactionalContext();
 

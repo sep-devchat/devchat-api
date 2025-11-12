@@ -44,13 +44,6 @@ export class UserGroupEntity {
 	})
 	joinedAt: Date | null;
 
-	@Column({
-		name: ColumnName.UserGroup.status,
-		type: "int",
-		default: 0,
-	})
-	status: number;
-
 	@Column({ name: ColumnName.UserGroup.invitedAt, type: "datetime" })
 	invitedAt: Date;
 }

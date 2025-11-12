@@ -1,7 +1,3 @@
-import { response } from "express";
-import { start } from "repl";
-import { threadId } from "worker_threads";
-
 export const DbConstants = {
 	TableName: {
 		User: "user",
@@ -21,6 +17,8 @@ export const DbConstants = {
 		Todo: "todo",
 		CodeBlock: "code_block",
 		DirectMessage: "direct_message",
+		FriendRequest: "friend_request",
+		GroupInvitation: "group_invitation",
 		Notification: "notification",
 		AiSession: "ai_session",
 		AiInteraction: "ai_interaction",
@@ -131,11 +129,8 @@ export const DbConstants = {
 		},
 		UserFriend: {
 			id: "user_friend_id",
-			senderId: "sender_id",
-			receiverId: "receiver_id",
-			status: "status",
-			message: "message",
-			respondedAt: "responded_at",
+			userId: "user_id",
+			friendId: "friend_id",
 		},
 		AuditLog: {
 			id: "audit_log_id",
@@ -179,6 +174,21 @@ export const DbConstants = {
 			toUserId: "to_user_id",
 			content: "content",
 			parentMessageId: "parent_message_id",
+		},
+		FriendRequest: {
+			id: "friend_request_id",
+			fromUserId: "from_user_id",
+			toUserId: "to_user_id",
+			status: "status",
+			message: "message",
+		},
+		GroupInvitation: {
+			id: "group_invitation_id",
+			fromUserId: "from_user_id",
+			toUserId: "to_user_id",
+			groupId: "group_id",
+			status: "status",
+			message: "message",
 		},
 		Notification: {
 			id: "notification_id",

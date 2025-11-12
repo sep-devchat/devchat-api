@@ -1,55 +1,98 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import {
-	CreateInvitationRequest,
 	DeleteMemberRequest,
 	UpdateUserGroupRequest,
 	UserGroupQuery,
 } from "./dto";
-import { UserGroupRepository, UserRepository } from "@db/repositories";
+import {
+	UserGroupRepository,
+	UserRepository,
+	GroupInvitationRepository,
+} from "@db/repositories";
 import { ClsService } from "nestjs-cls";
-import { DevChatCls, InvitationStatus, PaginationDto } from "@utils";
+import { DevChatCls, PaginationDto } from "@utils";
 import { GroupService } from "@modules/group";
 import { UserService } from "@modules/user/user.service";
-import {
-	InvalidInvitationError,
-	InvitationNotFoundError,
-	MemberAlreadyInvitedError,
-	MemberExistedError,
-	MemberNotFoundError,
-} from "./errors";
+import { MemberNotFoundError } from "./errors";
 import { FindOptionsWhere } from "typeorm";
 import { UserEntity, UserGroupEntity } from "@db/entities";
-import { UpdateInvitationRequest } from "./dto/update-invitation.request";
 
+/**
+ * UserGroupService - Manages actual group membership records
+ *
+ * ARCHITECTURE OVERVIEW:
+ * =====================
+ * This service is part of a two-service architecture for group management:
+ *
+ * 1. GroupInvitationService - Handles invitation flow
+ *    - Creates invitations (GroupInvitationEntity)
+ *    - Manages invitation status (PENDING, ACCEPTED, DECLINED, CANCELLED)
+ *    - Handles invitation acceptance/decline logic
+ *    - Automatically creates UserGroupEntity when invitation is accepted
+ *
+ * 2. UserGroupService (this service) - Handles actual membership
+ *    - Manages UserGroupEntity records (actual group memberships)
+ *    - Handles direct member addition (admin actions)
+ *    - Manages member removal
+ *    - Provides membership queries and statistics
+ *
+ * WORKFLOW:
+ * =========
+ * Invitation Flow:
+ * 1. User A invites User B → GroupInvitationService.createOne()
+ * 2. User B accepts invite → GroupInvitationService.acceptInvitation()
+ * 3. Acceptance automatically calls addUserToGroup() → UserGroupEntity created
+ *
+ * Direct Addition:
+ * 1. Admin adds user directly → UserGroupService.addUserToGroup()
+ * 2. UserGroupEntity created immediately (no invitation needed)
+ *
+ * ENTITIES:
+ * =========
+ * - GroupInvitationEntity: Tracks invitation lifecycle
+ * - UserGroupEntity: Tracks actual group membership with status
+ */
 @Injectable()
 export class UserGroupService {
+	private readonly logger = new Logger(UserGroupService.name);
+
 	constructor(
 		private readonly userGroupRepo: UserGroupRepository,
 		private readonly groupService: GroupService,
 		private readonly userService: UserService,
 		private readonly cls: ClsService<DevChatCls>,
 		private userRepo: UserRepository,
+		private readonly groupInvitationRepo: GroupInvitationRepository,
 	) {}
 
 	async getGroupMembers() {
 		const groupId = this.cls.get("group").id;
+		this.logger.log(`Getting members for group: ${groupId}`);
 
-		return this.userRepo.find({
+		const members = await this.userRepo.find({
 			where: {
 				userGroups: {
 					groupId: groupId,
-					status: InvitationStatus.ACCEPTED,
 				},
 			},
 		});
+
+		this.logger.log(`Found ${members.length} members in group ${groupId}`);
+		return members;
 	}
 
-	async updateOne(id: string | number, dto: UpdateUserGroupRequest) {}
+	async updateOne(id: string | number, dto: UpdateUserGroupRequest) {
+		// TODO: Implement member role/permission updates
+		this.logger.log(`Updating user-group record: ${id}`);
+	}
 
 	async findMany() {
+		const groupId = this.cls.get("group").id;
+		this.logger.log(`Finding all user-group records for group: ${groupId}`);
+
 		return this.userGroupRepo.find({
 			where: {
-				groupId: this.cls.get("group").id,
+				groupId: groupId,
 			},
 			relations: {
 				user: true,
@@ -92,8 +135,23 @@ export class UserGroupService {
 	async removeMemberByGroupAndUser(request: DeleteMemberRequest) {
 		const groupId = this.cls.get("group").id;
 		const { userId } = request;
+
+		this.logger.log(`Removing user ${userId} from group ${groupId}`);
+
 		const member = await this.getMemberByGroupAndUser(groupId, userId);
-		return this.userGroupRepo.remove(member);
+
+		// Also clean up any pending invitations
+		await this.groupInvitationRepo.delete({
+			toUserId: userId,
+			groupId: groupId,
+		});
+
+		const result = await this.userGroupRepo.remove(member);
+		this.logger.log(
+			`Successfully removed user ${userId} from group ${groupId}`,
+		);
+
+		return result;
 	}
 
 	// Get all groups for a user
@@ -120,16 +178,56 @@ export class UserGroupService {
 
 	// Get member count of a group
 	async getMemberCount(groupId: string): Promise<number> {
-		return this.userGroupRepo.count({
-			where: { group: { id: groupId } },
+		const count = await this.userGroupRepo.count({
+			where: {
+				group: { id: groupId },
+			},
 		});
+		this.logger.log(`Group ${groupId} has ${count} members`);
+		return count;
 	}
 
-	// Add members
-	async addMembers(groupId: string, userIds: string[]) {
-		const group = await this.groupService.findOne(groupId);
+	// Add user to group (called when invitation is accepted)
+	async addUserToGroup(userId: string, groupId: string, addedById: string) {
+		this.logger.log(`Adding user ${userId} to group ${groupId}`);
 
+		// Check if already a member
+		const existing = await this.userGroupRepo.findOne({
+			where: { userId, groupId },
+		});
+
+		if (existing) {
+			// if (existing.status === InvitationStatus.ACCEPTED) {
+			// 	this.logger.warn(
+			// 		`User ${userId} is already a member of group ${groupId}`,
+			// 	);
+			// 	return existing;
+			// }
+
+			// Update existing record
+			existing.joinedAt = new Date();
+			existing.addedById = addedById;
+			return await this.userGroupRepo.save(existing);
+		}
+
+		// Create new membership record
+		const userGroup = this.userGroupRepo.create({
+			userId,
+			groupId,
+			addedById,
+			joinedAt: new Date(),
+			invitedAt: new Date(),
+		});
+
+		const result = await this.userGroupRepo.save(userGroup);
+		this.logger.log(`Successfully added user ${userId} to group ${groupId}`);
+		return result;
+	}
+
+	// Add multiple members directly (admin action)
+	async addMembers(groupId: string, userIds: string[]) {
 		const addedBy = this.cls.get("profile");
+		this.logger.log(`Adding ${userIds.length} users to group ${groupId}`);
 
 		const members = [];
 
@@ -140,95 +238,48 @@ export class UserGroupService {
 			const exists = await this.isMember(groupId, userId);
 			if (!exists) {
 				const userGroup = this.userGroupRepo.create({
-					group,
-					user,
-					addedBy,
+					userId,
+					groupId,
+					addedById: addedBy.id,
 					joinedAt: new Date(),
+					invitedAt: new Date(),
 				});
 				members.push(userGroup);
 			}
 		}
 
-		return this.userGroupRepo.insert(members);
-	}
-	// Invite user to a group
-	async inviteUser(request: CreateInvitationRequest) {
-		const { userIdOrEmail } = request;
-		const invitedById = this.cls.get("profile").id;
-		const groupId = this.cls.get("group").id;
-
-		// Validate group and user exist
-		const group = await this.groupService.findOne(groupId);
-		const user = await this.userService.findByUniqueKey(userIdOrEmail);
-		const addedBy = await this.userService.findById(invitedById);
-
-		// Check if already invited/member
-		const existing = await this.userGroupRepo.findOne({
-			where: { group: { id: groupId }, user: { id: user.id } },
-		});
-
-		if (existing) {
-			if (existing.status === InvitationStatus.PENDING) {
-				// Throw an user here
-				throw new MemberAlreadyInvitedError();
-			}
-			if (existing.status === InvitationStatus.ACCEPTED) {
-				// Throw an error here
-				throw new MemberExistedError();
-			}
-			// Allow re-invite if previously declined
-			if (existing.status === InvitationStatus.PENDING) {
-				existing.status = InvitationStatus.ACCEPTED;
-				existing.invitedAt = new Date();
-				existing.addedBy = addedBy;
-				return this.userGroupRepo.save(existing);
-			}
-		}
-
-		const invitation = this.userGroupRepo.create({
-			group,
-			user,
-			addedBy: addedBy,
-			status: InvitationStatus.PENDING,
-			invitedAt: new Date(),
-			joinedAt: null,
-		});
-
-		return this.userGroupRepo.save(invitation);
+		const result = await this.userGroupRepo.save(members);
+		this.logger.log(
+			`Successfully added ${members.length} new members to group ${groupId}`,
+		);
+		return result;
 	}
 
-	// Update invitation status (accepted/declined)
-	async updateInvitationStatus(request: UpdateInvitationRequest) {
-		const { userIdOrEmail, status } = request;
-		const groupId = this.cls.get("group").id;
+	async leaveGroup(groupId: string) {
+		const userId = this.cls.get("profile").id; // Get current user from CLS
 
-		const invitation = await this.userGroupRepo.findOne({
+		this.logger.log(`User ${userId} attempting to leave group ${groupId}`);
+
+		// Validate that the group exists
+		await this.groupService.findOne(groupId);
+
+		// Check if user is actually a member
+		const member = await this.userGroupRepo.findOne({
 			where: {
-				group: { id: groupId },
-				user: [{ id: userIdOrEmail }, { email: userIdOrEmail }],
-				status: InvitationStatus.PENDING,
+				groupId: groupId,
+				userId: userId,
 			},
-			relations: ["user", "group", "addedBy"],
+			relations: ["user", "group"],
 		});
 
-		if (!invitation) {
-			throw new InvitationNotFoundError();
+		if (!member) {
+			throw new MemberNotFoundError();
 		}
 
-		if (
-			![InvitationStatus.ACCEPTED, InvitationStatus.DECLINED].includes(status)
-		) {
-			throw new InvalidInvitationError();
-		}
+		// Remove the membership
+		const result = await this.userGroupRepo.remove(member);
 
-		// Update status
-		invitation.status = status;
-
-		if (status === InvitationStatus.ACCEPTED) {
-			invitation.joinedAt = new Date();
-		}
-
-		const result = await this.userGroupRepo.save(invitation);
+		this.logger.log(`User ${userId} successfully left group ${groupId}`);
 		return result;
 	}
 }

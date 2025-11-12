@@ -1,18 +1,39 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsNumber, Min, Max } from "class-validator";
+import { IsNumber, Min, Max, IsOptional, IsString } from "class-validator";
 
 export class UserFriendQuery {
-	@ApiProperty({ required: true })
+	@ApiPropertyOptional({
+		example: 1,
+		description: "Page number for pagination",
+		minimum: 1,
+		default: 1,
+	})
+	@IsOptional()
+	@Type(() => Number)
 	@IsNumber()
 	@Min(1)
-	@Type(() => Number)
-	page: number;
+	page: number = 1;
 
-	@ApiProperty({ required: true })
+	@ApiPropertyOptional({
+		example: 10,
+		description: "Number of items per page",
+		minimum: 1,
+		maximum: 100,
+		default: 10,
+	})
+	@IsOptional()
+	@Type(() => Number)
 	@IsNumber()
 	@Min(1)
 	@Max(100)
-	@Type(() => Number)
-	limit: number;
+	limit: number = 10;
+
+	@ApiPropertyOptional({
+		example: "john",
+		description: "Search by username, first name, or last name",
+	})
+	@IsOptional()
+	@IsString()
+	search?: string;
 }

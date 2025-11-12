@@ -4,3 +4,5 @@ export * from "./invalid-friend-request.error";
 export * from "./only-receiver.error";
 export * from "./already-friend.error";
 export * from "./already-pending-request.error";
+export * from "./friendship-not-found.error";
+export * from "./user-not-found.error";

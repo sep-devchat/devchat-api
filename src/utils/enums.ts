@@ -33,6 +33,22 @@ export enum FriendRequestStatus {
 	UNFRIEND = 3,
 }
 
+/**
+ * Represents the status of a group invitation between users and groups.
+ *
+ * Each status indicates the current state of the invitation:
+ * - `PENDING`: An invitation has been sent but not yet responded to.
+ * - `ACCEPTED`: The invitation has been accepted; user has joined the group.
+ * - `DECLINED`: The invitation has been declined.
+ * - `CANCELLED`: The invitation has been cancelled by the sender.
+ */
+export enum GroupInvitationStatus {
+	PENDING = 0,
+	ACCEPTED = 1,
+	DECLINED = 2,
+	CANCELLED = 3,
+}
+
 export enum TaskStatusEnum {
 	TODO = 0,
 	IN_PROGRESS = 1,

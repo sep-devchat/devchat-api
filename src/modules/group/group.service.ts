@@ -44,7 +44,6 @@ export class GroupService {
 			joinedAt: new Date(),
 			userId: createdBy,
 			addedById: createdBy,
-			status: 1,
 		});
 
 		return await this.groupRepo.findOne({
@@ -69,7 +68,6 @@ export class GroupService {
 				{
 					userGroups: {
 						userId: userId,
-						status: InvitationStatus.ACCEPTED,
 					},
 				},
 			],
@@ -88,7 +86,6 @@ export class GroupService {
 					id,
 					userGroups: {
 						userId: userId,
-						status: InvitationStatus.ACCEPTED,
 					},
 				},
 			],

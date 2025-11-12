@@ -4,46 +4,32 @@ import {
 	JoinColumn,
 	ManyToOne,
 	PrimaryGeneratedColumn,
+	Index,
 } from "typeorm";
 import { UserEntity } from "./user.entity";
-import { FriendRequestStatus } from "@utils";
 import { DbConstants } from "../db-constants";
 
-const { TableName, ColumnName, IndexName } = DbConstants;
+const { TableName, ColumnName } = DbConstants;
 
 @Entity(TableName.UserFriend)
+@Index(["userId", "friendId"], { unique: true })
 export class UserFriendEntity {
 	@PrimaryGeneratedColumn("uuid", { name: ColumnName.UserFriend.id })
 	id: string;
 
-	@Column({ name: ColumnName.UserFriend.senderId })
-	senderId: string;
+	@Column({ name: ColumnName.UserFriend.userId })
+	userId: string;
 
-	@Column({ name: ColumnName.UserFriend.receiverId })
-	receiverId: string;
-
-	@JoinColumn({ name: ColumnName.UserFriend.senderId })
+	@JoinColumn({ name: ColumnName.UserFriend.userId })
 	@ManyToOne(() => UserEntity)
-	sender: UserEntity;
+	user: UserEntity;
 
-	@JoinColumn({ name: ColumnName.UserFriend.receiverId })
+	@Column({ name: ColumnName.UserFriend.friendId })
+	friendId: string;
+
+	@JoinColumn({ name: ColumnName.UserFriend.friendId })
 	@ManyToOne(() => UserEntity)
-	receiver: UserEntity;
-
-	@Column({
-		name: ColumnName.UserFriend.status,
-		type: "int",
-		unsigned: true,
-		default: FriendRequestStatus.PENDING,
-	})
-	status: number;
-
-	@Column({
-		name: ColumnName.UserFriend.message,
-		type: "text",
-		nullable: true,
-	})
-	message: string | null;
+	friend: UserEntity;
 
 	@Column({
 		name: ColumnName.Audit.createdAt,
@@ -59,12 +45,4 @@ export class UserFriendEntity {
 		onUpdate: "CURRENT_TIMESTAMP",
 	})
 	updatedAt: Date;
-
-	@Column({
-		type: "datetime",
-		name: ColumnName.UserFriend.respondedAt,
-		nullable: true,
-		default: null,
-	})
-	respondedAt: Date | null;
 }

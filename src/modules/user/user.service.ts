@@ -3,13 +3,14 @@ import {
 	UserRepository,
 	UserGroupRepository,
 	TaskRepository,
+	FriendRequestRepository,
+	GroupInvitationRepository,
 } from "@db/repositories";
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { UserExistedError } from "./errors/user-existed.error";
 import * as bcrypt from "bcryptjs";
 import {
 	GetFriendRequestQuery,
-	GroupRequestQuery,
 	UpdateUserRequest,
 	UserQuery,
 	CreateUserRequest,
@@ -23,18 +24,25 @@ import {
 import { UserNotFoundError } from "./errors";
 import { randomBytes } from "crypto";
 import { ClsService } from "nestjs-cls";
-import { In } from "typeorm";
+import { In, FindOptionsWhere, ILike } from "typeorm";
+import { FriendRequestEntity } from "@db/entities/friend-request.entity";
+import { GroupInvitationEntity, UserFriendEntity } from "@db/entities";
+import { UserFriendQuery } from "@modules/user-friend/dto";
 
 const emailToken = randomBytes(32).toString("hex");
 
 @Injectable()
 export class UserService {
+	private readonly logger = new Logger(UserService.name);
+
 	constructor(
 		private readonly userRepo: UserRepository,
 		private readonly userGroupRepo: UserGroupRepository,
 		private readonly taskRepo: TaskRepository,
 		private readonly cls: ClsService<DevChatCls>,
 		private readonly userFriendRepo: UserFriendRepository,
+		private readonly friendRequestRepo: FriendRequestRepository,
+		private readonly groupInvitationRepo: GroupInvitationRepository,
 	) {}
 
 	async validateBeforeCreate(dto: CreateUserRequest) {
@@ -147,64 +155,386 @@ export class UserService {
 		await this.userRepo.save(user);
 	}
 
-	async getSentFriendRequests(query: GetFriendRequestQuery) {
+	async getSentFriendRequests(search?: string) {
 		const userId = this.cls.get("profile").id;
 
-		const { status } = query;
-		const friendRequests = await this.userFriendRepo.find({
-			where: {
-				senderId: userId,
-				status,
-			},
-			relations: ["sender", "receiver"],
-		});
+		let where:
+			| FindOptionsWhere<FriendRequestEntity>[]
+			| FindOptionsWhere<FriendRequestEntity>;
 
-		return friendRequests;
+		if (search) {
+			const searchPattern = `%${search}%`;
+			where = [
+				{
+					fromUserId: userId,
+					toUser: { firstName: ILike(searchPattern) },
+				},
+				{
+					fromUserId: userId,
+					toUser: { lastName: ILike(searchPattern) },
+				},
+				{
+					fromUserId: userId,
+					toUser: { username: ILike(searchPattern) },
+				},
+			];
+		} else {
+			where = { fromUserId: userId };
+		}
+
+		return this.friendRequestRepo.find({
+			where,
+			relations: ["fromUser", "toUser"],
+			order: { createdAt: "DESC" },
+		});
 	}
 
-	async getReceivedFriendRequests(query: GetFriendRequestQuery) {
+	async getReceivedFriendRequests(search?: string) {
 		const userId = this.cls.get("profile").id;
 
-		const { status } = query;
-		const friendRequests = await this.userFriendRepo.find({
-			where: {
-				receiverId: userId,
-				status,
-			},
-			relations: ["sender", "receiver"],
-		});
+		let where:
+			| FindOptionsWhere<FriendRequestEntity>[]
+			| FindOptionsWhere<FriendRequestEntity>;
 
-		return friendRequests;
+		if (search) {
+			const searchPattern = `%${search}%`;
+			where = [
+				{
+					toUserId: userId,
+					fromUser: { firstName: ILike(searchPattern) },
+				},
+				{
+					toUserId: userId,
+					fromUser: { lastName: ILike(searchPattern) },
+				},
+				{
+					toUserId: userId,
+					fromUser: { username: ILike(searchPattern) },
+				},
+			];
+		} else {
+			where = { toUserId: userId };
+		}
+
+		return this.friendRequestRepo.find({
+			where,
+			relations: ["fromUser", "toUser"],
+			order: { createdAt: "DESC" },
+		});
 	}
 
-	async getReceiveGroupRequests(query: GroupRequestQuery) {
-		const userId = this.cls.get("profile").id;
-		const { status } = query;
+	async getAllFriendsWithMutuals(query: UserFriendQuery) {
+		try {
+			this.logger.log(
+				`Starting getAllFriendsWithMutuals with query: ${JSON.stringify(query)}`,
+			);
 
-		const groupRequests = this.userGroupRepo.find({
-			where: {
-				userId,
-				status,
-			},
-			relations: ["user", "group", "addedBy"],
-		});
+			const profile = this.cls.get("profile");
+			this.logger.log(`CLS profile: ${JSON.stringify(profile)}`);
 
-		return groupRequests;
+			if (!profile || !profile.id) {
+				this.logger.error("No user profile found in CLS context");
+				throw new Error("User not found in context");
+			}
+
+			const userId = profile.id;
+			this.logger.log(`Extracted userId: ${userId}`);
+			const { page, limit, search } = query;
+
+			// Build where conditions
+			const where: FindOptionsWhere<UserFriendEntity>[] = [
+				{ userId },
+				{ friendId: userId },
+			];
+
+			const findOptions = {
+				where,
+				relations: ["user", "friend"],
+				skip: (page - 1) * limit,
+				take: limit,
+				order: { createdAt: "DESC" as const },
+			};
+
+			// Handle search if provided
+			if (search) {
+				const searchConditions = [
+					{
+						userId,
+						friend: { username: ILike(`%${search}%`) },
+					},
+					{
+						userId,
+						friend: { firstName: ILike(`%${search}%`) },
+					},
+					{
+						userId,
+						friend: { lastName: ILike(`%${search}%`) },
+					},
+					{
+						friendId: userId,
+						user: { username: ILike(`%${search}%`) },
+					},
+					{
+						friendId: userId,
+						user: { firstName: ILike(`%${search}%`) },
+					},
+					{
+						friendId: userId,
+						user: { lastName: ILike(`%${search}%`) },
+					},
+				];
+
+				this.logger.log(
+					`Finding friends with search conditions: ${JSON.stringify(searchConditions)}`,
+				);
+				this.logger.log(`User ID from CLS: ${userId}`);
+
+				let data, total;
+				try {
+					[data, total] = await this.userFriendRepo.findAndCount({
+						where: searchConditions,
+						relations: findOptions.relations,
+						skip: findOptions.skip,
+						take: findOptions.take,
+						order: findOptions.order,
+					});
+					this.logger.log(
+						`Found ${total} total friends, returned ${data.length} items`,
+					);
+					this.logger.log(
+						`Raw data from query: ${JSON.stringify(data, null, 2)}`,
+					);
+				} catch (dbError) {
+					this.logger.error(`Database query failed: ${dbError.message}`);
+					this.logger.error(
+						`Query was: ${JSON.stringify(searchConditions, null, 2)}`,
+					);
+					throw dbError;
+				}
+
+				const pagination = new PaginationDto(page, limit, total);
+
+				// Extract the friend users and add mutual friends
+				const friendsWithMutuals = await Promise.all(
+					data.map(async (friendship) => {
+						const friend =
+							friendship.userId === userId
+								? friendship.friend
+								: friendship.user;
+
+						this.logger.log(
+							`Processing friendship: ${JSON.stringify({
+								friendshipId: friendship.id,
+								userId: friendship.userId,
+								friendId: friendship.friendId,
+								friendName: friend.username,
+								friendFullName: `${friend.firstName} ${friend.lastName}`,
+							})}`,
+						);
+
+						try {
+							const mutuals = await this.getMutualFriends(friend.id);
+							return {
+								...friend,
+								mutualFriends: mutuals.mutualFriends,
+								mutualFriendsCount: mutuals.count,
+							};
+						} catch (error) {
+							// If mutual friends calculation fails, return friend without mutuals
+							this.logger.warn(
+								`Failed to get mutual friends for user ${friend.id}:`,
+								error.message,
+							);
+							return {
+								...friend,
+								mutualFriends: [],
+								mutualFriendsCount: 0,
+							};
+						}
+					}),
+				);
+
+				return { friends: friendsWithMutuals, pagination };
+			}
+
+			// Regular find without search
+			this.logger.log(
+				`Finding all friends for user ${userId} with options: ${JSON.stringify(findOptions)}`,
+			);
+			this.logger.log(`User ID from CLS: ${userId}`);
+
+			let data, total;
+			try {
+				[data, total] = await this.userFriendRepo.findAndCount(findOptions);
+				this.logger.log(
+					`Found ${total} total friends, returned ${data.length} items`,
+				);
+				this.logger.log(
+					`Raw data from query: ${JSON.stringify(data, null, 2)}`,
+				);
+			} catch (dbError) {
+				this.logger.error(`Database query failed: ${dbError.message}`);
+				this.logger.error(`Query was: ${JSON.stringify(findOptions, null, 2)}`);
+				throw dbError;
+			}
+
+			const pagination = new PaginationDto(page, limit, total);
+
+			// Extract the friend users and add mutual friends
+			const friendsWithMutuals = await Promise.all(
+				data.map(async (friendship) => {
+					const friend =
+						friendship.userId === userId ? friendship.friend : friendship.user;
+
+					this.logger.log(
+						`Processing friendship: ${JSON.stringify({
+							friendshipId: friendship.id,
+							userId: friendship.userId,
+							friendId: friendship.friendId,
+							friendName: friend.username,
+							friendFullName: `${friend.firstName} ${friend.lastName}`,
+						})}`,
+					);
+
+					try {
+						const mutuals = await this.getMutualFriends(friend.id);
+						return {
+							...friend,
+							mutualFriends: mutuals.mutualFriends,
+							mutualFriendsCount: mutuals.count,
+						};
+					} catch (error) {
+						// If mutual friends calculation fails, return friend without mutuals
+						this.logger.warn(
+							`Failed to get mutual friends for user ${friend.id}:`,
+							error.message,
+						);
+						return {
+							...friend,
+							mutualFriends: [],
+							mutualFriendsCount: 0,
+						};
+					}
+				}),
+			);
+
+			return { friends: friendsWithMutuals, pagination };
+		} catch (error) {
+			this.logger.error(`Error in getAllFriendsWithMutuals: ${error.message}`);
+			this.logger.error(`Stack trace: ${error.stack}`);
+			throw error;
+		}
 	}
 
-	async getSentGroupRequests(query: GroupRequestQuery) {
+	async getFriendshipStatus(friendId: string) {
 		const userId = this.cls.get("profile").id;
-		const { status } = query;
 
-		const groupRequests = this.userGroupRepo.find({
-			where: {
-				addedById: userId,
-				status,
-			},
-			relations: ["user", "group", "addedBy"],
+		// Check if they are friends
+		const friendship = await this.userFriendRepo.findOne({
+			where: [
+				{ userId, friendId },
+				{ userId: friendId, friendId: userId },
+			],
 		});
 
-		return groupRequests;
+		if (friendship) {
+			return {
+				status: "friends",
+				since: friendship.createdAt,
+			};
+		}
+
+		// Check if there's a pending friend request
+		const friendRequest = await this.friendRequestRepo.findOne({
+			where: [
+				{
+					fromUserId: userId,
+					toUserId: friendId,
+				},
+				{
+					fromUserId: friendId,
+					toUserId: userId,
+				},
+			],
+			relations: ["fromUser", "toUser"],
+		});
+
+		if (friendRequest) {
+			return {
+				status: "pending",
+				direction: friendRequest.fromUserId === userId ? "sent" : "received",
+				requestId: friendRequest.id,
+				since: friendRequest.createdAt,
+			};
+		}
+
+		return { status: "none" };
+	}
+
+	async getFriendsCount() {
+		const userId = this.cls.get("profile").id;
+
+		return await this.userFriendRepo.count({
+			where: [{ userId }, { friendId: userId }],
+		});
+	}
+
+	async getPendingFriendRequestsCount() {
+		const userId = this.cls.get("profile").id;
+
+		return await this.friendRequestRepo.count({
+			where: {
+				toUserId: userId,
+			},
+		});
+	}
+
+	async getReceivedGroupInvitations(search?: string) {
+		const userId = this.cls.get("profile").id;
+
+		let where:
+			| FindOptionsWhere<GroupInvitationEntity>[]
+			| FindOptionsWhere<GroupInvitationEntity>;
+
+		if (search) {
+			const searchPattern = `%${search}%`;
+			where = {
+				toUserId: userId,
+				group: { name: ILike(searchPattern) },
+			};
+		} else {
+			where = { toUserId: userId };
+		}
+
+		return this.groupInvitationRepo.find({
+			where,
+			relations: ["fromUser", "toUser", "group"],
+			order: { createdAt: "DESC" },
+		});
+	}
+
+	async getSentGroupInvitations(search?: string) {
+		const userId = this.cls.get("profile").id;
+
+		let where:
+			| FindOptionsWhere<GroupInvitationEntity>[]
+			| FindOptionsWhere<GroupInvitationEntity>;
+
+		if (search) {
+			const searchPattern = `%${search}%`;
+			where = {
+				fromUserId: userId,
+				group: { name: ILike(searchPattern) },
+			};
+		} else {
+			where = { fromUserId: userId };
+		}
+
+		return this.groupInvitationRepo.find({
+			where,
+			relations: ["fromUser", "toUser", "group"],
+			order: { createdAt: "DESC" },
+		});
 	}
 
 	async getTasksByGroupId(groupId: string) {
@@ -220,5 +550,68 @@ export class UserService {
 		});
 
 		return tasks;
+	}
+
+	async getMutualFriends(targetUserId: string) {
+		const profile = this.cls.get("profile");
+		if (!profile || !profile.id) {
+			throw new UserNotFoundError();
+		}
+		const userId = profile.id;
+
+		// Verify target user exists - use repository to avoid throwing error
+		const targetUser = await this.userRepo.findOne({
+			where: { id: targetUserId },
+		});
+		if (!targetUser) {
+			throw new UserNotFoundError();
+		}
+
+		// Get current user's friends
+		const userFriends = await this.userFriendRepo.find({
+			where: [{ userId }, { friendId: userId }],
+			relations: ["user", "friend"],
+		});
+
+		// Get target user's friends
+		const targetFriends = await this.userFriendRepo.find({
+			where: [{ userId: targetUserId }, { friendId: targetUserId }],
+			relations: ["user", "friend"],
+		});
+
+		// Extract friend IDs for current user
+		const userFriendIds = new Set(
+			userFriends.map((friendship) =>
+				friendship.userId === userId ? friendship.friendId : friendship.userId,
+			),
+		);
+
+		// Extract friend IDs for target user
+		const targetFriendIds = new Set(
+			targetFriends.map((friendship) =>
+				friendship.userId === targetUserId
+					? friendship.friendId
+					: friendship.userId,
+			),
+		);
+
+		// Find mutual friend IDs
+		const mutualFriendIds = [...userFriendIds].filter((id) =>
+			targetFriendIds.has(id),
+		);
+
+		// Get mutual friends data
+		const mutualFriends = [];
+		for (const friendId of mutualFriendIds) {
+			const friend = await this.userRepo.findOne({ where: { id: friendId } });
+			if (friend) {
+				mutualFriends.push(friend);
+			}
+		}
+
+		return {
+			mutualFriends,
+			count: mutualFriends.length,
+		};
 	}
 }

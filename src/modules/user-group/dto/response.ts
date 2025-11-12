@@ -44,7 +44,6 @@ export class UserGroupResponse {
 		response.addedById = entity.addedBy.id;
 		response.joinedAt = entity.joinedAt;
 		response.invitedAt = entity.invitedAt;
-		response.status = entity.status;
 		response.group = GroupResponse.fromEntity(entity.group);
 		response.user = UserResponse.fromEntity(entity.user);
 		response.addedBy = Profile.fromEntity(entity.addedBy);
