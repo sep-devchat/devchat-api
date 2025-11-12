@@ -20,6 +20,7 @@ import {
 	AlreadyFriendsError,
 } from "./errors";
 import { UserService } from "@modules/user";
+import { NotificationService } from "@modules/notification";
 
 @Injectable()
 export class FriendRequestService {
@@ -30,6 +31,7 @@ export class FriendRequestService {
 		private readonly userFriendRepo: UserFriendRepository,
 		private readonly userService: UserService,
 		private readonly cls: ClsService<DevChatCls>,
+		private readonly notificationService: NotificationService,
 	) {}
 
 	async validateBeforeCreate(fromUserId: string, toUserId: string) {
@@ -92,6 +94,14 @@ export class FriendRequestService {
 		});
 
 		await this.repo.insert(friendRequest);
+
+		// Send notification to the recipient
+		await this.notificationService.createOne({
+			toUserId: dto.toUserId,
+			title: "New Friend Request",
+			content: `You have a new friend request`,
+			notificationSource: "/chat/friend?tab=pending",
+		});
 
 		// Return with relations
 		return await this.repo.findOne({
@@ -277,6 +287,13 @@ export class FriendRequestService {
 
 			// Delete the friend request record
 			await this.repo.delete(id);
+
+			await this.notificationService.createOne({
+				toUserId: existingFriendRequest.fromUserId,
+				title: "Friend Request Accepted",
+				content: `Your friend request has been accepted`,
+				notificationSource: "/chat/friend?tab=all",
+			});
 
 			this.logger.log(
 				`Friend request ${id} accepted, friendship created, and request deleted`,

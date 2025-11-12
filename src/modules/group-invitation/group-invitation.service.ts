@@ -22,6 +22,7 @@ import {
 } from "./errors";
 import { UserService } from "@modules/user";
 import { GroupService } from "@modules/group";
+import { NotificationService } from "@modules/notification";
 
 @Injectable()
 export class GroupInvitationService {
@@ -35,6 +36,7 @@ export class GroupInvitationService {
 		private readonly userService: UserService,
 		private readonly groupService: GroupService,
 		private readonly cls: ClsService<DevChatCls>,
+		private readonly notificationService: NotificationService,
 	) {}
 
 	async validateBeforeCreate(
@@ -101,6 +103,13 @@ export class GroupInvitationService {
 		this.logger.log(
 			`Group invitation created successfully with ID: ${groupInvitation.id}`,
 		);
+
+		await this.notificationService.createOne({
+			toUserId: dto.toUserId,
+			title: "New Group Invitation",
+			content: `You have been invited to join a group`,
+			notificationSource: `/chat/friend?tab=pending`,
+		});
 
 		// Return with relations
 		return await this.repo.findOne({
@@ -345,6 +354,13 @@ export class GroupInvitationService {
 
 			// Delete the invitation record
 			await this.repo.delete(id);
+
+			await this.notificationService.createOne({
+				toUserId: existingInvitation.fromUserId,
+				title: "Group Invitation Accepted",
+				content: `Your group invitation has been accepted`,
+				notificationSource: `/chat/group/${existingInvitation.groupId}`,
+			});
 
 			this.logger.log(
 				`Invitation ${id} accepted, membership created, and invitation deleted`,
