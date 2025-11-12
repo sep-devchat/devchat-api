@@ -17,3 +17,6 @@ export * from "./code-block.entity";
 export * from "./direct-message.entity";
 export * from "./friend-request.entity";
 export * from "./group-invitation.entity";
+export * from "./notification.entity";
+export * from "./ai-session.entity";
+export * from "./ai-interaction.entity";

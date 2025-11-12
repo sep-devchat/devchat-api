@@ -4,9 +4,10 @@ import { MessageGateway } from "./message.gateway";
 import { AuthModule } from "@modules/auth";
 import { UserModule } from "@modules/user";
 import { SocketModule } from "@modules/socket";
+import { AiModule } from "@modules/ai";
 
 @Module({
-	imports: [AuthModule, UserModule, SocketModule],
+	imports: [AuthModule, UserModule, SocketModule, AiModule],
 	providers: [MessageService, MessageGateway],
 	exports: [MessageService],
 })

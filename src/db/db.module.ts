@@ -22,6 +22,9 @@ import {
 	DirectMessageRepository,
 	FriendRequestRepository,
 	GroupInvitationRepository,
+	NotificationRepository,
+	AiSessionRepository,
+	AiInteractionRepository,
 } from "./repositories";
 
 const repositories = [
@@ -44,6 +47,9 @@ const repositories = [
 	DirectMessageRepository,
 	FriendRequestRepository,
 	GroupInvitationRepository,
+	NotificationRepository,
+	AiSessionRepository,
+	AiInteractionRepository,
 ];
 
 @Module({

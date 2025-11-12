@@ -97,3 +97,22 @@ export enum CodeExecutionStatus {
 	TIMED_OUT = 4,
 	CANCELLED = 5,
 }
+
+export enum AIProviderEnum {
+	OPENAI = "openai",
+	GEMINI = "gemini",
+}
+
+/**
+ * Types of AI requests that can be made.
+ * - `CHAT`: General chat interactions.
+ * - `SUGGEST`: Requests for suggestions or recommendations.
+ * - `EXPLAIN`: Requests for explanations or clarifications.
+ * - `REFACTOR`: Requests for code refactoring or improvements.
+ */
+export enum AIRequestTypeEnum {
+	CHAT = "chat",
+	SUGGEST = "suggest",
+	EXPLAIN = "explain",
+	REFACTOR = "refactor",
+}

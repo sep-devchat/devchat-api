@@ -1,3 +1,7 @@
+import { response } from "express";
+import { start } from "repl";
+import { threadId } from "worker_threads";
+
 export const DbConstants = {
 	TableName: {
 		User: "user",
@@ -19,6 +23,9 @@ export const DbConstants = {
 		DirectMessage: "direct_message",
 		FriendRequest: "friend_request",
 		GroupInvitation: "group_invitation",
+		Notification: "notification",
+		AiSession: "ai_session",
+		AiInteraction: "ai_interaction",
 	},
 	ColumnName: {
 		User: {
@@ -186,37 +193,79 @@ export const DbConstants = {
 			groupId: "group_id",
 			status: "status",
 			message: "message",
+			Notification: {
+				id: "notification_id",
+				toUserId: "to_user_id",
+				title: "notification_title",
+				content: "notification_content",
+				notificationSource: "notification_source",
+				isRead: "is_read",
+			},
+			AiSession: {
+				id: "ai_session_id",
+				userId: "user_id",
+				channelId: "channel_id",
+				threadId: "thread_id",
+				sessionType: "session_type",
+				startedAt: "started_at",
+				endedAt: "ended_at",
+				status: "status",
+			},
+			AiInteraction: {
+				id: "ai_interaction_id",
+				sessionId: "ai_session_id",
+				userId: "user_id",
+				messageId: "message_id",
+				aiResponse: "ai_response",
+				model: "ai_model",
+				contextData: "context_data",
+				responseTime: "response_time",
+			},
 		},
-	},
-	IndexName: {
-		User: {
-			username: "idx_user_unique_username",
-			email: "idx_user_unique_email",
-		},
-		Group: {
-			name: "idx_group_name",
-		},
-		Channel: {
-			name: "idx_channel_unique_name",
-			groupId: "idx_channel_normal_group",
-		},
-		PasswordResetToken: {
-			userId: "idx_password_reset_token_normal_userId",
-			verifyCode: "idx_password_reset_token_normal_verifyCode",
-		},
-		Attachment: {
-			messageId: "idx_attachment_normal_messageId",
-		},
-		AuditLog: {
-			userId: "idx_audit_log_normal_userId",
-			entityType: "idx_audit_log_normal_entityType",
-			entityId: "idx_audit_log_normal_entityId",
-		},
-		Task: {
-			groupId: "idx_task_normal_groupId",
-		},
-		Todo: {
-			userId: "idx_todo_normal_userId",
+		IndexName: {
+			User: {
+				username: "idx_user_unique_username",
+				email: "idx_user_unique_email",
+			},
+			Group: {
+				name: "idx_group_name",
+			},
+			Channel: {
+				name: "idx_channel_unique_name",
+				groupId: "idx_channel_normal_group",
+			},
+			PasswordResetToken: {
+				userId: "idx_password_reset_token_normal_userId",
+				verifyCode: "idx_password_reset_token_normal_verifyCode",
+			},
+			Attachment: {
+				messageId: "idx_attachment_normal_messageId",
+			},
+			AuditLog: {
+				userId: "idx_audit_log_normal_userId",
+				entityType: "idx_audit_log_normal_entityType",
+				entityId: "idx_audit_log_normal_entityId",
+			},
+			Task: {
+				groupId: "idx_task_normal_groupId",
+			},
+			Todo: {
+				userId: "idx_todo_normal_userId",
+			},
+			Notification: {
+				userId: "idx_notification_normal_toUserId",
+			},
+			AiSession: {
+				userId: "idx_ai_session_normal_userId",
+				channelId: "idx_ai_session_normal_channelId",
+				threadId: "idx_ai_session_normal_threadId",
+				status: "idx_ai_session_normal_status",
+			},
+			AiInteraction: {
+				sessionId: "idx_ai_interaction_normal_sessionId",
+				userId: "idx_ai_interaction_normal_userId",
+				messageId: "idx_ai_interaction_normal_messageId",
+			},
 		},
 	},
 };

@@ -15,12 +15,11 @@ import {
 	UserQuery,
 	CreateUserRequest,
 } from "./dto";
-import { UserFriendQuery } from "@modules/user-friend/dto";
 import {
 	DevChatCls,
 	PaginationDto,
+	sendVerificationEmail,
 	TaskStatusEnum,
-	FriendRequestStatus,
 } from "@utils";
 import { UserNotFoundError } from "./errors";
 import { randomBytes } from "crypto";
@@ -28,6 +27,7 @@ import { ClsService } from "nestjs-cls";
 import { In, FindOptionsWhere, ILike } from "typeorm";
 import { FriendRequestEntity } from "@db/entities/friend-request.entity";
 import { GroupInvitationEntity, UserFriendEntity } from "@db/entities";
+import { UserFriendQuery } from "@modules/user-friend/dto";
 
 const emailToken = randomBytes(32).toString("hex");
 
@@ -78,7 +78,7 @@ export class UserService {
 			emailVerificationToken: emailToken,
 		});
 
-		// await sendVerificationEmail(user.email, emailToken);
+		await sendVerificationEmail(user.email, emailToken);
 
 		return await this.userRepo.insert(user);
 	}

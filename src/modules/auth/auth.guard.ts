@@ -36,7 +36,6 @@ export class AuthGuard implements CanActivate {
 
 		const decoded = this.authService.verifyAccessToken(token);
 		const user = await this.userService.findById(decoded.sub);
-		console.log("Admin role:", user.adminRoleId);
 		const profile = Profile.fromEntity(user);
 		let adminRole = null as any;
 		if (user.adminRoleId) {
@@ -44,7 +43,6 @@ export class AuthGuard implements CanActivate {
 				where: { id: user.adminRoleId },
 			});
 		}
-		console.log("Admin Role in Auth Guard:", adminRole);
 		this.cls.set("profile", adminRole ? { ...profile, adminRole } : profile);
 
 		if (adminRole) {

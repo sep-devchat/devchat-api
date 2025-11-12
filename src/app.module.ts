@@ -26,6 +26,8 @@ import { TodoModule } from "@modules/todo";
 import { CodeBlockModule } from "@modules/code-block";
 import { FriendRequestModule } from "@modules/friend-request";
 import { GroupInvitationModule } from "@modules/group-invitation";
+import { NotificationModule } from "@modules/notification";
+import { AiModule } from "@modules/ai/ai.module";
 
 @Module({
 	imports: [
@@ -61,6 +63,8 @@ import { GroupInvitationModule } from "@modules/group-invitation";
 		CodeBlockModule,
 		FriendRequestModule,
 		GroupInvitationModule,
+		NotificationModule,
+		AiModule,
 	],
 	controllers: [],
 	providers: [
