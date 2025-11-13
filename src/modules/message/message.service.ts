@@ -4,6 +4,8 @@ import {
 	MessageRepository,
 	DirectMessageRepository,
 	UserRepository,
+	AttachmentRepository,
+	CodeBlockRepository,
 } from "@db/repositories";
 import { SendMessageRequest } from "./dto/send-message.request";
 import { EditMessageRequest } from "./dto/edit-message.request";
@@ -16,6 +18,8 @@ import { EditMessageFailedError, DeleteMessageFailedError } from "./errors";
 import { AuthService } from "@modules/auth";
 import { UserService } from "@modules/user";
 import { MessageEntity } from "@db/entities";
+import { In, IsNull } from "typeorm";
+import { AttachmentResponse } from "@modules/attachment/dto";
 import { constructUserRoomName } from "@utils";
 import { AiService } from "@modules/ai";
 import { Socket } from "socket.io";
@@ -32,6 +36,8 @@ export class MessageService {
 		private readonly authService: AuthService,
 		private readonly userService: UserService,
 		private readonly aiService: AiService,
+		private readonly attachmentRepo: AttachmentRepository,
+		private readonly codeBlockRepo: CodeBlockRepository,
 	) {}
 
 	async fetchMessages(client: Socket, dto: FetchMessagesRequest) {
@@ -45,12 +51,30 @@ export class MessageService {
 		const skip = (page - 1) * take;
 		const messages = await this.messageRepo.find({
 			where: { channelId: client.data.channel.id },
-			relations: { sender: true },
+			relations: { sender: true, codeBlock: true },
 			order: { createdAt: "DESC" },
 			take,
 			skip,
 		});
-		return MessageResponse.fromEntities(messages);
+		const responses = MessageResponse.fromEntities(messages);
+		if (messages.length) {
+			const ids = messages.map((m) => m.id);
+			const atts = await this.attachmentRepo.find({
+				where: { messageId: In(ids) },
+			});
+			if (atts.length) {
+				const grouped = atts.reduce<Record<string, AttachmentResponse[]>>(
+					(acc, a) => {
+						if (!acc[a.messageId!]) acc[a.messageId!] = [];
+						acc[a.messageId!].push(AttachmentResponse.fromEntity(a));
+						return acc;
+					},
+					{},
+				);
+				responses.forEach((r) => (r.attachments = grouped[r.id]));
+			}
+		}
+		return responses;
 	}
 
 	async fetchDirectMessages(client: Socket, dto: FetchDirectMessagesRequest) {
@@ -112,20 +136,50 @@ export class MessageService {
 		payload: SendMessageRequest,
 		server: Socket["server"],
 	) {
+		let codeBlockId: string | null = null;
+		if (payload.codeBlockId) {
+			const cb = await this.codeBlockRepo.findOne({
+				where: { id: payload.codeBlockId, userId: client.data.user.id },
+			});
+			if (!cb) {
+				throw new WsException({
+					code: "invalid_code_block_err",
+					message: "Code block not found or not owned by user",
+				});
+			}
+			codeBlockId = cb.id;
+		}
 		const insertResult = await this.messageRepo.insert({
 			channelId: client.data.channel.id,
 			threadId: payload.threadId,
 			parentMessageId: payload.parentMessageId,
 			senderId: client.data.user.id,
 			content: payload.content,
+			codeBlockId,
 		});
 
 		const message = await this.messageRepo.findOne({
 			where: { id: insertResult.identifiers[0].id },
-			relations: { sender: true, channel: { group: true } },
+			relations: { sender: true, channel: { group: true }, codeBlock: true },
 		});
 
 		const resp = MessageResponse.fromEntity(message!);
+		// Attach any provided attachments by setting their messageId (only unattached & owned by sender)
+		if (payload.attachmentIds?.length) {
+			const safeIds = [...new Set(payload.attachmentIds)].slice(0, 10); // dedupe & enforce max
+			await this.attachmentRepo.update(
+				{
+					id: In(safeIds),
+					messageId: IsNull(),
+					uploadedBy: client.data.user.id,
+				},
+				{ messageId: message!.id },
+			);
+			const atts = await this.attachmentRepo.find({
+				where: { messageId: message!.id },
+			});
+			resp.attachments = AttachmentResponse.fromEntities(atts);
+		}
 
 		server.to(client.data.room).emit(Events.MESSAGE, resp);
 		this.createMessageNotification(message!, server);
@@ -181,7 +235,7 @@ export class MessageService {
 			});
 			const aiMsg = await this.messageRepo.findOne({
 				where: { id: aiInsert.identifiers[0].id },
-				relations: { sender: true, channel: { group: true } },
+				relations: { sender: true, channel: { group: true }, codeBlock: true },
 			});
 			if (aiMsg) {
 				const aiResp = MessageResponse.fromEntity(aiMsg);
@@ -247,7 +301,7 @@ export class MessageService {
 	) {
 		const message = await this.messageRepo.findOne({
 			where: { id: dto.messageId },
-			relations: { sender: true, channel: { group: true } },
+			relations: { sender: true, channel: { group: true }, codeBlock: true },
 		});
 		if (!message) throw new EditMessageFailedError("Message not found");
 		if (message.senderId !== client.data.user.id)
@@ -263,7 +317,7 @@ export class MessageService {
 	async deleteMessage(client: Socket, id: string, server: Socket["server"]) {
 		const message = await this.messageRepo.findOne({
 			where: { id },
-			relations: { sender: true, channel: { group: true } },
+			relations: { sender: true, channel: { group: true }, codeBlock: true },
 		});
 		if (!message) throw new DeleteMessageFailedError("Message not found");
 		if (message.senderId !== client.data.user.id)
