@@ -65,6 +65,7 @@ import { AiModule } from "@modules/ai/ai.module";
 		GroupInvitationModule,
 		NotificationModule,
 		AiModule,
+		MessageModule,
 	],
 	controllers: [],
 	providers: [
