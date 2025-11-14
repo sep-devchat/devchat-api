@@ -17,7 +17,13 @@ import {
 	UploadSignatureDto,
 	UploadSignatureResponseDto,
 } from "./dto"; // (possibly unused now)
-import { ApiMessageResponseDto, ApiResponseDto, SkipAuth } from "@utils";
+import {
+	ApiMessageResponseDto,
+	ApiResponseDto,
+	SkipAuth,
+	SwaggerApiMessageResponse,
+	SwaggerApiResponse,
+} from "@utils";
 import {
 	ApiBearerAuth,
 	ApiBody,
@@ -30,6 +36,7 @@ import { FileInterceptor } from "@nestjs/platform-express";
 import { UploadFileRequest } from "./dto/upload-file.request";
 import { CloudinaryService } from "@providers/cloudinary";
 import { CloudinaryUploadSaveRequestDto } from "./dto";
+import { AttachmentResponse } from "@modules/attachment/dto";
 
 @ApiBearerAuth()
 @Controller("upload")
@@ -105,9 +112,13 @@ export class UploadController {
 		summary: "Save a direct Cloudinary upload response to database",
 	})
 	@ApiBody({ type: CloudinaryUploadSaveRequestDto })
-	@ApiOkResponse({ type: ApiMessageResponseDto })
+	@SwaggerApiResponse(AttachmentResponse)
 	async saveCloudinaryUpload(@Body() body: CloudinaryUploadSaveRequestDto) {
-		await this.uploadService.saveCloudinaryUpload(body);
-		return new ApiMessageResponseDto("Cloudinary upload saved successfully");
+		const data = await this.uploadService.saveCloudinaryUpload(body);
+		return new ApiResponseDto(
+			AttachmentResponse.fromEntity(data),
+			null,
+			"Cloudinary upload saved successfully",
+		);
 	}
 }

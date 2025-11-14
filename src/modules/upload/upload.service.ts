@@ -84,7 +84,7 @@ export class UploadService {
 			}
 		}
 
-		await this.attachmentRepo.insert({
+		const attachtment = await this.attachmentRepo.save({
 			originalFileName: payload.original_filename,
 			filePath: payload.secure_url,
 			fileType: payload.resource_type,
@@ -97,6 +97,6 @@ export class UploadService {
 			uploadedBy: this.cls.get("profile")?.id ?? null,
 		});
 
-		return { publicId: payload.public_id };
+		return attachtment;
 	}
 }
