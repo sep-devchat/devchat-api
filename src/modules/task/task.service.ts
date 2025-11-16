@@ -4,7 +4,7 @@ import { TaskRepository } from "@db/repositories";
 import { ClsService } from "nestjs-cls";
 import { DevChatCls, PaginationDto } from "@utils";
 import { UserService } from "@modules/user";
-import { FindOptionsWhere, ILike, IsNull, LessThan } from "typeorm";
+import { FindOptionsWhere, ILike, IsNull, LessThan, Between } from "typeorm";
 import { TaskEntity } from "@db/entities";
 import { AssigneeIsNotGroupMember, TaskNotFound } from "./errors";
 import { GroupService } from "@modules/group";
@@ -70,6 +70,7 @@ export class TaskService {
 			priority,
 			search,
 			overdue,
+			dueDate,
 			unassigned,
 		} = query;
 
@@ -103,6 +104,17 @@ export class TaskService {
 		// Filter overdue tasks
 		if (overdue === true) {
 			where.dueDate = LessThan(new Date());
+		}
+
+		// Filter by specific due date (entire day)
+		if (dueDate) {
+			const startOfDay = new Date(dueDate);
+			startOfDay.setHours(0, 0, 0, 0);
+
+			const endOfDay = new Date(dueDate);
+			endOfDay.setHours(23, 59, 59, 999);
+
+			where.dueDate = Between(startOfDay, endOfDay);
 		}
 
 		const findOptions = {
