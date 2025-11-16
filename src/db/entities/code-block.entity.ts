@@ -1,5 +1,4 @@
 import { DbConstants } from "@db/db-constants";
-import { ProgrammingLanguageEnum } from "@modules/code/code.enums";
 import {
 	Column,
 	CreateDateColumn,
@@ -26,6 +25,12 @@ export class CodeBlockEntity {
 	@ManyToOne(() => UserEntity)
 	@JoinColumn({ name: ColumnName.CodeBlock.userId })
 	user: UserEntity;
+
+	@Column({ name: ColumnName.CodeBlock.messageId, type: "uuid" })
+	messageId: string;
+
+	@Column({ name: ColumnName.Attachment.channelId, nullable: true })
+	channelId: string;
 
 	@Column({
 		name: ColumnName.CodeBlock.title,

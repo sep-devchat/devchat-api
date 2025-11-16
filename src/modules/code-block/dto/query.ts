@@ -19,17 +19,8 @@ export class CodeBlockQuery {
 
 	@ApiProperty({ required: true })
 	@IsNumber()
-	@Min(1)
+	@Min(10)
 	@Max(100)
 	@Type(() => Number)
 	limit: number;
-
-	@ApiProperty({
-		description: "Filter code blocks by language.",
-		example: "python",
-		required: false,
-	})
-	@IsOptional()
-	@IsString()
-	language?: string;
 }

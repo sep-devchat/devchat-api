@@ -6,9 +6,18 @@ import { AuthModule } from "@modules/auth";
 import { UserModule } from "@modules/user";
 import { SocketModule } from "@modules/socket";
 import { AiModule } from "@modules/ai";
+import { AttachmentModule } from "@modules/attachment";
+import { CodeBlockModule } from "@modules/code-block";
 
 @Module({
-	imports: [AuthModule, UserModule, SocketModule, AiModule],
+	imports: [
+		AuthModule,
+		UserModule,
+		SocketModule,
+		AiModule,
+		AttachmentModule,
+		CodeBlockModule,
+	],
 	providers: [MessageService, MessageGateway],
 	controllers: [MessageController],
 	exports: [MessageService],
