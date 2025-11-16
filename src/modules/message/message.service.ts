@@ -20,6 +20,7 @@ import { constructUserRoomName } from "@utils";
 import { AiService } from "@modules/ai";
 import { Socket } from "socket.io";
 import { SocketConstants } from "@modules/socket/socket.constants";
+import { In } from "typeorm";
 
 const { Events } = SocketConstants;
 
@@ -33,6 +34,59 @@ export class MessageService {
 		private readonly userService: UserService,
 		private readonly aiService: AiService,
 	) {}
+
+	/**
+	 * Return distinct users that the current user has direct message history with,
+	 * sorted by most recent conversation activity (latest DM createdAt).
+	 */
+	async getDirectMessagePeers() {
+		const userId = this.authService.getProfileCls()?.id;
+		if (!userId) {
+			throw new WsException({
+				code: "auth_required_err",
+				message: "Authenticate before fetching direct message peers",
+			});
+		}
+
+		// Get distinct peer ids and last activity timestamp
+		const rows = await this.directMessageRepo
+			.createQueryBuilder("dm")
+			.select(
+				"CASE WHEN dm.fromUserId = :userId THEN dm.toUserId ELSE dm.fromUserId END",
+				"peerId",
+			)
+			.addSelect("MAX(dm.createdAt)", "lastAt")
+			.where("dm.fromUserId = :userId OR dm.toUserId = :userId", { userId })
+			.groupBy("peerId")
+			.orderBy("lastAt", "DESC")
+			.getRawMany<{ peerId: string; lastAt: string }>();
+
+		if (!rows.length) return [];
+
+		const peerIds = rows.map((r) => r.peerId);
+		const users = await this.userRepo.findBy({ id: In(peerIds) });
+		const mapById = new Map(users.map((u) => [u.id, u] as const));
+
+		// Preserve order by last activity
+		const orderedUsers = rows
+			.map((r) => mapById.get(r.peerId))
+			.filter((u): u is NonNullable<typeof u> => !!u);
+
+		return orderedUsers.map((u) => ({
+			id: u.id,
+			username: u.username,
+			email: u.email,
+			firstName: u.firstName,
+			lastName: u.lastName,
+			avatarUrl: u.avatarUrl ?? undefined,
+			isActive: u.isActive,
+			emailVerified: u.emailVerified,
+			createdAt: u.createdAt,
+			updatedAt: u.updatedAt,
+			lastLogin: u.lastLogin ?? undefined,
+			timezone: u.timezone ?? undefined,
+		}));
+	}
 
 	async fetchMessages(client: Socket, dto: FetchMessagesRequest) {
 		if (!client.data.channel)
