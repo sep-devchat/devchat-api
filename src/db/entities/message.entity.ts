@@ -44,17 +44,6 @@ export class MessageEntity {
 	@Column({ name: ColumnName.Message.content, type: "text" })
 	content: string;
 
-	@Column({
-		name: ColumnName.Message.codeBlockId,
-		type: "uuid",
-		nullable: true,
-	})
-	codeBlockId: string | null;
-
-	@ManyToOne(() => CodeBlockEntity)
-	@JoinColumn({ name: ColumnName.Message.codeBlockId })
-	codeBlock: CodeBlockEntity | null;
-
 	@CreateDateColumn({ type: "datetime", name: ColumnName.Audit.createdAt })
 	createdAt: Date;
 

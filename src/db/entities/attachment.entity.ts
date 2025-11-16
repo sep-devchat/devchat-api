@@ -1,13 +1,5 @@
 import { DbConstants } from "@db/db-constants";
-import {
-	Column,
-	Entity,
-	Index,
-	JoinColumn,
-	ManyToOne,
-	PrimaryGeneratedColumn,
-} from "typeorm";
-import { MessageEntity } from "./message.entity";
+import { Column, Entity, Index, PrimaryGeneratedColumn } from "typeorm";
 
 const { TableName, ColumnName, IndexName } = DbConstants;
 
@@ -22,11 +14,10 @@ export class AttachmentEntity {
 		nullable: true,
 	})
 	@Index(IndexName.Attachment.messageId)
-	messageId: string | null;
+	messageId: string;
 
-	@ManyToOne(() => MessageEntity)
-	@JoinColumn({ name: ColumnName.Attachment.messageId })
-	message: MessageEntity;
+	@Column({ name: ColumnName.Attachment.channelId, nullable: true })
+	channelId: string;
 
 	@Column({ name: ColumnName.Attachment.fileName, length: 255 })
 	fileName: string;

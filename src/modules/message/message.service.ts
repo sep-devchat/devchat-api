@@ -20,6 +20,8 @@ import { constructUserRoomName } from "@utils";
 import { AiService } from "@modules/ai";
 import { Socket } from "socket.io";
 import { SocketConstants } from "@modules/socket/socket.constants";
+import { AttachmentService } from "@modules/attachment";
+import { CodeBlockService } from "@modules/code-block";
 import { In } from "typeorm";
 
 const { Events } = SocketConstants;
@@ -33,6 +35,8 @@ export class MessageService {
 		private readonly authService: AuthService,
 		private readonly userService: UserService,
 		private readonly aiService: AiService,
+		private readonly attachmentService: AttachmentService,
+		private readonly codeBlockService: CodeBlockService,
 	) {}
 
 	/**
@@ -178,6 +182,21 @@ export class MessageService {
 			where: { id: insertResult.identifiers[0].id },
 			relations: { sender: true, channel: { group: true } },
 		});
+
+		if (payload.attachmentIds && payload.attachmentIds.length > 0) {
+			await this.attachmentService.addAttachmentsToMessage(
+				message!,
+				payload.attachmentIds,
+			);
+		}
+
+		if (payload.codeBlock) {
+			await this.codeBlockService.createOrUpdateWithMessage(
+				payload.codeBlock,
+				client.data.user.id,
+				message,
+			);
+		}
 
 		const resp = MessageResponse.fromEntity(message!);
 

@@ -47,7 +47,6 @@ export const DbConstants = {
 			content: "content",
 			parentMessageId: "parent_message_id",
 			isFirstThreadMessage: "is_first_thread_message",
-			codeBlockId: "code_block_id",
 		},
 		UserMessageDelete: {
 			id: "user_message_delete_id",
@@ -74,6 +73,7 @@ export const DbConstants = {
 			format: "format",
 			publicId: "public_id",
 			uploadedBy: "uploaded_by",
+			channelId: "channel_id",
 		},
 		Audit: {
 			createdAt: "created_at",
@@ -167,6 +167,8 @@ export const DbConstants = {
 			executionResult: "execution_result",
 			executionStatus: "execution_status",
 			executedAt: "executed_at",
+			messageId: "message_id",
+			channelId: "channel_id",
 		},
 		DirectMessage: {
 			id: "direct_message_id",

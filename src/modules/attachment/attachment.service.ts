@@ -1,28 +1,47 @@
 import { Injectable } from "@nestjs/common";
 import { AttachmentQuery } from "./dto";
 import { AttachmentRepository } from "@db/repositories";
-import { PaginationDto } from "@utils";
+import { DevChatCls, PaginationDto } from "@utils";
 import { AttachmentResponse } from "./dto";
+import { In } from "typeorm";
+import { AttachmentEntity, MessageEntity } from "@db/entities";
+import { ClsService } from "nestjs-cls";
 
 @Injectable()
 export class AttachmentService {
-	constructor(private readonly attachmentRepo: AttachmentRepository) {}
+	constructor(
+		private readonly attachmentRepo: AttachmentRepository,
+		private readonly cls: ClsService<DevChatCls>,
+	) {}
 
-	async findMany(query: AttachmentQuery) {
-		const page = Number(query.page || 1);
-		const size = Number(query.size || 20);
-		const [data, total] = await this.attachmentRepo.findAndCount({
-			where: query.userId ? ({ uploadedBy: query.userId } as any) : {},
-			order: { createdAt: "DESC" as const },
-			skip: (page - 1) * size,
-			take: size,
+	async findMany(
+		query: AttachmentQuery,
+	): Promise<[AttachmentEntity[], number]> {
+		const channelId = this.cls.get("channel.id");
+		const [entities, count] = await this.attachmentRepo.findAndCount({
+			where: {
+				channelId: channelId,
+			},
+			order: { createdAt: "DESC" },
+			skip: (query.page - 1) * query.size,
+			take: query.size,
 		});
-		const pagination = new PaginationDto(page, size, total);
-		return { data: AttachmentResponse.fromEntities(data as any), pagination };
+
+		return [entities, count];
 	}
 
 	async findOne(id: string) {
 		const entity = await this.attachmentRepo.findOne({ where: { id } });
 		return entity ? AttachmentResponse.fromEntity(entity as any) : null;
+	}
+
+	async addAttachmentsToMessage(
+		message: MessageEntity,
+		attachmentIds: string[],
+	) {
+		await this.attachmentRepo.update(
+			{ id: In(attachmentIds) },
+			{ messageId: message.id, channelId: message.channelId },
+		);
 	}
 }
