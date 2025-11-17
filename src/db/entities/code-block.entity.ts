@@ -6,11 +6,13 @@ import {
 	Entity,
 	JoinColumn,
 	ManyToOne,
+	OneToOne,
 	PrimaryGeneratedColumn,
 	UpdateDateColumn,
 } from "typeorm";
 import { UserEntity } from "./user.entity";
 import { CodeExecutionStatus } from "@utils";
+import { MessageEntity } from "./message.entity";
 
 const { TableName, ColumnName } = DbConstants;
 
@@ -26,8 +28,10 @@ export class CodeBlockEntity {
 	@JoinColumn({ name: ColumnName.CodeBlock.userId })
 	user: UserEntity;
 
-	@Column({ name: ColumnName.CodeBlock.messageId, type: "uuid" })
-	messageId: string;
+	@OneToOne(() => MessageEntity, (message) => message.codeBlock, {
+		onDelete: "CASCADE",
+	})
+	message: MessageEntity;
 
 	@Column({ name: ColumnName.Attachment.channelId, nullable: true })
 	channelId: string;

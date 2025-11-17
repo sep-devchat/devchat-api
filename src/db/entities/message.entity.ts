@@ -5,6 +5,7 @@ import {
 	Entity,
 	JoinColumn,
 	ManyToOne,
+	OneToOne,
 	PrimaryGeneratedColumn,
 	UpdateDateColumn,
 } from "typeorm";
@@ -63,4 +64,14 @@ export class MessageEntity {
 	@ManyToOne(() => UserEntity)
 	@JoinColumn({ name: ColumnName.Message.senderId })
 	sender: UserEntity;
+
+	@Column({ name: ColumnName.CodeBlock.id, type: "uuid", nullable: true })
+	codeBlockId: string;
+
+	@OneToOne(() => CodeBlockEntity, (codeBlock) => codeBlock.message, {
+		nullable: true,
+		cascade: true,
+	})
+	@JoinColumn({ name: ColumnName.CodeBlock.id })
+	codeBlock: CodeBlockEntity;
 }

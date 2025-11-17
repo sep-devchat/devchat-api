@@ -21,7 +21,6 @@ import { AiService } from "@modules/ai";
 import { Socket } from "socket.io";
 import { SocketConstants } from "@modules/socket/socket.constants";
 import { AttachmentService } from "@modules/attachment";
-import { CodeBlockService } from "@modules/code-block";
 import { In } from "typeorm";
 
 const { Events } = SocketConstants;
@@ -36,7 +35,6 @@ export class MessageService {
 		private readonly userService: UserService,
 		private readonly aiService: AiService,
 		private readonly attachmentService: AttachmentService,
-		private readonly codeBlockService: CodeBlockService,
 	) {}
 
 	/**
@@ -170,31 +168,31 @@ export class MessageService {
 		payload: SendMessageRequest,
 		server: Socket["server"],
 	) {
-		const insertResult = await this.messageRepo.insert({
+		let message = await this.messageRepo.save({
 			channelId: client.data.channel.id,
 			threadId: payload.threadId,
 			parentMessageId: payload.parentMessageId,
 			senderId: client.data.user.id,
 			content: payload.content,
+			codeBlock: payload.codeBlock
+				? {
+						content: payload.codeBlock.content,
+						language: payload.codeBlock.language,
+						channelId: client.data.channel.id,
+						userId: client.data.user.id,
+					}
+				: undefined,
 		});
 
-		const message = await this.messageRepo.findOne({
-			where: { id: insertResult.identifiers[0].id },
-			relations: { sender: true, channel: { group: true } },
+		message = await this.messageRepo.findOne({
+			where: { id: message.id },
+			relations: { sender: true, channel: true },
 		});
 
 		if (payload.attachmentIds && payload.attachmentIds.length > 0) {
 			await this.attachmentService.addAttachmentsToMessage(
 				message!,
 				payload.attachmentIds,
-			);
-		}
-
-		if (payload.codeBlock) {
-			await this.codeBlockService.createOrUpdateWithMessage(
-				payload.codeBlock,
-				client.data.user.id,
-				message,
 			);
 		}
 
@@ -208,7 +206,7 @@ export class MessageService {
 			client,
 			payload,
 			server,
-			insertResult.identifiers[0].id,
+			message.id,
 		);
 	}
 

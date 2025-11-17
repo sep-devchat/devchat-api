@@ -168,7 +168,6 @@ export const DbConstants = {
 			executionResult: "execution_result",
 			executionStatus: "execution_status",
 			executedAt: "executed_at",
-			messageId: "message_id",
 			channelId: "channel_id",
 		},
 		DirectMessage: {

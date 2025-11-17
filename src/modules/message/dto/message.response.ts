@@ -13,6 +13,7 @@ export class MessageResponse {
 	deletedAt: Date | null;
 	sender: Profile;
 	channel?: ChannelResponse;
+	codeBlockId?: string;
 
 	static fromEntity(entity: MessageEntity): MessageResponse {
 		return {
@@ -26,6 +27,7 @@ export class MessageResponse {
 			deletedAt: entity.deletedAt,
 			sender: Profile.fromEntity(entity.sender),
 			channel: entity.channel && ChannelResponse.fromEntity(entity.channel),
+			codeBlockId: entity.codeBlockId,
 		};
 	}
 

@@ -1,13 +1,9 @@
 import { Injectable } from "@nestjs/common";
-import {
-	CreateCodeBlockRequest,
-	UpdateCodeBlockRequest,
-	CodeBlockQuery,
-} from "./dto";
+import { UpdateCodeBlockRequest, CodeBlockQuery } from "./dto";
 import { CodeBlockRepository } from "@db/repositories";
 import { ClsService } from "nestjs-cls";
 import { DevChatCls } from "@utils";
-import { CodeBlockEntity, MessageEntity } from "@db/entities";
+import { CodeBlockEntity } from "@db/entities";
 import { CodeBlockNotFound } from "./errors/code-block-not-found.error";
 
 @Injectable()
@@ -16,37 +12,6 @@ export class CodeBlockService {
 		private readonly repo: CodeBlockRepository,
 		private readonly cls: ClsService<DevChatCls>,
 	) {}
-
-	async createOrUpdateWithMessage(
-		dto: CreateCodeBlockRequest,
-		userId: string,
-		message: MessageEntity,
-	) {
-		let codeBlock = await this.repo.findOne({
-			where: { messageId: message.id },
-		});
-
-		if (codeBlock) {
-			codeBlock.content = dto.content;
-			codeBlock.language = dto.language;
-
-			await this.repo.save(codeBlock);
-		} else {
-			codeBlock = this.repo.create({
-				userId,
-				messageId: message.id,
-				channelId: message.channelId,
-				...dto,
-			});
-
-			const result = await this.repo.insert(codeBlock);
-			codeBlock = await this.repo.findOne({
-				where: { id: result.identifiers[0].id },
-			});
-		}
-
-		return codeBlock;
-	}
 
 	async updateOne(id: string, dto: UpdateCodeBlockRequest) {
 		const existingCodeblock = await this.findOne(id);
