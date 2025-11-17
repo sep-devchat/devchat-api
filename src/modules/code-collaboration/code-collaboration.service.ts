@@ -23,6 +23,7 @@ export class CodeCollaborationService {
 		await this.codeCollaborationRepo.insert({
 			codeBlockId: codeBlock.id,
 			content: dto.content,
+			createdById: this.cls.get("profile.id"),
 		});
 	}
 
