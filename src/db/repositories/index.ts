@@ -21,3 +21,4 @@ export * from "./direct-message.repository";
 export * from "./friend-request.repository";
 export * from "./group-invitation.repository";
 export * from "./notification.repository";
+export * from "./code-collaboration.repository";

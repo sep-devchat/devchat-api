@@ -28,6 +28,7 @@ import { FriendRequestModule } from "@modules/friend-request";
 import { GroupInvitationModule } from "@modules/group-invitation";
 import { NotificationModule } from "@modules/notification";
 import { AiModule } from "@modules/ai/ai.module";
+import { CodeCollaborationModule } from "@modules/code-collaboration";
 
 @Module({
 	imports: [
@@ -66,8 +67,8 @@ import { AiModule } from "@modules/ai/ai.module";
 		NotificationModule,
 		AiModule,
 		MessageModule,
+		CodeCollaborationModule,
 	],
-	controllers: [],
 	providers: [
 		{
 			provide: APP_FILTER,

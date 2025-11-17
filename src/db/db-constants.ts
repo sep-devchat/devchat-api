@@ -22,6 +22,7 @@ export const DbConstants = {
 		Notification: "notification",
 		AiSession: "ai_session",
 		AiInteraction: "ai_interaction",
+		CodeCollaboration: "code_collaboration",
 	},
 	ColumnName: {
 		User: {
@@ -219,6 +220,10 @@ export const DbConstants = {
 			model: "ai_model",
 			contextData: "context_data",
 			responseTime: "response_time",
+		},
+		CodeCollaboration: {
+			id: "code_collaboration_id",
+			content: "content",
 		},
 	},
 	IndexName: {

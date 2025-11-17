@@ -6,8 +6,7 @@ import {
 } from "./dto";
 import { CodeBlockRepository } from "@db/repositories";
 import { ClsService } from "nestjs-cls";
-import { DevChatCls, PaginationDto } from "@utils";
-import { FindOptionsWhere } from "typeorm";
+import { DevChatCls } from "@utils";
 import { CodeBlockEntity, MessageEntity } from "@db/entities";
 import { CodeBlockNotFound } from "./errors/code-block-not-found.error";
 

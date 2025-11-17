@@ -25,6 +25,7 @@ import {
 	NotificationRepository,
 	AiSessionRepository,
 	AiInteractionRepository,
+	CodeCollaborationRepository,
 } from "./repositories";
 
 const repositories = [
@@ -50,6 +51,7 @@ const repositories = [
 	NotificationRepository,
 	AiSessionRepository,
 	AiInteractionRepository,
+	CodeCollaborationRepository,
 ];
 
 @Module({
