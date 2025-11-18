@@ -120,6 +120,7 @@ export class UserService {
 		await this.userRepo.update(id, {
 			emailVerified: true,
 			isActive: true,
+			emailVerifiedAt: new Date(),
 		});
 	}
 
