@@ -1,14 +1,6 @@
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import {
-	IsOptional,
-	IsNumber,
-	Min,
-	Max,
-	IsEnum,
-	IsString,
-} from "class-validator";
-import { ProgrammingLanguageEnum } from "@modules/code/code.enums";
+import { IsNumber, Min, Max } from "class-validator";
 
 export class CodeBlockQuery {
 	@ApiProperty({ required: true })

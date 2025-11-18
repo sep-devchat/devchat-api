@@ -16,20 +16,6 @@ export class CodeBlockResponse {
 	userId: string;
 
 	@ApiProperty({
-		description: "The title of the code block.",
-		example: "Factorial Function",
-		required: false,
-	})
-	title: string | null;
-
-	@ApiProperty({
-		description: "A description of the code block.",
-		example: "Calculates the factorial of a number recursively.",
-		required: false,
-	})
-	description: string | null;
-
-	@ApiProperty({
 		description: "The programming language.",
 		example: "javascript",
 	})
@@ -55,37 +41,15 @@ export class CodeBlockResponse {
 	})
 	user: UserResponse;
 
-	@ApiPropertyOptional({
-		description: "The result of code execution",
-		example: "null",
-	})
-	executionResult: string | null;
-
-	@ApiProperty({
-		description: "The status of code execution",
-		example: "0",
-	})
-	executionStatus: number;
-
-	@ApiPropertyOptional({
-		description: "The date and time the code was executed",
-	})
-	executedAt: Date | null;
-
 	static fromEntity(entity: CodeBlockEntity): CodeBlockResponse {
 		return {
 			id: entity.id,
 			userId: entity.userId,
-			title: entity.title,
-			description: entity.description,
 			language: entity.language,
 			content: entity.content,
 			createdAt: entity.createdAt,
 			updatedAt: entity.updatedAt,
 			user: entity.user ? UserResponse.fromEntity(entity.user) : undefined,
-			executionResult: entity.executionResult,
-			executionStatus: entity.executionStatus,
-			executedAt: entity.executedAt,
 		};
 	}
 

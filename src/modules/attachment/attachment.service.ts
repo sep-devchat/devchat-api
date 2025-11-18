@@ -1,10 +1,14 @@
 import { Injectable } from "@nestjs/common";
 import { AttachmentQuery } from "./dto";
 import { AttachmentRepository } from "@db/repositories";
-import { DevChatCls, PaginationDto } from "@utils";
+import { DevChatCls } from "@utils";
 import { AttachmentResponse } from "./dto";
 import { In } from "typeorm";
-import { AttachmentEntity, MessageEntity } from "@db/entities";
+import {
+	AttachmentEntity,
+	MessageEntity,
+	DirectMessageEntity,
+} from "@db/entities";
 import { ClsService } from "nestjs-cls";
 
 @Injectable()
@@ -42,6 +46,16 @@ export class AttachmentService {
 		await this.attachmentRepo.update(
 			{ id: In(attachmentIds) },
 			{ messageId: message.id, channelId: message.channelId },
+		);
+	}
+
+	async addAttachmentsToDirectMessage(
+		dm: DirectMessageEntity,
+		attachmentIds: string[],
+	) {
+		await this.attachmentRepo.update(
+			{ id: In(attachmentIds) },
+			{ messageId: dm.id, toUserId: dm.toUserId },
 		);
 	}
 }

@@ -75,6 +75,7 @@ export const DbConstants = {
 			publicId: "public_id",
 			uploadedBy: "uploaded_by",
 			channelId: "channel_id",
+			toUserId: "to_user_id",
 		},
 		Audit: {
 			createdAt: "created_at",
@@ -169,6 +170,7 @@ export const DbConstants = {
 			executionStatus: "execution_status",
 			executedAt: "executed_at",
 			channelId: "channel_id",
+			toUserId: "to_user_id",
 		},
 		DirectMessage: {
 			id: "direct_message_id",

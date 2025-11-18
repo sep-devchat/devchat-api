@@ -19,6 +19,13 @@ export class AttachmentEntity {
 	@Column({ name: ColumnName.Attachment.channelId, nullable: true })
 	channelId: string;
 
+	@Column({
+		name: ColumnName.Attachment.toUserId,
+		type: "uuid",
+		nullable: true,
+	})
+	toUserId: string;
+
 	@Column({ name: ColumnName.Attachment.fileName, length: 255 })
 	fileName: string;
 

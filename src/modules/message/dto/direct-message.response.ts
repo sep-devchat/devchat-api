@@ -7,6 +7,7 @@ export class DirectMessageResponse {
 	to: Profile;
 	content: string;
 	parentMessageId: string | null;
+	codeBlockId?: string;
 	createdAt: Date;
 	updatedAt: Date;
 
@@ -17,6 +18,7 @@ export class DirectMessageResponse {
 			to: Profile.fromEntity(entity.toUser),
 			content: entity.content,
 			parentMessageId: entity.parentMessageId,
+			codeBlockId: entity.codeBlockId ?? undefined,
 			createdAt: entity.createdAt,
 			updatedAt: entity.updatedAt,
 		};

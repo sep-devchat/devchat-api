@@ -5,9 +5,11 @@ import {
 	Entity,
 	JoinColumn,
 	ManyToOne,
+	OneToOne,
 	PrimaryGeneratedColumn,
 } from "typeorm";
 import { UserEntity } from "./user.entity";
+import { CodeBlockEntity } from "./code-block.entity";
 
 const { TableName, ColumnName } = DbConstants;
 
@@ -35,6 +37,13 @@ export class DirectMessageEntity {
 
 	@Column({ name: ColumnName.DirectMessage.content, type: "text" })
 	content: string;
+
+	@Column({ name: ColumnName.CodeBlock.id, type: "uuid", nullable: true })
+	codeBlockId: string;
+
+	@OneToOne(() => CodeBlockEntity, { cascade: true, nullable: true })
+	@JoinColumn({ name: ColumnName.CodeBlock.id })
+	codeBlock: CodeBlockEntity;
 
 	@CreateDateColumn({ name: ColumnName.Audit.createdAt })
 	createdAt: Date;

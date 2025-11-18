@@ -136,7 +136,7 @@ export class MessageService {
 				{ fromUserId: userId, toUserId: dto.targetUserId },
 				{ fromUserId: dto.targetUserId, toUserId: userId },
 			],
-			relations: { fromUser: true, toUser: true },
+			relations: { fromUser: true, toUser: true, codeBlock: true },
 			order: { createdAt: "DESC" },
 			take,
 			skip,
@@ -285,28 +285,39 @@ export class MessageService {
 				code: "invalid_recipient_err",
 				message: "Cannot send a direct message to yourself",
 			});
-		const toUser = await this.userService.findById(dto.toUserId);
-		if (!toUser)
-			throw new WsException({
-				code: "recipient_not_found_err",
-				message: "Recipient user not found",
-			});
-		const insertResult = await this.directMessageRepo.insert({
+
+		let dm = await this.directMessageRepo.save({
 			fromUserId: fromUser.id,
-			toUserId: toUser.id,
+			toUserId: dto.toUserId,
 			content: dto.content,
 			parentMessageId: dto.parentMessageId ?? null,
+			codeBlock: dto.codeBlock
+				? {
+						content: dto.codeBlock.content,
+						language: dto.codeBlock.language,
+						userId: fromUser.id,
+						toUserId: dto.toUserId,
+					}
+				: undefined,
 		});
-		const dm = await this.directMessageRepo.findOne({
-			where: { id: insertResult.identifiers[0].id },
+
+		dm = await this.directMessageRepo.findOne({
+			where: { id: dm.id },
 			relations: { fromUser: true, toUser: true },
 		});
+
+		if (dto.attachmentIds && dto.attachmentIds.length > 0 && dm) {
+			await this.attachmentService.addAttachmentsToDirectMessage(
+				dm,
+				dto.attachmentIds,
+			);
+		}
 		const resp = DirectMessageResponse.fromEntity(dm!);
 		server
 			.to(constructUserRoomName(fromUser.id))
 			.emit(Events.DIRECT_MESSAGE, resp);
 		server
-			.to(constructUserRoomName(toUser.id))
+			.to(constructUserRoomName(dto.toUserId))
 			.emit(Events.DIRECT_MESSAGE, resp);
 		return resp;
 	}

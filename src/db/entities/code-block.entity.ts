@@ -11,8 +11,8 @@ import {
 	UpdateDateColumn,
 } from "typeorm";
 import { UserEntity } from "./user.entity";
-import { CodeExecutionStatus } from "@utils";
 import { MessageEntity } from "./message.entity";
+import { DirectMessageEntity } from "./direct-message.entity";
 
 const { TableName, ColumnName } = DbConstants;
 
@@ -24,6 +24,9 @@ export class CodeBlockEntity {
 	@Column({ name: ColumnName.CodeBlock.userId, type: "uuid" })
 	userId: string;
 
+	@Column({ name: ColumnName.CodeBlock.toUserId, type: "uuid", nullable: true })
+	toUserId: string;
+
 	@ManyToOne(() => UserEntity)
 	@JoinColumn({ name: ColumnName.CodeBlock.userId })
 	user: UserEntity;
@@ -33,50 +36,19 @@ export class CodeBlockEntity {
 	})
 	message: MessageEntity;
 
-	@Column({ name: ColumnName.Attachment.channelId, nullable: true })
+	@OneToOne(() => DirectMessageEntity, (dm) => dm.codeBlock, {
+		onDelete: "CASCADE",
+	})
+	directMessage: DirectMessageEntity;
+
+	@Column({ name: ColumnName.Channel.id, nullable: true })
 	channelId: string;
-
-	@Column({
-		name: ColumnName.CodeBlock.title,
-		type: "varchar",
-		length: 255,
-		nullable: true,
-	})
-	title: string | null;
-
-	@Column({
-		name: ColumnName.CodeBlock.description,
-		type: "text",
-		nullable: true,
-	})
-	description: string | null;
 
 	@Column({ name: ColumnName.CodeBlock.language, type: "varchar", length: 50 })
 	language: string;
 
 	@Column({ name: ColumnName.CodeBlock.code, type: "text" })
 	content: string;
-
-	@Column({
-		name: ColumnName.CodeBlock.executionResult,
-		type: "text",
-		nullable: true,
-	})
-	executionResult: string | null;
-
-	@Column({
-		name: ColumnName.CodeBlock.executionStatus,
-		type: "int",
-		default: CodeExecutionStatus.PENDING,
-	})
-	executionStatus: number;
-
-	@Column({
-		name: ColumnName.CodeBlock.executedAt,
-		type: "datetime",
-		nullable: true,
-	})
-	executedAt: Date | null;
 
 	@CreateDateColumn({ type: "datetime", name: ColumnName.Audit.createdAt })
 	createdAt: Date;

@@ -1,5 +1,4 @@
 import { Injectable } from "@nestjs/common";
-import { CreateUploadRequest, UpdateUploadRequest, UploadQuery } from "./dto";
 import { CloudinaryService } from "@providers/cloudinary";
 import { NoFileUploadedError, UploadedException } from "./errors";
 import { AttachmentRepository } from "@db/repositories";
