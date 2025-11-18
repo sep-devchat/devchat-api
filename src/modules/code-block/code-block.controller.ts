@@ -1,4 +1,4 @@
-import { Controller, Query, Get, UseGuards } from "@nestjs/common";
+import { Controller, Query, Get, UseGuards, Param } from "@nestjs/common";
 import { CodeBlockService } from "./code-block.service";
 import { CodeBlockQuery, CodeBlockResponse } from "./dto";
 import { ApiResponseDto, PaginationDto, SwaggerApiResponse } from "@utils";
@@ -26,6 +26,17 @@ export class CodeBlockController {
 			CodeBlockResponse.fromEntities(entities),
 			new PaginationDto(query.page, query.limit, count),
 			"Code blocks retrieved successfully",
+		);
+	}
+
+	@Get(":id")
+	@SwaggerApiResponse(CodeBlockResponse)
+	async findOne(@Param("id") id: string) {
+		const data = await this.codeBlockService.findOne(id);
+		return new ApiResponseDto(
+			CodeBlockResponse.fromEntity(data),
+			undefined,
+			"Code block retrieved successfully",
 		);
 	}
 }
