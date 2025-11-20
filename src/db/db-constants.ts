@@ -41,6 +41,7 @@ export const DbConstants = {
 			lastLogin: "last_login",
 			timezone: "timezone",
 			adminRoleId: "admin_role_id",
+			isAdmin: "is_admin",
 		},
 		Message: {
 			id: "message_id",

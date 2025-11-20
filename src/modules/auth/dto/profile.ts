@@ -38,6 +38,9 @@ export class Profile {
 	@ApiProperty({ required: false })
 	timezone?: string;
 
+	@ApiProperty()
+	isAdmin: boolean;
+
 	static fromEntity(entity: UserEntity): Profile {
 		return {
 			id: entity.id,
@@ -52,6 +55,7 @@ export class Profile {
 			updatedAt: entity.updatedAt,
 			lastLogin: entity.lastLogin ?? undefined,
 			timezone: entity.timezone ?? undefined,
+			isAdmin: entity.isAdmin,
 		};
 	}
 }

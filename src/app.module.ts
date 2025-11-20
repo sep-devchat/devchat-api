@@ -17,7 +17,6 @@ import { UserGroupModule } from "@modules/user-group";
 import { ChannelModule } from "@modules/channel";
 import { ThreadModule } from "@modules/thread";
 import { CodeModule } from "@modules/code";
-import { AdminRoleModule } from "@modules/admin-role";
 import { PermissionModule } from "@modules/permission";
 import { UserFriendModule } from "@modules/user-friend";
 import { AuditLogInterceptor } from "./interceptors";
@@ -57,7 +56,6 @@ import { CodeCollaborationModule } from "@modules/code-collaboration";
 		ChannelModule,
 		ThreadModule,
 		CodeModule,
-		AdminRoleModule,
 		PermissionModule,
 		TaskModule,
 		TodoModule,

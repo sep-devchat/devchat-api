@@ -4,13 +4,10 @@ import {
 	CreateDateColumn,
 	Entity,
 	Index,
-	JoinColumn,
 	OneToMany,
-	OneToOne,
 	PrimaryGeneratedColumn,
 	UpdateDateColumn,
 } from "typeorm";
-import { AdminRoleEntity } from "./admin-role.entity";
 import { UserGroupEntity } from "./user-group.entity";
 
 const { TableName, ColumnName, IndexName } = DbConstants;
@@ -69,10 +66,8 @@ export class UserEntity {
 	@Column({ name: ColumnName.User.timezone, length: 50, nullable: true })
 	timezone: string | null;
 
-	@Column({ name: ColumnName.User.adminRoleId, type: "uuid", nullable: true })
-	@OneToOne(() => AdminRoleEntity)
-	@JoinColumn({ name: ColumnName.AdminRole.id })
-	adminRoleId: string | null;
+	@Column({ name: ColumnName.User.isAdmin, type: "boolean", default: false })
+	isAdmin: boolean;
 
 	@OneToMany(() => UserGroupEntity, (userGroup) => userGroup.user)
 	userGroups: UserGroupEntity[];

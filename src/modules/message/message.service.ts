@@ -87,6 +87,7 @@ export class MessageService {
 			updatedAt: u.updatedAt,
 			lastLogin: u.lastLogin ?? undefined,
 			timezone: u.timezone ?? undefined,
+			isAdmin: u.isAdmin,
 		}));
 	}
 

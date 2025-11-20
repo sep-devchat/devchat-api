@@ -65,7 +65,6 @@ export class AiUserSeeder implements OnApplicationBootstrap {
 			emailVerified: true,
 			emailVerificationToken: null,
 			timezone: null,
-			adminRoleId: null,
 		});
 		const created = await this.users.findOne({
 			where: { id: insert.identifiers[0].id },

@@ -1,22 +1,22 @@
 import {
 	UserFriendRepository,
 	UserRepository,
-	UserGroupRepository,
 	TaskRepository,
 	FriendRequestRepository,
 	GroupInvitationRepository,
 } from "@db/repositories";
-import { Injectable, Logger } from "@nestjs/common";
+import {
+	ForbiddenException,
+	Injectable,
+	Logger,
+	OnModuleInit,
+} from "@nestjs/common";
 import { UserExistedError } from "./errors/user-existed.error";
 import * as bcrypt from "bcryptjs";
-import {
-	GetFriendRequestQuery,
-	UpdateUserRequest,
-	UserQuery,
-	CreateUserRequest,
-} from "./dto";
+import { UpdateUserRequest, UserQuery, CreateUserRequest } from "./dto";
 import {
 	DevChatCls,
+	Env,
 	PaginationDto,
 	sendVerificationEmail,
 	TaskStatusEnum,
@@ -32,18 +32,36 @@ import { UserFriendQuery } from "@modules/user-friend/dto";
 const emailToken = randomBytes(32).toString("hex");
 
 @Injectable()
-export class UserService {
+export class UserService implements OnModuleInit {
 	private readonly logger = new Logger(UserService.name);
 
 	constructor(
 		private readonly userRepo: UserRepository,
-		private readonly userGroupRepo: UserGroupRepository,
 		private readonly taskRepo: TaskRepository,
 		private readonly cls: ClsService<DevChatCls>,
 		private readonly userFriendRepo: UserFriendRepository,
 		private readonly friendRequestRepo: FriendRequestRepository,
 		private readonly groupInvitationRepo: GroupInvitationRepository,
 	) {}
+
+	async onModuleInit() {
+		const admin = await this.userRepo.findOne({
+			where: { email: Env.EMAIL_USER },
+		});
+		if (!admin) {
+			await this.userRepo.insert({
+				email: Env.EMAIL_USER,
+				username: Env.EMAIL_USER.split("@")[0],
+				password: bcrypt.hashSync(Math.random().toString(36).slice(-8), 10),
+				firstName: "Admin",
+				lastName: "Admin",
+				isActive: true,
+				emailVerified: true,
+				isAdmin: true,
+			});
+			console.log("Admin user created");
+		}
+	}
 
 	async validateBeforeCreate(dto: CreateUserRequest) {
 		const user = await this.userRepo.findOne({
@@ -140,19 +158,17 @@ export class UserService {
 	}
 
 	async update(id: string, updateData: UpdateUserRequest) {
-		const user = await this.findByUniqueKey(id);
-
-		if (!user) {
-			throw new UserNotFoundError();
-		}
-
+		const currentUser = this.cls.get("profile");
+		if (id != currentUser.id && !currentUser.isAdmin)
+			throw new ForbiddenException();
 		await this.userRepo.update(id, updateData);
 	}
 
 	async delete(id: string) {
-		const user = await this.findByUniqueKey(id);
-		user.isActive = false;
-		await this.userRepo.save(user);
+		const currentUser = this.cls.get("profile");
+		if (id != currentUser.id && !currentUser.isAdmin)
+			throw new ForbiddenException();
+		await this.userRepo.update(id, { isActive: false });
 	}
 
 	async getSentFriendRequests(search?: string) {

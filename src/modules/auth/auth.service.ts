@@ -2,7 +2,6 @@ import { PasswordResetTokenRepository, UserRepository } from "@db/repositories";
 import { Injectable } from "@nestjs/common";
 import {
 	InvalidGoogleCredentialsError,
-	UserExistedError,
 	WrongUsernameOrPasswordError,
 	RefreshTokenError,
 	LoginMethodNotSupportedError,
