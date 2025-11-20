@@ -1,15 +1,17 @@
 import { Injectable } from "@nestjs/common";
 import { CreateThreadRequest, UpdateThreadRequest } from "./dto";
-import { ThreadRepository } from "@db/repositories";
+import { MessageRepository, ThreadRepository } from "@db/repositories";
 import { ClsService } from "nestjs-cls";
 import { DevChatCls } from "@utils";
 import { ThreadExistedError, ThreadNotExistedError } from "./errors";
+import { MessageNotFoundError } from "@modules/ai/errors";
 
 @Injectable()
 export class ThreadService {
 	constructor(
 		private readonly threadRepo: ThreadRepository,
 		private readonly cls: ClsService<DevChatCls>,
+		private readonly messageRepo: MessageRepository,
 	) {}
 
 	private async ensureUniqueName(
@@ -23,17 +25,30 @@ export class ThreadService {
 		if (existing && existing.id !== excludeId) throw new ThreadExistedError();
 	}
 
-	async createOne(dto: CreateThreadRequest) {
-		const createdBy = this.cls.get("profile").id;
-		const channelId = this.cls.get("channel").id;
+	private async findMessageOrFail(messageId: string) {
+		const createdBy = this.cls.get("profile.id");
+		const channelId = this.cls.get("channel.id");
+		const message = await this.messageRepo.findOne({
+			where: { id: messageId, channelId: channelId, senderId: createdBy },
+		});
+		if (!message) throw new MessageNotFoundError();
+		return message;
+	}
 
-		await this.ensureUniqueName(dto.name, channelId);
+	async createOne(dto: CreateThreadRequest) {
+		const createdBy = this.cls.get("profile.id");
+		const channelId = this.cls.get("channel.id");
+
+		const message = await this.findMessageOrFail(dto.messageId);
+
+		const threadCount = await this.threadRepo.count({ where: { channelId } });
 
 		const entity = this.threadRepo.create({
-			name: dto.name,
-			description: dto.description ?? null,
-			channelId,
-			createdBy,
+			name: `Thread ${threadCount + 1}`,
+			channelId: channelId,
+			createdById: createdBy,
+			messageId: message.id,
+			createdAt: new Date(),
 		});
 		await this.threadRepo.insert(entity);
 		return entity;
@@ -45,7 +60,6 @@ export class ThreadService {
 		await this.ensureUniqueName(dto.name, channelId, id);
 		await this.threadRepo.update(id, {
 			name: dto.name,
-			description: dto.description ?? null,
 		});
 	}
 

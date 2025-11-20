@@ -1,3 +1,9 @@
-import { CreateThreadRequest } from "./create.request";
+import { ApiProperty } from "@nestjs/swagger";
+import { IsNotEmpty, IsString } from "class-validator";
 
-export class UpdateThreadRequest extends CreateThreadRequest {}
+export class UpdateThreadRequest {
+	@ApiProperty()
+	@IsString()
+	@IsNotEmpty()
+	name: string;
+}

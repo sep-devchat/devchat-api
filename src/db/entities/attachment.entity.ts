@@ -19,6 +19,9 @@ export class AttachmentEntity {
 	@Column({ name: ColumnName.Attachment.channelId, nullable: true })
 	channelId: string;
 
+	@Column({ name: ColumnName.Thread.id, nullable: true })
+	threadId: string;
+
 	@Column({
 		name: ColumnName.Attachment.toUserId,
 		type: "uuid",

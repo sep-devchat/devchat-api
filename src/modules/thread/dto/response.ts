@@ -18,16 +18,19 @@ export class ThreadResponse {
 	createdAt: Date;
 
 	@ApiProperty()
-	createdBy: string;
+	createdById: string;
+
+	@ApiProperty()
+	messageId: string;
 
 	static fromEntity(entity: ThreadEntity): ThreadResponse {
 		return {
 			id: entity.id,
 			name: entity.name,
-			description: entity.description,
 			channelId: entity.channelId,
+			messageId: entity.messageId,
 			createdAt: entity.createdAt,
-			createdBy: entity.createdBy,
+			createdById: entity.createdById,
 		};
 	}
 

@@ -23,6 +23,7 @@ export const DbConstants = {
 		AiSession: "ai_session",
 		AiInteraction: "ai_interaction",
 		CodeCollaboration: "code_collaboration",
+		ThreadMessage: "thread_message",
 	},
 	ColumnName: {
 		User: {
@@ -226,6 +227,11 @@ export const DbConstants = {
 		CodeCollaboration: {
 			id: "code_collaboration_id",
 			content: "content",
+		},
+		ThreadMessage: {
+			id: "thread_message_id",
+			content: "content",
+			senderId: "sender_id",
 		},
 	},
 	IndexName: {

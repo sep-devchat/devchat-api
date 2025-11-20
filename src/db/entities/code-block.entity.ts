@@ -13,6 +13,7 @@ import {
 import { UserEntity } from "./user.entity";
 import { MessageEntity } from "./message.entity";
 import { DirectMessageEntity } from "./direct-message.entity";
+import { ThreadMessageEntity } from "./thread-message.entity";
 
 const { TableName, ColumnName } = DbConstants;
 
@@ -40,6 +41,11 @@ export class CodeBlockEntity {
 		onDelete: "CASCADE",
 	})
 	directMessage: DirectMessageEntity;
+
+	@OneToOne(() => ThreadMessageEntity, (tm) => tm.codeBlock, {
+		onDelete: "CASCADE",
+	})
+	threadMessage: ThreadMessageEntity;
 
 	@Column({ name: ColumnName.Channel.id, nullable: true })
 	channelId: string;

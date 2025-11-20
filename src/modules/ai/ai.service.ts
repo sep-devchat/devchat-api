@@ -124,7 +124,7 @@ export class AiService {
 			throw new MissingPromptOrMessageError();
 		}
 		const msg = await this.messages.findOne({ where: { id: dto.messageId } });
-		if (!msg) throw new MessageNotFoundError(dto.messageId);
+		if (!msg) throw new MessageNotFoundError();
 
 		// Determine user context: prefer current CLS user, fallback to message sender
 		const userId = this.cls.get("profile")?.id ?? msg.senderId ?? null;

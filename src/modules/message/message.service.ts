@@ -14,7 +14,6 @@ import { DirectMessageResponse } from "./dto/direct-message.response";
 import { FetchDirectMessagesRequest } from "./dto/fetch-direct-messages.request";
 import { EditMessageFailedError, DeleteMessageFailedError } from "./errors";
 import { AuthService } from "@modules/auth";
-import { UserService } from "@modules/user";
 import { MessageEntity } from "@db/entities";
 import { constructUserRoomName } from "@utils";
 import { AiService } from "@modules/ai";
@@ -32,7 +31,6 @@ export class MessageService {
 		private readonly directMessageRepo: DirectMessageRepository,
 		private readonly userRepo: UserRepository,
 		private readonly authService: AuthService,
-		private readonly userService: UserService,
 		private readonly aiService: AiService,
 		private readonly attachmentService: AttachmentService,
 	) {}

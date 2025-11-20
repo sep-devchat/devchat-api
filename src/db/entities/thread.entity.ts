@@ -3,13 +3,10 @@ import {
 	Column,
 	CreateDateColumn,
 	Entity,
-	JoinColumn,
-	ManyToOne,
 	PrimaryGeneratedColumn,
 } from "typeorm";
-import { ChannelEntity } from "./channel.entity";
 
-const { TableName, ColumnName, IndexName } = DbConstants;
+const { TableName, ColumnName } = DbConstants;
 
 @Entity(TableName.Thread)
 export class ThreadEntity {
@@ -19,18 +16,14 @@ export class ThreadEntity {
 	@Column({ name: ColumnName.Thread.name })
 	name: string;
 
+	@Column({ name: ColumnName.Message.id })
+	messageId: string;
+
 	@Column({ name: ColumnName.Channel.id })
 	channelId: string;
 
-	@ManyToOne(() => ChannelEntity)
-	@JoinColumn({ name: ColumnName.Channel.id })
-	channel: ChannelEntity;
-
-	@Column({ name: ColumnName.Thread.description })
-	description: string;
-
 	@Column({ name: ColumnName.Audit.createdBy })
-	createdBy: string;
+	createdById: string;
 
 	@CreateDateColumn({ name: ColumnName.Audit.createdAt })
 	createdAt: Date;
