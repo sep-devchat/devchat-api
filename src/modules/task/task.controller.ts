@@ -13,11 +13,13 @@ import { TaskService } from "./task.service";
 import {
 	CreateTaskRequest,
 	UpdateTaskRequest,
+	UpdateTaskStatusRequest,
 	TaskQuery,
 	TaskResponse,
 } from "./dto";
 import { ApiResponseDto, AuditLog, SwaggerApiResponse } from "@utils";
 import { GroupGuard } from "@modules/group";
+import { GroupOwnerGuard } from "./guards/group-owner.guard";
 import { ApiBearerAuth, ApiOperation, ApiParam } from "@nestjs/swagger";
 
 @Controller("group/:groupId/task")
@@ -27,8 +29,10 @@ import { ApiBearerAuth, ApiOperation, ApiParam } from "@nestjs/swagger";
 export class TaskController {
 	constructor(private readonly taskService: TaskService) {}
 
+	// Only group owners can create tasks
 	@Post()
-	@ApiOperation({ summary: "Create a new task in group" })
+	@UseGuards(GroupOwnerGuard)
+	@ApiOperation({ summary: "Create a new task in group (Group Owner Only)" })
 	@SwaggerApiResponse(TaskResponse)
 	@AuditLog({
 		action: "TASK_CREATE",
@@ -44,6 +48,7 @@ export class TaskController {
 		);
 	}
 
+	// All group members can search and filter tasks
 	@Get()
 	@ApiOperation({ summary: "Get all tasks in group" })
 	@SwaggerApiResponse(TaskResponse, { withPagination: true, isArray: true })
@@ -56,9 +61,11 @@ export class TaskController {
 		);
 	}
 
+	// Only group owners can fully update tasks
 	@Put(":id")
+	@UseGuards(GroupOwnerGuard)
 	@ApiParam({ name: "id", description: "Task ID" })
-	@ApiOperation({ summary: "Update a task" })
+	@ApiOperation({ summary: "Update a task (Group Owner Only)" })
 	@SwaggerApiResponse(TaskResponse)
 	async updateOne(@Param("id") id: string, @Body() dto: UpdateTaskRequest) {
 		const response = await this.taskService.updateOne(id, dto);
@@ -69,6 +76,24 @@ export class TaskController {
 		);
 	}
 
+	// All group members can update only task status
+	@Put(":id/status")
+	@ApiParam({ name: "id", description: "Task ID" })
+	@ApiOperation({ summary: "Update task status only (All Members)" })
+	@SwaggerApiResponse(TaskResponse)
+	async updateStatus(
+		@Param("id") id: string,
+		@Body() dto: UpdateTaskStatusRequest,
+	) {
+		const response = await this.taskService.updateTaskStatus(id, dto);
+		return new ApiResponseDto(
+			TaskResponse.fromEntity(response),
+			null,
+			"Status updated successfully",
+		);
+	}
+
+	// All group members can view task details
 	@Get(":id")
 	@ApiParam({ name: "id", description: "Task ID" })
 	@ApiOperation({ summary: "Get a specific task" })
@@ -82,9 +107,11 @@ export class TaskController {
 		);
 	}
 
-	@Delete(":id") // Fix: add colon and route parameter
+	// Only group owners can delete tasks
+	@Delete(":id")
+	@UseGuards(GroupOwnerGuard)
 	@ApiParam({ name: "id", description: "Task ID" })
-	@ApiOperation({ summary: "Delete a task" })
+	@ApiOperation({ summary: "Delete a task (Group Owner Only)" })
 	async deleteOne(@Param("id") id: string) {
 		await this.taskService.deleteOne(id);
 		return new ApiResponseDto(null, null, "Deleted successfully");

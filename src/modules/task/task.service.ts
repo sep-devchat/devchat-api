@@ -4,7 +4,15 @@ import { TaskRepository } from "@db/repositories";
 import { ClsService } from "nestjs-cls";
 import { DevChatCls, PaginationDto } from "@utils";
 import { UserService } from "@modules/user";
-import { FindOptionsWhere, ILike, IsNull, LessThan, Between } from "typeorm";
+import {
+	FindOptionsWhere,
+	ILike,
+	IsNull,
+	LessThan,
+	Between,
+	MoreThanOrEqual,
+	LessThanOrEqual,
+} from "typeorm";
 import { TaskEntity } from "@db/entities";
 import { AssigneeIsNotGroupMember, TaskNotFound } from "./errors";
 import { GroupService } from "@modules/group";
@@ -70,7 +78,8 @@ export class TaskService {
 			priority,
 			search,
 			overdue,
-			dueDate,
+			dueDateFrom,
+			dueDateTo,
 			unassigned,
 		} = query;
 
@@ -106,15 +115,28 @@ export class TaskService {
 			where.dueDate = LessThan(new Date());
 		}
 
-		// Filter by specific due date (entire day)
-		if (dueDate) {
-			const startOfDay = new Date(dueDate);
-			startOfDay.setHours(0, 0, 0, 0);
+		// Filter by due date range
+		if (dueDateFrom || dueDateTo) {
+			let startDate: Date | undefined;
+			let endDate: Date | undefined;
 
-			const endOfDay = new Date(dueDate);
-			endOfDay.setHours(23, 59, 59, 999);
+			if (dueDateFrom) {
+				startDate = new Date(dueDateFrom);
+				startDate.setHours(0, 0, 0, 0);
+			}
 
-			where.dueDate = Between(startOfDay, endOfDay);
+			if (dueDateTo) {
+				endDate = new Date(dueDateTo);
+				endDate.setHours(23, 59, 59, 999);
+			}
+
+			if (startDate && endDate) {
+				where.dueDate = Between(startDate, endDate);
+			} else if (startDate) {
+				where.dueDate = MoreThanOrEqual(startDate);
+			} else if (endDate) {
+				where.dueDate = LessThanOrEqual(endDate);
+			}
 		}
 
 		const findOptions = {
@@ -195,6 +217,21 @@ export class TaskService {
 		}
 
 		return existingTask;
+	}
+
+	async updateTaskStatus(id: string, dto: { status: number }) {
+		const existingTask = await this.findOne(id);
+
+		await this.repo.update(id, {
+			status: dto.status,
+			updatedAt: new Date(),
+		});
+
+		// Return updated task with relations
+		return await this.repo.findOne({
+			where: { id },
+			relations: ["assignee", "creator", "group"],
+		});
 	}
 
 	async deleteOne(id: string) {
