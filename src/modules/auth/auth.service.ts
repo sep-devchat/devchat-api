@@ -8,6 +8,7 @@ import {
 	InvalidPkceAuthCodeError,
 	InvalidTokenError,
 	MissingVerifyTokenError,
+	AccountInactiveError,
 } from "./errors";
 import * as bcrypt from "bcryptjs";
 import * as jwt from "jsonwebtoken";
@@ -176,6 +177,8 @@ export class AuthService {
 		const user = await this.userService.findByUniqueKey(usernameOrEmail);
 		if (!user) throw new WrongUsernameOrPasswordError();
 
+		if (!user.isActive) throw new AccountInactiveError();
+
 		const isPassValid = bcrypt.compareSync(password, user.password);
 		if (!isPassValid) throw new WrongUsernameOrPasswordError();
 
@@ -195,6 +198,8 @@ export class AuthService {
 		if (!email) throw new InvalidGoogleCredentialsError();
 
 		let user = await this.userService.findByUniqueKey(email, false);
+
+		if (!user.isActive) throw new AccountInactiveError();
 
 		if (!user) {
 			const data = await this.userService.create(
@@ -229,6 +234,8 @@ export class AuthService {
 			primaryEmailObj.email,
 			false,
 		);
+
+		if (!user.isActive) throw new AccountInactiveError();
 
 		if (!user) {
 			const data = await this.userService.create(

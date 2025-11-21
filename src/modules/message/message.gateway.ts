@@ -22,6 +22,7 @@ import { FetchMessagesRequest } from "./dto/fetch-messages.request";
 import { EditMessageRequest } from "./dto/edit-message.request";
 import { FetchDirectMessagesRequest } from "./dto/fetch-direct-messages.request";
 import { SendDirectMessageRequest } from "./dto/send-direct-message.request";
+import { EditDirectMessageRequest } from "./dto/edit-direct-message.request";
 
 const { Events } = SocketConstants;
 
@@ -100,6 +101,30 @@ export class MessageGateway implements OnGatewayInit {
 		return await this.messageService.sendDirectMessage(
 			client,
 			payload,
+			client.nsp.server,
+		);
+	}
+
+	@SubscribeMessage(Events.EDIT_DIRECT_MESSAGE)
+	async handleEditDirectMessage(
+		@ConnectedSocket() client: Socket,
+		@MessageBody() payload: EditDirectMessageRequest,
+	) {
+		return await this.messageService.editDirectMessage(
+			client,
+			payload,
+			client.nsp.server,
+		);
+	}
+
+	@SubscribeMessage(Events.DELETE_DIRECT_MESSAGE)
+	async handleDeleteDirectMessage(
+		@ConnectedSocket() client: Socket,
+		@MessageBody() id: string,
+	) {
+		return await this.messageService.deleteDirectMessage(
+			client,
+			id,
 			client.nsp.server,
 		);
 	}

@@ -10,3 +10,4 @@ export * from "./code-used.error";
 export * from "./code-expired.error";
 export * from "./password-duplicated.error";
 export * from "./forbidden-permission.error";
+export * from "./account-inactive.error";

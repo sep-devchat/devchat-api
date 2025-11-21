@@ -35,6 +35,10 @@ export class DirectMessageEntity {
 	@Column({ name: ColumnName.DirectMessage.parentMessageId, nullable: true })
 	parentMessageId: string | null;
 
+	@ManyToOne(() => DirectMessageEntity, { nullable: true })
+	@JoinColumn({ name: ColumnName.DirectMessage.parentMessageId })
+	parentMessage: DirectMessageEntity | null;
+
 	@Column({ name: ColumnName.DirectMessage.content, type: "text" })
 	content: string;
 

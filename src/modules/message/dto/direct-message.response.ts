@@ -3,10 +3,11 @@ import { Profile } from "@modules/auth/dto";
 
 export class DirectMessageResponse {
 	id: string;
-	from: Profile;
-	to: Profile;
+	from: Profile | null;
+	to: Profile | null;
 	content: string;
 	parentMessageId: string | null;
+	parentMessage: DirectMessageResponse | null;
 	codeBlockId?: string;
 	createdAt: Date;
 	updatedAt: Date;
@@ -14,10 +15,13 @@ export class DirectMessageResponse {
 	static fromEntity(entity: DirectMessageEntity): DirectMessageResponse {
 		return {
 			id: entity.id,
-			from: Profile.fromEntity(entity.fromUser),
-			to: Profile.fromEntity(entity.toUser),
+			from: entity.fromUser ? Profile.fromEntity(entity.fromUser) : null,
+			to: entity.toUser ? Profile.fromEntity(entity.toUser) : null,
 			content: entity.content,
 			parentMessageId: entity.parentMessageId,
+			parentMessage: entity.parentMessage
+				? this.fromEntity(entity.parentMessage)
+				: null,
 			codeBlockId: entity.codeBlockId ?? undefined,
 			createdAt: entity.createdAt,
 			updatedAt: entity.updatedAt,

@@ -7,6 +7,7 @@ import {
 } from "@db/repositories";
 import { SendMessageRequest } from "./dto/send-message.request";
 import { EditMessageRequest } from "./dto/edit-message.request";
+import { EditDirectMessageRequest } from "./dto/edit-direct-message.request";
 import { FetchMessagesRequest } from "./dto/fetch-messages.request";
 import { MessageResponse } from "./dto/message.response";
 import { SendDirectMessageRequest } from "./dto/send-direct-message.request";
@@ -135,7 +136,12 @@ export class MessageService {
 				{ fromUserId: userId, toUserId: dto.targetUserId },
 				{ fromUserId: dto.targetUserId, toUserId: userId },
 			],
-			relations: { fromUser: true, toUser: true, codeBlock: true },
+			relations: {
+				fromUser: true,
+				toUser: true,
+				codeBlock: true,
+				parentMessage: { fromUser: true },
+			},
 			order: { createdAt: "DESC" },
 			take,
 			skip,
@@ -306,7 +312,11 @@ export class MessageService {
 
 		dm = await this.directMessageRepo.findOne({
 			where: { id: dm.id },
-			relations: { fromUser: true, toUser: true },
+			relations: {
+				fromUser: true,
+				toUser: true,
+				parentMessage: { fromUser: true },
+			},
 		});
 
 		if (dto.attachmentIds && dto.attachmentIds.length > 0 && dm) {
@@ -365,5 +375,64 @@ export class MessageService {
 			);
 		await this.messageRepo.delete(message.id);
 		server.to(client.data.room).emit(Events.DELETE_MESSAGE, id);
+	}
+
+	async editDirectMessage(
+		client: Socket,
+		dto: EditDirectMessageRequest,
+		server: Socket["server"],
+	) {
+		const dm = await this.directMessageRepo.findOne({
+			where: { id: dto.messageId },
+			relations: {
+				fromUser: true,
+				toUser: true,
+				parentMessage: { fromUser: true },
+			},
+		});
+		if (!dm) throw new EditMessageFailedError("Direct message not found");
+		if (dm.fromUserId !== client.data.user.id)
+			throw new EditMessageFailedError(
+				"You can only edit your own direct messages",
+			);
+		dm.content = dto.content;
+		dm.updatedAt = new Date();
+		await this.directMessageRepo.save(dm);
+		const resp = DirectMessageResponse.fromEntity(dm);
+		server
+			.to(constructUserRoomName(dm.fromUserId))
+			.emit(Events.EDIT_DIRECT_MESSAGE, resp);
+		server
+			.to(constructUserRoomName(dm.toUserId))
+			.emit(Events.EDIT_DIRECT_MESSAGE, resp);
+		return resp;
+	}
+
+	async deleteDirectMessage(
+		client: Socket,
+		id: string,
+		server: Socket["server"],
+	) {
+		const dm = await this.directMessageRepo.findOne({
+			where: { id },
+			relations: {
+				fromUser: true,
+				toUser: true,
+				parentMessage: { fromUser: true },
+			},
+		});
+		if (!dm) throw new DeleteMessageFailedError("Direct message not found");
+		if (dm.fromUserId !== client.data.user.id)
+			throw new DeleteMessageFailedError(
+				"You can only delete your own direct messages",
+			);
+		await this.directMessageRepo.delete(dm.id);
+		server
+			.to(constructUserRoomName(dm.fromUserId))
+			.emit(Events.DELETE_DIRECT_MESSAGE, id);
+		server
+			.to(constructUserRoomName(dm.toUserId))
+			.emit(Events.DELETE_DIRECT_MESSAGE, id);
+		return id;
 	}
 }
