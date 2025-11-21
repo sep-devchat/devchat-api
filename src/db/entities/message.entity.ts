@@ -42,6 +42,10 @@ export class MessageEntity {
 	})
 	parentMessageId: string | null;
 
+	@ManyToOne(() => MessageEntity, { nullable: true })
+	@JoinColumn({ name: ColumnName.Message.parentMessageId })
+	parentMessage: MessageEntity | null;
+
 	@Column({ name: ColumnName.Message.content, type: "text" })
 	content: string;
 

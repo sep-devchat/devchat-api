@@ -7,6 +7,7 @@ export class MessageResponse {
 	channelId: string;
 	threadId: string | null;
 	parentMessageId: string | null;
+	parentMessage: MessageResponse | null;
 	content: string;
 	createdAt: Date;
 	updatedAt: Date;
@@ -21,11 +22,16 @@ export class MessageResponse {
 			channelId: entity.channelId,
 			threadId: entity.threadId,
 			parentMessageId: entity.parentMessageId,
+			parentMessage: entity.parentMessage
+				? this.fromEntity(entity.parentMessage)
+				: null,
 			content: entity.content,
 			createdAt: entity.createdAt,
 			updatedAt: entity.updatedAt,
 			deletedAt: entity.deletedAt,
-			sender: Profile.fromEntity(entity.sender),
+			sender: entity.parentMessage
+				? Profile.fromEntity(entity.sender)
+				: undefined,
 			channel: entity.channel && ChannelResponse.fromEntity(entity.channel),
 			codeBlockId: entity.codeBlockId,
 		};

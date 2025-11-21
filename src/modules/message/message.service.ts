@@ -100,7 +100,7 @@ export class MessageService {
 		const skip = (page - 1) * take;
 		const messages = await this.messageRepo.find({
 			where: { channelId: client.data.channel.id },
-			relations: { sender: true },
+			relations: { sender: true, parentMessage: { sender: true } },
 			order: { createdAt: "DESC" },
 			take,
 			skip,
@@ -185,7 +185,11 @@ export class MessageService {
 
 		message = await this.messageRepo.findOne({
 			where: { id: message.id },
-			relations: { sender: true, channel: true },
+			relations: {
+				sender: true,
+				channel: true,
+				parentMessage: { sender: true },
+			},
 		});
 
 		if (payload.attachmentIds && payload.attachmentIds.length > 0) {
@@ -328,7 +332,11 @@ export class MessageService {
 	) {
 		const message = await this.messageRepo.findOne({
 			where: { id: dto.messageId },
-			relations: { sender: true, channel: { group: true } },
+			relations: {
+				sender: true,
+				channel: { group: true },
+				parentMessage: { sender: true },
+			},
 		});
 		if (!message) throw new EditMessageFailedError("Message not found");
 		if (message.senderId !== client.data.user.id)
@@ -344,7 +352,11 @@ export class MessageService {
 	async deleteMessage(client: Socket, id: string, server: Socket["server"]) {
 		const message = await this.messageRepo.findOne({
 			where: { id },
-			relations: { sender: true, channel: { group: true } },
+			relations: {
+				sender: true,
+				channel: { group: true },
+				parentMessage: { sender: true },
+			},
 		});
 		if (!message) throw new DeleteMessageFailedError("Message not found");
 		if (message.senderId !== client.data.user.id)
