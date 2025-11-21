@@ -29,9 +29,7 @@ export class MessageResponse {
 			createdAt: entity.createdAt,
 			updatedAt: entity.updatedAt,
 			deletedAt: entity.deletedAt,
-			sender: entity.parentMessage
-				? Profile.fromEntity(entity.sender)
-				: undefined,
+			sender: entity.sender ? Profile.fromEntity(entity.sender) : undefined,
 			channel: entity.channel && ChannelResponse.fromEntity(entity.channel),
 			codeBlockId: entity.codeBlockId,
 		};
