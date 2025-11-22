@@ -4,14 +4,11 @@ import { UserService } from "@modules/user";
 import { Injectable } from "@nestjs/common";
 import { Server, Socket } from "socket.io";
 import { AuthenticateRequest, JoinRoomRequest } from "./dto";
-import { SocketConstants } from "./socket.constants";
+import { SocketEvents } from "./socket.constants";
 import { ChannelRepository, GroupRepository } from "@db/repositories";
 import { JoinRoomFailedError } from "./errors";
-import { constructRoomName, constructUserRoomName } from "@utils";
 import { NotificationEntity } from "@db/entities";
 import { NotificationResponse } from "@modules/notification/dto";
-
-const { Events } = SocketConstants;
 
 @Injectable()
 export class SocketService {
@@ -22,6 +19,14 @@ export class SocketService {
 		private readonly groupRepo: GroupRepository,
 		private readonly channelRepo: ChannelRepository,
 	) {}
+
+	constructRoomName(groupId: string, channelId: string) {
+		return `group_${groupId}:channel_${channelId}`;
+	}
+
+	constructUserRoomName(userId: string) {
+		return `user:${userId}`;
+	}
 
 	async authenticateSocket(client: Socket, payload: AuthenticateRequest) {
 		try {
@@ -41,12 +46,12 @@ export class SocketService {
 				new Date(decoded.exp * 1000).toISOString(),
 			);
 			// Notify client of successful authentication
-			client.join(constructUserRoomName(user.id));
-			client.emit(Events.SOCKET_READY);
+			client.join(this.constructUserRoomName(user.id));
+			client.emit(SocketEvents.SOCKET_READY);
 		} catch (err) {
 			if (!err.message)
 				console.error("Error during socket authentication:", err);
-			client.emit(Events.AUTHENTICATE_FAILED, {
+			client.emit(SocketEvents.AUTHENTICATE_FAILED, {
 				message: "Authentication failed",
 				detail: err.message ?? "Unknown error",
 			});
@@ -88,7 +93,7 @@ export class SocketService {
 			await client.leave(client.data.room);
 		}
 
-		const room = constructRoomName(groupId, channelId);
+		const room = this.constructRoomName(groupId, channelId);
 		await client.join(room);
 
 		// Store for future usage
@@ -96,7 +101,7 @@ export class SocketService {
 		client.data.channel = channel;
 		client.data.room = room;
 
-		client.emit(Events.JOINED_ROOM, {
+		client.emit(SocketEvents.JOINED_ROOM, {
 			room,
 			groupId,
 			channelId,
@@ -105,7 +110,24 @@ export class SocketService {
 
 	sendNotification(notification: NotificationEntity) {
 		this.server
-			.to(constructUserRoomName(notification.toUserId))
-			.emit(Events.NOTIFICATION, NotificationResponse.fromEntity(notification));
+			.to(this.constructUserRoomName(notification.toUserId))
+			.emit(
+				SocketEvents.NOTIFICATION,
+				NotificationResponse.fromEntity(notification),
+			);
+	}
+
+	sendEventToUser(userId: string, event: string, payload: any) {
+		this.server.to(this.constructUserRoomName(userId)).emit(event, payload);
+	}
+
+	sendEventToRoom(
+		groupId: string,
+		channelId: string,
+		event: string,
+		payload: any,
+	) {
+		const room = this.constructRoomName(groupId, channelId);
+		this.server.to(room).emit(event, payload);
 	}
 }

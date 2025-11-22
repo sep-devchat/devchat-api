@@ -1,10 +1,12 @@
-import { GroupEntity, ChannelEntity, ThreadEntity } from "@db/entities";
 import { Profile } from "@modules/auth/dto";
+import { ChannelResponse } from "@modules/channel/dto";
+import { GroupResponse } from "@modules/group/dto";
+import { ThreadResponse } from "@modules/thread/dto";
 import { ClsStore } from "nestjs-cls";
 
 export interface DevChatCls extends ClsStore {
 	profile: Profile;
-	group: GroupEntity;
-	channel: ChannelEntity;
-	thread: ThreadEntity;
+	group: GroupResponse;
+	channel: ChannelResponse;
+	thread: ThreadResponse;
 }

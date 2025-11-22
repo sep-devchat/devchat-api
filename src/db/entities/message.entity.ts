@@ -28,11 +28,7 @@ export class MessageEntity {
 	@JoinColumn({ name: ColumnName.Channel.id })
 	channel: ChannelEntity;
 
-	@Column({ name: ColumnName.Thread.id, type: "uuid", nullable: true })
-	threadId: string | null;
-
-	@ManyToOne(() => ThreadEntity)
-	@JoinColumn({ name: ColumnName.Thread.id })
+	@OneToOne(() => ThreadEntity, (thread) => thread.message, { nullable: true })
 	thread: ThreadEntity | null;
 
 	@Column({

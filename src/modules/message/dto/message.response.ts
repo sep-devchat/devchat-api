@@ -1,11 +1,11 @@
 import { MessageEntity } from "@db/entities";
 import { Profile } from "@modules/auth/dto";
 import { ChannelResponse } from "@modules/channel/dto";
+import { ThreadResponse } from "@modules/thread/dto";
 
 export class MessageResponse {
 	id: string;
 	channelId: string;
-	threadId: string | null;
 	parentMessageId: string | null;
 	parentMessage: MessageResponse | null;
 	content: string;
@@ -13,6 +13,7 @@ export class MessageResponse {
 	updatedAt: Date;
 	deletedAt: Date | null;
 	sender: Profile;
+	thread?: ThreadResponse;
 	channel?: ChannelResponse;
 	codeBlockId?: string;
 
@@ -20,7 +21,6 @@ export class MessageResponse {
 		return {
 			id: entity.id,
 			channelId: entity.channelId,
-			threadId: entity.threadId,
 			parentMessageId: entity.parentMessageId,
 			parentMessage: entity.parentMessage
 				? this.fromEntity(entity.parentMessage)
@@ -31,6 +31,7 @@ export class MessageResponse {
 			deletedAt: entity.deletedAt,
 			sender: entity.sender ? Profile.fromEntity(entity.sender) : undefined,
 			channel: entity.channel && ChannelResponse.fromEntity(entity.channel),
+			thread: entity.thread && ThreadResponse.fromEntity(entity.thread),
 			codeBlockId: entity.codeBlockId,
 		};
 	}

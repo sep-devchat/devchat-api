@@ -15,7 +15,7 @@ import {
 } from "@nestjs/common";
 import { SocketExceptionFilter } from "@modules/socket/socket.exception-filter";
 import { SocketGuard } from "@modules/socket/socket.guard";
-import { SocketConstants } from "@modules/socket/socket.constants";
+import { SocketEvents } from "@modules/socket/socket.constants";
 import { MessageService } from "./message.service";
 import { SendMessageRequest } from "./dto/send-message.request";
 import { FetchMessagesRequest } from "./dto/fetch-messages.request";
@@ -23,8 +23,6 @@ import { EditMessageRequest } from "./dto/edit-message.request";
 import { FetchDirectMessagesRequest } from "./dto/fetch-direct-messages.request";
 import { SendDirectMessageRequest } from "./dto/send-direct-message.request";
 import { EditDirectMessageRequest } from "./dto/edit-direct-message.request";
-
-const { Events } = SocketConstants;
 
 @WebSocketGateway({
 	cors: { origin: "*" },
@@ -41,7 +39,7 @@ export class MessageGateway implements OnGatewayInit {
 		// nothing persistent needed; server passed on per-call
 	}
 
-	@SubscribeMessage(Events.MESSAGE)
+	@SubscribeMessage(SocketEvents.MESSAGE)
 	async handleMessage(
 		@ConnectedSocket() client: Socket,
 		@MessageBody() payload: SendMessageRequest,
@@ -53,7 +51,7 @@ export class MessageGateway implements OnGatewayInit {
 		);
 	}
 
-	@SubscribeMessage(Events.FETCH_MESSAGES)
+	@SubscribeMessage(SocketEvents.FETCH_MESSAGES)
 	async handleFetchMessages(
 		@ConnectedSocket() client: Socket,
 		@MessageBody() payload: FetchMessagesRequest,
@@ -61,7 +59,7 @@ export class MessageGateway implements OnGatewayInit {
 		return await this.messageService.fetchMessages(client, payload);
 	}
 
-	@SubscribeMessage(Events.EDIT_MESSAGE)
+	@SubscribeMessage(SocketEvents.EDIT_MESSAGE)
 	async handleEditMessage(
 		@ConnectedSocket() client: Socket,
 		@MessageBody() payload: EditMessageRequest,
@@ -73,7 +71,7 @@ export class MessageGateway implements OnGatewayInit {
 		);
 	}
 
-	@SubscribeMessage(Events.DELETE_MESSAGE)
+	@SubscribeMessage(SocketEvents.DELETE_MESSAGE)
 	async handleDeleteMessage(
 		@ConnectedSocket() client: Socket,
 		@MessageBody() id: string,
@@ -85,7 +83,7 @@ export class MessageGateway implements OnGatewayInit {
 		);
 	}
 
-	@SubscribeMessage(Events.FETCH_DIRECT_MESSAGES)
+	@SubscribeMessage(SocketEvents.FETCH_DIRECT_MESSAGES)
 	async handleFetchDirectMessages(
 		@ConnectedSocket() client: Socket,
 		@MessageBody() payload: FetchDirectMessagesRequest,
@@ -93,7 +91,7 @@ export class MessageGateway implements OnGatewayInit {
 		return await this.messageService.fetchDirectMessages(client, payload);
 	}
 
-	@SubscribeMessage(Events.SEND_DIRECT_MESSAGE)
+	@SubscribeMessage(SocketEvents.SEND_DIRECT_MESSAGE)
 	async handleSendDirectMessage(
 		@ConnectedSocket() client: Socket,
 		@MessageBody() payload: SendDirectMessageRequest,
@@ -105,7 +103,7 @@ export class MessageGateway implements OnGatewayInit {
 		);
 	}
 
-	@SubscribeMessage(Events.EDIT_DIRECT_MESSAGE)
+	@SubscribeMessage(SocketEvents.EDIT_DIRECT_MESSAGE)
 	async handleEditDirectMessage(
 		@ConnectedSocket() client: Socket,
 		@MessageBody() payload: EditDirectMessageRequest,
@@ -117,7 +115,7 @@ export class MessageGateway implements OnGatewayInit {
 		);
 	}
 
-	@SubscribeMessage(Events.DELETE_DIRECT_MESSAGE)
+	@SubscribeMessage(SocketEvents.DELETE_DIRECT_MESSAGE)
 	async handleDeleteDirectMessage(
 		@ConnectedSocket() client: Socket,
 		@MessageBody() id: string,

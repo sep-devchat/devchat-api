@@ -9,7 +9,7 @@ import {
 	WsException,
 } from "@nestjs/websockets";
 import { SocketService } from "./socket.service";
-import { SocketConstants } from "./socket.constants";
+import { SocketEvents } from "./socket.constants";
 import { Server, Socket } from "socket.io";
 import {
 	UseFilters,
@@ -21,8 +21,6 @@ import { SocketExceptionFilter } from "./socket.exception-filter";
 import { AuthenticateRequest, JoinRoomRequest } from "./dto";
 import { SocketGuard } from "./socket.guard";
 import { SkipAuth } from "@utils";
-
-const { Events } = SocketConstants;
 
 @WebSocketGateway({
 	cors: {
@@ -48,7 +46,7 @@ export class SocketGateway
 		console.log("New client connection:", client.id);
 		// Timeout when user doesn't authenticate in 30 seconds
 		client.data.timeout = setTimeout(() => {
-			client.emit(Events.MESSAGE, {
+			client.emit(SocketEvents.MESSAGE, {
 				message: "Authentication timeout. Disconnecting...",
 			});
 			client.disconnect();
@@ -59,7 +57,7 @@ export class SocketGateway
 		console.log("Client disconnected:", client.id);
 	}
 
-	@SubscribeMessage(Events.AUTHENTICATE)
+	@SubscribeMessage(SocketEvents.AUTHENTICATE)
 	@SkipAuth()
 	async handleAuthenticate(
 		@ConnectedSocket() client: Socket,
@@ -68,7 +66,7 @@ export class SocketGateway
 		await this.socketService.authenticateSocket(client, payload);
 	}
 
-	@SubscribeMessage(Events.JOIN_ROOM)
+	@SubscribeMessage(SocketEvents.JOIN_ROOM)
 	async handleJoinRoom(
 		@ConnectedSocket() client: Socket,
 		@MessageBody() payload: JoinRoomRequest,

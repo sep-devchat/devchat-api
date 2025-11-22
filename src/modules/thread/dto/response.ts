@@ -1,4 +1,5 @@
 import { ThreadEntity } from "@db/entities";
+import { Profile } from "@modules/auth/dto";
 import { ApiProperty } from "@nestjs/swagger";
 
 export class ThreadResponse {
@@ -20,6 +21,9 @@ export class ThreadResponse {
 	@ApiProperty()
 	createdById: string;
 
+	@ApiProperty({ type: Profile })
+	createdBy: Profile;
+
 	@ApiProperty()
 	messageId: string;
 
@@ -31,6 +35,7 @@ export class ThreadResponse {
 			messageId: entity.messageId,
 			createdAt: entity.createdAt,
 			createdById: entity.createdById,
+			createdBy: entity.createdBy ? Profile.fromEntity(entity.createdBy) : null,
 		};
 	}
 

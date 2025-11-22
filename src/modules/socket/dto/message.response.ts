@@ -1,16 +1,17 @@
 import { MessageEntity } from "@db/entities";
 import { Profile } from "@modules/auth/dto";
 import { ChannelResponse } from "@modules/channel/dto";
+import { ThreadResponse } from "@modules/thread/dto";
 
 export class MessageResponse {
 	id: string;
 	channelId: string;
-	threadId: string | null;
 	parentMessageId: string | null;
 	content: string;
 	createdAt: Date;
 	updatedAt: Date;
 	deletedAt: Date | null;
+	thread?: ThreadResponse;
 	sender: Profile;
 	channel?: ChannelResponse;
 
@@ -18,13 +19,13 @@ export class MessageResponse {
 		return {
 			id: entity.id,
 			channelId: entity.channelId,
-			threadId: entity.threadId,
 			parentMessageId: entity.parentMessageId,
 			content: entity.content,
 			createdAt: entity.createdAt,
 			updatedAt: entity.updatedAt,
 			deletedAt: entity.deletedAt,
 			sender: Profile.fromEntity(entity.sender),
+			thread: entity.thread && ThreadResponse.fromEntity(entity.thread),
 			channel: entity.channel && ChannelResponse.fromEntity(entity.channel),
 		};
 	}

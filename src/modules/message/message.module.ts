@@ -9,7 +9,14 @@ import { AiModule } from "@modules/ai";
 import { AttachmentModule } from "@modules/attachment";
 
 @Module({
-	imports: [AuthModule, UserModule, SocketModule, AiModule, AttachmentModule],
+	imports: [
+		AuthModule,
+		UserModule,
+		SocketModule,
+		AiModule,
+		AttachmentModule,
+		SocketModule,
+	],
 	providers: [MessageService, MessageGateway],
 	controllers: [MessageController],
 	exports: [MessageService],

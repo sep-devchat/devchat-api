@@ -3,8 +3,13 @@ import {
 	Column,
 	CreateDateColumn,
 	Entity,
+	JoinColumn,
+	ManyToOne,
+	OneToOne,
 	PrimaryGeneratedColumn,
 } from "typeorm";
+import { UserEntity } from "./user.entity";
+import { MessageEntity } from "./message.entity";
 
 const { TableName, ColumnName } = DbConstants;
 
@@ -19,11 +24,19 @@ export class ThreadEntity {
 	@Column({ name: ColumnName.Message.id })
 	messageId: string;
 
+	@OneToOne(() => MessageEntity, (message) => message.thread)
+	@JoinColumn({ name: ColumnName.Message.id })
+	message: MessageEntity;
+
 	@Column({ name: ColumnName.Channel.id })
 	channelId: string;
 
 	@Column({ name: ColumnName.Audit.createdBy })
 	createdById: string;
+
+	@ManyToOne(() => UserEntity)
+	@JoinColumn({ name: ColumnName.Audit.createdBy })
+	createdBy: UserEntity;
 
 	@CreateDateColumn({ name: ColumnName.Audit.createdAt })
 	createdAt: Date;

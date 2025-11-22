@@ -123,7 +123,10 @@ export class AiService {
 		if (!dto.messageId) {
 			throw new MissingPromptOrMessageError();
 		}
-		const msg = await this.messages.findOne({ where: { id: dto.messageId } });
+		const msg = await this.messages.findOne({
+			where: { id: dto.messageId },
+			relations: { thread: true },
+		});
 		if (!msg) throw new MessageNotFoundError();
 
 		// Determine user context: prefer current CLS user, fallback to message sender
@@ -139,7 +142,7 @@ export class AiService {
 			const newSession = this.sessions.create({
 				userId: userId!,
 				channelId: msg.channelId ?? null,
-				threadId: msg.threadId ?? null,
+				threadId: msg.thread.id ?? null,
 				sessionType: "chat",
 				startedAt: new Date(),
 				endedAt: null,

@@ -16,14 +16,12 @@ import { FetchDirectMessagesRequest } from "./dto/fetch-direct-messages.request"
 import { EditMessageFailedError, DeleteMessageFailedError } from "./errors";
 import { AuthService } from "@modules/auth";
 import { MessageEntity } from "@db/entities";
-import { constructUserRoomName } from "@utils";
 import { AiService } from "@modules/ai";
 import { Socket } from "socket.io";
-import { SocketConstants } from "@modules/socket/socket.constants";
+import { SocketEvents } from "@modules/socket/socket.constants";
 import { AttachmentService } from "@modules/attachment";
 import { In } from "typeorm";
-
-const { Events } = SocketConstants;
+import { SocketService } from "@modules/socket";
 
 @Injectable()
 export class MessageService {
@@ -34,6 +32,7 @@ export class MessageService {
 		private readonly authService: AuthService,
 		private readonly aiService: AiService,
 		private readonly attachmentService: AttachmentService,
+		private readonly socketService: SocketService,
 	) {}
 
 	/**
@@ -158,12 +157,11 @@ export class MessageService {
 		});
 		listUsers.forEach((user) => {
 			if (user.id !== message.senderId) {
-				server
-					.to(constructUserRoomName(user.id))
-					.emit(
-						Events.MESSAGE_NOTIFICATION,
-						MessageResponse.fromEntity(message),
-					);
+				this.socketService.sendEventToUser(
+					user.id,
+					SocketEvents.MESSAGE_NOTIFICATION,
+					MessageResponse.fromEntity(message),
+				);
 			}
 		});
 	}
@@ -175,7 +173,6 @@ export class MessageService {
 	) {
 		let message = await this.messageRepo.save({
 			channelId: client.data.channel.id,
-			threadId: payload.threadId,
 			parentMessageId: payload.parentMessageId,
 			senderId: client.data.user.id,
 			content: payload.content,
@@ -195,6 +192,7 @@ export class MessageService {
 				sender: true,
 				channel: true,
 				parentMessage: { sender: true },
+				thread: true,
 			},
 		});
 
@@ -207,7 +205,7 @@ export class MessageService {
 
 		const resp = MessageResponse.fromEntity(message!);
 
-		server.to(client.data.room).emit(Events.MESSAGE, resp);
+		server.to(client.data.room).emit(SocketEvents.MESSAGE, resp);
 		this.createMessageNotification(message!, server);
 
 		// Delegate AI mention handling to helper
@@ -254,7 +252,6 @@ export class MessageService {
 			// persist AI answer as a message in same channel/thread, parented to original
 			const aiInsert = await this.messageRepo.insert({
 				channelId: client.data.channel.id,
-				threadId: payload.threadId ?? null,
 				parentMessageId,
 				senderId: aiUserId,
 				content: answer,
@@ -265,7 +262,7 @@ export class MessageService {
 			});
 			if (aiMsg) {
 				const aiResp = MessageResponse.fromEntity(aiMsg);
-				server.to(client.data.room).emit(Events.MESSAGE, aiResp);
+				server.to(client.data.room).emit(SocketEvents.MESSAGE, aiResp);
 				this.createMessageNotification(aiMsg, server);
 			}
 		} catch (err) {
@@ -326,12 +323,16 @@ export class MessageService {
 			);
 		}
 		const resp = DirectMessageResponse.fromEntity(dm!);
-		server
-			.to(constructUserRoomName(fromUser.id))
-			.emit(Events.DIRECT_MESSAGE, resp);
-		server
-			.to(constructUserRoomName(dto.toUserId))
-			.emit(Events.DIRECT_MESSAGE, resp);
+		this.socketService.sendEventToUser(
+			fromUser.id,
+			SocketEvents.DIRECT_MESSAGE,
+			resp,
+		);
+		this.socketService.sendEventToUser(
+			dto.toUserId,
+			SocketEvents.DIRECT_MESSAGE,
+			resp,
+		);
 		return resp;
 	}
 
@@ -356,7 +357,7 @@ export class MessageService {
 		await this.messageRepo.save(message);
 		server
 			.to(client.data.room)
-			.emit(Events.EDIT_MESSAGE, MessageResponse.fromEntity(message));
+			.emit(SocketEvents.EDIT_MESSAGE, MessageResponse.fromEntity(message));
 	}
 
 	async deleteMessage(client: Socket, id: string, server: Socket["server"]) {
@@ -374,7 +375,7 @@ export class MessageService {
 				"You can only delete your own messages",
 			);
 		await this.messageRepo.delete(message.id);
-		server.to(client.data.room).emit(Events.DELETE_MESSAGE, id);
+		server.to(client.data.room).emit(SocketEvents.DELETE_MESSAGE, id);
 	}
 
 	async editDirectMessage(
@@ -399,12 +400,16 @@ export class MessageService {
 		dm.updatedAt = new Date();
 		await this.directMessageRepo.save(dm);
 		const resp = DirectMessageResponse.fromEntity(dm);
-		server
-			.to(constructUserRoomName(dm.fromUserId))
-			.emit(Events.EDIT_DIRECT_MESSAGE, resp);
-		server
-			.to(constructUserRoomName(dm.toUserId))
-			.emit(Events.EDIT_DIRECT_MESSAGE, resp);
+		this.socketService.sendEventToUser(
+			dm.fromUserId,
+			SocketEvents.EDIT_DIRECT_MESSAGE,
+			resp,
+		);
+		this.socketService.sendEventToUser(
+			dm.toUserId,
+			SocketEvents.EDIT_DIRECT_MESSAGE,
+			resp,
+		);
 		return resp;
 	}
 
@@ -427,12 +432,16 @@ export class MessageService {
 				"You can only delete your own direct messages",
 			);
 		await this.directMessageRepo.delete(dm.id);
-		server
-			.to(constructUserRoomName(dm.fromUserId))
-			.emit(Events.DELETE_DIRECT_MESSAGE, id);
-		server
-			.to(constructUserRoomName(dm.toUserId))
-			.emit(Events.DELETE_DIRECT_MESSAGE, id);
+		this.socketService.sendEventToUser(
+			dm.fromUserId,
+			SocketEvents.DELETE_DIRECT_MESSAGE,
+			id,
+		);
+		this.socketService.sendEventToUser(
+			dm.toUserId,
+			SocketEvents.DELETE_DIRECT_MESSAGE,
+			id,
+		);
 		return id;
 	}
 }
