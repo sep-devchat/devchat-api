@@ -4,10 +4,10 @@ import {
 	MessageRepository,
 	DirectMessageRepository,
 	UserRepository,
+	ThreadMessageRepository,
 } from "@db/repositories";
 import { SendMessageRequest } from "./dto/send-message.request";
 import { EditMessageRequest } from "./dto/edit-message.request";
-import { EditDirectMessageRequest } from "./dto/edit-direct-message.request";
 import { FetchMessagesRequest } from "./dto/fetch-messages.request";
 import { MessageResponse } from "./dto/message.response";
 import { SendDirectMessageRequest } from "./dto/send-direct-message.request";
@@ -22,6 +22,12 @@ import { SocketEvents } from "@modules/socket/socket.constants";
 import { AttachmentService } from "@modules/attachment";
 import { In } from "typeorm";
 import { SocketService } from "@modules/socket";
+import {
+	SendThreadMessageRequest,
+	FetchThreadMessagesRequest,
+	EditThreadMessageRequest,
+} from "./dto";
+import { ThreadMessageResponse } from "./dto/thread-message.response";
 
 @Injectable()
 export class MessageService {
@@ -33,12 +39,9 @@ export class MessageService {
 		private readonly aiService: AiService,
 		private readonly attachmentService: AttachmentService,
 		private readonly socketService: SocketService,
+		private readonly threadMessageRepo: ThreadMessageRepository,
 	) {}
 
-	/**
-	 * Return distinct users that the current user has direct message history with,
-	 * sorted by most recent conversation activity (latest DM createdAt).
-	 */
 	async getDirectMessagePeers() {
 		const userId = this.authService.getProfileCls()?.id;
 		if (!userId) {
@@ -343,11 +346,6 @@ export class MessageService {
 	) {
 		const message = await this.messageRepo.findOne({
 			where: { id: dto.messageId },
-			relations: {
-				sender: true,
-				channel: { group: true },
-				parentMessage: { sender: true },
-			},
 		});
 		if (!message) throw new EditMessageFailedError("Message not found");
 		if (message.senderId !== client.data.user.id)
@@ -355,19 +353,12 @@ export class MessageService {
 		message.content = dto.content;
 		message.updatedAt = new Date();
 		await this.messageRepo.save(message);
-		server
-			.to(client.data.room)
-			.emit(SocketEvents.EDIT_MESSAGE, MessageResponse.fromEntity(message));
+		server.to(client.data.room).emit(SocketEvents.EDIT_MESSAGE, message.id);
 	}
 
 	async deleteMessage(client: Socket, id: string, server: Socket["server"]) {
 		const message = await this.messageRepo.findOne({
 			where: { id },
-			relations: {
-				sender: true,
-				channel: { group: true },
-				parentMessage: { sender: true },
-			},
 		});
 		if (!message) throw new DeleteMessageFailedError("Message not found");
 		if (message.senderId !== client.data.user.id)
@@ -378,70 +369,130 @@ export class MessageService {
 		server.to(client.data.room).emit(SocketEvents.DELETE_MESSAGE, id);
 	}
 
-	async editDirectMessage(
+	async sendThreadMessage(
 		client: Socket,
-		dto: EditDirectMessageRequest,
+		dto: SendThreadMessageRequest,
 		server: Socket["server"],
 	) {
-		const dm = await this.directMessageRepo.findOne({
-			where: { id: dto.messageId },
-			relations: {
-				fromUser: true,
-				toUser: true,
-				parentMessage: { fromUser: true },
-			},
+		if (!client.data.channel)
+			throw new WsException({
+				code: "channel_not_selected_err",
+				message: "Join a channel before sending thread messages",
+			});
+		if (!client.data.user)
+			throw new WsException({
+				code: "auth_required_err",
+				message: "Authenticate before sending thread messages",
+			});
+
+		// Persist thread message
+		let threadMessage = await this.threadMessageRepo.save({
+			threadId: dto.threadId,
+			channelId: client.data.channel.id,
+			senderId: client.data.user.id,
+			content: dto.content,
+			codeBlock: dto.codeBlock
+				? {
+						content: dto.codeBlock.content,
+						language: dto.codeBlock.language,
+						channelId: client.data.channel.id,
+						userId: client.data.user.id,
+					}
+				: undefined,
 		});
-		if (!dm) throw new EditMessageFailedError("Direct message not found");
-		if (dm.fromUserId !== client.data.user.id)
-			throw new EditMessageFailedError(
-				"You can only edit your own direct messages",
+
+		threadMessage = await this.threadMessageRepo.findOne({
+			where: { id: threadMessage.id },
+			relations: { sender: true, codeBlock: true },
+		});
+
+		if (dto.attachmentIds && dto.attachmentIds.length > 0 && threadMessage) {
+			await this.attachmentService.addAttachmentsToThreadMessage(
+				threadMessage,
+				dto.attachmentIds,
 			);
-		dm.content = dto.content;
-		dm.updatedAt = new Date();
-		await this.directMessageRepo.save(dm);
-		const resp = DirectMessageResponse.fromEntity(dm);
-		this.socketService.sendEventToUser(
-			dm.fromUserId,
-			SocketEvents.EDIT_DIRECT_MESSAGE,
-			resp,
-		);
-		this.socketService.sendEventToUser(
-			dm.toUserId,
-			SocketEvents.EDIT_DIRECT_MESSAGE,
-			resp,
-		);
+		}
+
+		server
+			.to(client.data.room)
+			.emit(
+				SocketEvents.SEND_THREAD_MESSAGE,
+				ThreadMessageResponse.fromEntity(threadMessage!),
+			);
+	}
+
+	async fetchThreadMessages(client: Socket, dto: FetchThreadMessagesRequest) {
+		if (!client.data.channel)
+			throw new WsException({
+				code: "channel_not_selected_err",
+				message: "Join a channel before fetching thread messages",
+			});
+		if (!client.data.user)
+			throw new WsException({
+				code: "auth_required_err",
+				message: "Authenticate before fetching thread messages",
+			});
+		if (!dto.threadId)
+			throw new WsException({
+				code: "thread_required_err",
+				message: "Provide a threadId to fetch thread messages",
+			});
+
+		const take = dto?.take && dto.take > 0 ? Math.min(dto.take, 100) : 50;
+		const page = dto?.page && dto.page > 0 ? dto.page : 1;
+		const skip = (page - 1) * take;
+
+		const messages = await this.threadMessageRepo.find({
+			where: { threadId: dto.threadId, channelId: client.data.channel.id },
+			relations: { sender: true, codeBlock: true },
+			order: { createdAt: "DESC" },
+			take,
+			skip,
+		});
+		return ThreadMessageResponse.fromEntities(messages);
+	}
+
+	async editThreadMessage(client: Socket, dto: EditThreadMessageRequest) {
+		if (!client.data.user)
+			throw new WsException({
+				code: "auth_required_err",
+				message: "Authenticate before editing thread messages",
+			});
+		const tm = await this.threadMessageRepo.findOne({
+			where: { id: dto.threadMessageId },
+			relations: { sender: true, codeBlock: true },
+		});
+		if (!tm) throw new EditMessageFailedError("Thread message not found");
+		if (tm.senderId !== client.data.user.id)
+			throw new EditMessageFailedError(
+				"You can only edit your own thread messages",
+			);
+		tm.content = dto.content;
+		tm.updatedAt = new Date();
+		await this.threadMessageRepo.save(tm);
+		const resp = ThreadMessageResponse.fromEntity(tm);
+		client.nsp.server
+			.to(client.data.room)
+			.emit(SocketEvents.EDIT_THREAD_MESSAGE, resp);
 		return resp;
 	}
 
-	async deleteDirectMessage(
-		client: Socket,
-		id: string,
-		server: Socket["server"],
-	) {
-		const dm = await this.directMessageRepo.findOne({
-			where: { id },
-			relations: {
-				fromUser: true,
-				toUser: true,
-				parentMessage: { fromUser: true },
-			},
-		});
-		if (!dm) throw new DeleteMessageFailedError("Direct message not found");
-		if (dm.fromUserId !== client.data.user.id)
+	async deleteThreadMessage(client: Socket, id: string) {
+		if (!client.data.user)
+			throw new WsException({
+				code: "auth_required_err",
+				message: "Authenticate before deleting thread messages",
+			});
+		const tm = await this.threadMessageRepo.findOne({ where: { id } });
+		if (!tm) throw new DeleteMessageFailedError("Thread message not found");
+		if (tm.senderId !== client.data.user.id)
 			throw new DeleteMessageFailedError(
-				"You can only delete your own direct messages",
+				"You can only delete your own thread messages",
 			);
-		await this.directMessageRepo.delete(dm.id);
-		this.socketService.sendEventToUser(
-			dm.fromUserId,
-			SocketEvents.DELETE_DIRECT_MESSAGE,
-			id,
-		);
-		this.socketService.sendEventToUser(
-			dm.toUserId,
-			SocketEvents.DELETE_DIRECT_MESSAGE,
-			id,
-		);
+		await this.threadMessageRepo.delete(id);
+		client.nsp.server
+			.to(client.data.room)
+			.emit(SocketEvents.DELETE_THREAD_MESSAGE, id);
 		return id;
 	}
 }

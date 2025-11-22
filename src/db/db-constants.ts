@@ -233,6 +233,7 @@ export const DbConstants = {
 			id: "thread_message_id",
 			content: "content",
 			senderId: "sender_id",
+			parentMessageId: "parent_message_id",
 		},
 	},
 	IndexName: {

@@ -1,31 +1,7 @@
-import { CreateCodeBlockRequest } from "@modules/code-block/dto";
-import { Type } from "class-transformer";
-import {
-	IsUUID,
-	IsString,
-	IsOptional,
-	IsArray,
-	ValidateNested,
-} from "class-validator";
+import { IsUUID } from "class-validator";
+import { SendMessageRequest } from "./send-message.request";
 
-export class SendDirectMessageRequest {
+export class SendDirectMessageRequest extends SendMessageRequest {
 	@IsUUID()
 	toUserId: string;
-
-	@IsString()
-	content: string;
-
-	@IsUUID()
-	@IsOptional()
-	parentMessageId?: string;
-
-	@IsString({ each: true })
-	@IsArray()
-	@IsOptional()
-	attachmentIds?: string[];
-
-	@ValidateNested()
-	@Type(() => CreateCodeBlockRequest)
-	@IsOptional()
-	codeBlock?: CreateCodeBlockRequest;
 }

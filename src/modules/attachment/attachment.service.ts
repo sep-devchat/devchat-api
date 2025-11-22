@@ -8,6 +8,7 @@ import {
 	AttachmentEntity,
 	MessageEntity,
 	DirectMessageEntity,
+	ThreadMessageEntity,
 } from "@db/entities";
 import { ClsService } from "nestjs-cls";
 
@@ -56,6 +57,20 @@ export class AttachmentService {
 		await this.attachmentRepo.update(
 			{ id: In(attachmentIds) },
 			{ messageId: dm.id, toUserId: dm.toUserId },
+		);
+	}
+
+	async addAttachmentsToThreadMessage(
+		threadMessage: ThreadMessageEntity,
+		attachmentIds: string[],
+	) {
+		await this.attachmentRepo.update(
+			{ id: In(attachmentIds) },
+			{
+				messageId: threadMessage.id,
+				channelId: threadMessage.channelId,
+				threadId: threadMessage.threadId,
+			},
 		);
 	}
 }

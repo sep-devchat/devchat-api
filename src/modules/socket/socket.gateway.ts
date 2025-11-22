@@ -74,6 +74,4 @@ export class SocketGateway
 		console.log("Join room request from client:", client.id, payload);
 		return await this.socketService.joinRoom(client, payload);
 	}
-
-	// Messaging events moved to MessageGateway in MessageModule
 }

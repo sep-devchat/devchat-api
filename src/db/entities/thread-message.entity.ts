@@ -22,6 +22,13 @@ export class ThreadMessageEntity {
 	@Column({ name: ColumnName.ThreadMessage.content, type: "text" })
 	content: string;
 
+	@Column({ name: ColumnName.ThreadMessage.parentMessageId, nullable: true })
+	parentMessageId: string | null;
+
+	@ManyToOne(() => ThreadMessageEntity)
+	@JoinColumn({ name: ColumnName.ThreadMessage.parentMessageId })
+	parentMessage: ThreadMessageEntity | null;
+
 	@Column({ name: ColumnName.ThreadMessage.senderId })
 	senderId: string;
 

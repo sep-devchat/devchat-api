@@ -1,8 +1,8 @@
 import { IsString } from "class-validator";
 
-export class EditDirectMessageRequest {
+export class EditThreadMessageRequest {
 	@IsString()
-	messageId: string;
+	threadMessageId: string;
 
 	@IsString()
 	content: string;
