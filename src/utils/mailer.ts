@@ -52,3 +52,28 @@ export async function sendPasswordResetCode(emailTo: string, code: string) {
 		throw new Error(`Failed to send password reset code: ${reason}`);
 	}
 }
+
+export async function sendReminderEmailVerification(
+	emailTo: string,
+	username: string,
+	dayLeft: number,
+) {
+	const mailOptions = {
+		from: Env.EMAIL_FROM,
+		to: emailTo,
+		subject: "Reminder: Verify your DevChat email address",
+		html: `
+			<h3>Hi ${username},</h3>
+			<p>This is a friendly reminder to verify your email address for your DevChat account.</p>
+			<p>Please verify your email within the next <span style="font-weight: bold;color: red;">${dayLeft}</span> day(s) to continue enjoying our services without interruption.</p>
+			<p>Go to your account settings to resend the verification email.</p>
+			<p>If you have already verified your email, please disregard this message.</p>
+		`,
+	};
+	try {
+		await transporter.sendMail(mailOptions);
+	} catch (err: any) {
+		const reason = err?.response || err?.message || "Unknown error";
+		throw new Error(`Failed to send reminder email: ${reason}`);
+	}
+}

@@ -37,6 +37,7 @@ export const DbConstants = {
 			isActive: "is_active",
 			emailVerified: "email_verified",
 			emailVerificationToken: "email_verification_token",
+			emailVerifiedAt: "email_verified_at",
 			createdAt: "created_at",
 			updatedAt: "updated_at",
 			lastLogin: "last_login",

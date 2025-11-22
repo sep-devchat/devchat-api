@@ -28,6 +28,8 @@ import { GroupInvitationModule } from "@modules/group-invitation";
 import { NotificationModule } from "@modules/notification";
 import { AiModule } from "@modules/ai/ai.module";
 import { CodeCollaborationModule } from "@modules/code-collaboration";
+import { UserScheduler } from "./schedulers";
+import { ScheduleModule } from "@nestjs/schedule";
 
 @Module({
 	imports: [
@@ -43,6 +45,7 @@ import { CodeCollaborationModule } from "@modules/code-collaboration";
 			clientId: Env.GITHUB_CLIENT_ID,
 			clientSecret: Env.GITHUB_CLIENT_SECRET,
 		}),
+		ScheduleModule.forRoot(),
 		AuthModule,
 		UserModule,
 		UserFriendModule,
@@ -84,6 +87,7 @@ import { CodeCollaborationModule } from "@modules/code-collaboration";
 			provide: APP_INTERCEPTOR,
 			useClass: AuditLogInterceptor,
 		},
+		UserScheduler,
 	],
 })
 export class AppModule {}

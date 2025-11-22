@@ -20,7 +20,12 @@ import {
 	LoginPkceResponse,
 	PkceIssueTokenRequest,
 } from "./dto";
-import { DevChatCls, Env, LoginMethodEnum } from "@utils";
+import {
+	DevChatCls,
+	Env,
+	LoginMethodEnum,
+	sendVerificationEmail,
+} from "@utils";
 import { ClsService } from "nestjs-cls";
 import { OAuth2Client } from "google-auth-library";
 import { GitHubService } from "@providers/github";
@@ -36,6 +41,8 @@ import { sendPasswordResetCode } from "@utils";
 import { CodeUsedError } from "./errors/code-used.error";
 import { CodeExpiredError } from "./errors/code-expired.error";
 import { PasswordDuplicatedError } from "./errors";
+import { UserNotFoundError } from "@modules/user/errors";
+import { randomBytes } from "crypto";
 
 @Injectable()
 export class AuthService {
@@ -331,5 +338,18 @@ export class AuthService {
 
 		// Invalidate this token
 		await this.prRepo.update(token.id, { usedAt: new Date() });
+	}
+
+	async resendVerificationEmail(email: string) {
+		const user = await this.userRepo.findOne({ where: { email } });
+		if (!user) {
+			throw new UserNotFoundError();
+		}
+
+		const newToken = randomBytes(32).toString("hex");
+		user.emailVerificationToken = newToken;
+		await this.userRepo.save(user);
+
+		await sendVerificationEmail(user.email, newToken);
 	}
 }

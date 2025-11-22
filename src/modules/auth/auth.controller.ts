@@ -86,6 +86,14 @@ export class AuthController {
 		return new ApiMessageResponseDto("Email verified successfully");
 	}
 
+	@Get("resend-verification-email")
+	@SwaggerApiMessageResponse()
+	@SkipAuth()
+	async resendVerificationEmail(@Query("email") email: string) {
+		await this.authService.resendVerificationEmail(email);
+		return new ApiMessageResponseDto("Verification email resent successfully");
+	}
+
 	@Post("forgot-password")
 	@SwaggerApiMessageResponse()
 	@SkipAuth()

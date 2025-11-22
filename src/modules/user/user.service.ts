@@ -138,6 +138,7 @@ export class UserService implements OnModuleInit {
 		await this.userRepo.update(id, {
 			emailVerified: true,
 			isActive: true,
+			emailVerifiedAt: new Date(),
 		});
 	}
 
