@@ -52,7 +52,7 @@ export class CodeCollaborationService {
 	async findOne(id: string) {
 		const codeCollaboration = await this.codeCollaborationRepo.findOne({
 			where: {
-				codeBlockId: id,
+				id: id,
 				createdById: this.cls.get("profile.id"),
 			},
 		});
