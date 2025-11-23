@@ -6,28 +6,34 @@ import {
 	UserRepository,
 	ThreadMessageRepository,
 } from "@db/repositories";
-import { SendMessageRequest } from "./dto/send-message.request";
-import { EditMessageRequest } from "./dto/edit-message.request";
-import { FetchMessagesRequest } from "./dto/fetch-messages.request";
-import { MessageResponse } from "./dto/message.response";
-import { SendDirectMessageRequest } from "./dto/send-direct-message.request";
-import { DirectMessageResponse } from "./dto/direct-message.response";
-import { FetchDirectMessagesRequest } from "./dto/fetch-direct-messages.request";
+import {
+	SendMessageRequest,
+	EditMessageRequest,
+	FetchMessagesRequest,
+	MessageResponse,
+	SendDirectMessageRequest,
+	DirectMessageResponse,
+	FetchDirectMessagesRequest,
+	SendThreadMessageRequest,
+	FetchThreadMessagesRequest,
+	EditThreadMessageRequest,
+	SearchMessagesRequest,
+	SearchDirectMessagesRequest,
+	SearchMessageResult,
+} from "./dto";
 import { EditMessageFailedError, DeleteMessageFailedError } from "./errors";
 import { AuthService } from "@modules/auth";
+import { ClsService } from "nestjs-cls";
+import { DevChatCls } from "@utils";
 import { MessageEntity } from "@db/entities";
 import { AiService } from "@modules/ai";
 import { Socket } from "socket.io";
 import { SocketEvents } from "@modules/socket/socket.constants";
 import { AttachmentService } from "@modules/attachment";
-import { In } from "typeorm";
+import { In, Like } from "typeorm";
 import { SocketService } from "@modules/socket";
-import {
-	SendThreadMessageRequest,
-	FetchThreadMessagesRequest,
-	EditThreadMessageRequest,
-} from "./dto";
-import { ThreadMessageResponse } from "./dto/thread-message.response";
+import { ThreadMessageResponse } from "./dto";
+import { ChannelRepository, UserGroupRepository } from "@db/repositories";
 
 @Injectable()
 export class MessageService {
@@ -35,7 +41,10 @@ export class MessageService {
 		private readonly messageRepo: MessageRepository,
 		private readonly directMessageRepo: DirectMessageRepository,
 		private readonly userRepo: UserRepository,
+		private readonly channelRepo: ChannelRepository,
+		private readonly userGroupRepo: UserGroupRepository,
 		private readonly authService: AuthService,
+		private readonly cls: ClsService<DevChatCls>,
 		private readonly aiService: AiService,
 		private readonly attachmentService: AttachmentService,
 		private readonly socketService: SocketService,
@@ -43,7 +52,7 @@ export class MessageService {
 	) {}
 
 	async getDirectMessagePeers() {
-		const userId = this.authService.getProfileCls()?.id;
+		const userId = this.cls.get("profile")?.id;
 		if (!userId) {
 			throw new WsException({
 				code: "auth_required_err",
@@ -450,6 +459,187 @@ export class MessageService {
 			skip,
 		});
 		return ThreadMessageResponse.fromEntities(messages);
+	}
+
+	async searchMessages(
+		dto: SearchMessagesRequest,
+	): Promise<{ items: SearchMessageResult[]; total: number }> {
+		const channelId = dto.channelId;
+		if (!channelId)
+			throw new WsException({
+				code: "channel_required_err",
+				message: "Provide a channelId to search messages",
+			});
+
+		const userId = this.cls.get("profile")?.id;
+		if (!userId)
+			throw new WsException({
+				code: "auth_required_err",
+				message: "Authenticate before searching messages",
+			});
+
+		const channel = await this.channelRepo.findOne({
+			where: { id: channelId },
+		});
+		if (!channel)
+			throw new WsException({
+				code: "channel_not_found_err",
+				message: "Channel not found",
+			});
+
+		// Verify user membership in the group owning the channel
+		const membership = await this.userGroupRepo.findOne({
+			where: { userId, groupId: (channel as any).groupId },
+		});
+		if (!membership)
+			throw new WsException({
+				code: "channel_search_forbidden_err",
+				message: "You are not a member of this channel's group",
+			});
+		const q = dto.q?.trim();
+		if (!q) return { items: [], total: 0 };
+		const take = dto?.take && dto.take > 0 ? Math.min(dto.take, 100) : 50;
+		const page = dto?.page && dto.page > 0 ? dto.page : 1;
+		const skip = (page - 1) * take;
+
+		// Use raw UNION for consistent pagination across both tables
+		const pattern = `%${q}%`;
+		// Use underlying repository query method (no direct DataSource injection)
+		const raw = await this.messageRepo.query(
+			`(
+				SELECT m.message_id AS id, 'message' AS type, m.created_at AS createdAt
+				FROM message m
+				WHERE m.channel_id = ? AND m.content LIKE ?
+			)
+			UNION ALL
+			(
+				SELECT tm.thread_message_id AS id, 'thread_message' AS type, tm.created_at AS createdAt
+				FROM thread_message tm
+				WHERE tm.channel_id = ? AND tm.content LIKE ?
+			)
+			ORDER BY createdAt DESC
+			LIMIT ? OFFSET ?`,
+			[channelId, pattern, channelId, pattern, take, skip],
+		);
+
+		if (!raw.length) {
+			return { items: [], total: 0 };
+		}
+
+		const messageIds: string[] = [];
+		const threadMessageIds: string[] = [];
+		for (const row of raw) {
+			if (row.type === "message") messageIds.push(row.id);
+			else if (row.type === "thread_message") threadMessageIds.push(row.id);
+		}
+
+		// Fetch entities preserving relations similar to fetch methods
+		const messages = messageIds.length
+			? await this.messageRepo.find({
+					where: { id: In(messageIds) },
+					relations: {
+						sender: true,
+						parentMessage: { sender: true },
+						thread: true,
+					},
+				})
+			: [];
+		const threadMessages = threadMessageIds.length
+			? await this.threadMessageRepo.find({
+					where: { id: In(threadMessageIds) },
+					relations: { sender: true, codeBlock: true },
+				})
+			: [];
+
+		const mapMessage = new Map(messages.map((m) => [m.id, m] as const));
+		const mapThread = new Map(threadMessages.map((t) => [t.id, t] as const));
+
+		// Reconstruct ordered unified results
+		const unified: SearchMessageResult[] = raw
+			.map((row: any) => {
+				if (row.type === "message") {
+					const ent = mapMessage.get(row.id);
+					return ent ? SearchMessageResult.fromMessage(ent) : null;
+				}
+				const ent = mapThread.get(row.id);
+				return ent ? SearchMessageResult.fromThreadMessage(ent) : null;
+			})
+			.filter((r): r is SearchMessageResult => !!r);
+
+		// Total count for pagination: sum of counts from both tables with same filter
+		const messageCount = await this.messageRepo.count({
+			where: { channelId, content: Like(pattern) },
+		});
+		const threadMessageCount = await this.threadMessageRepo.count({
+			where: { channelId, content: Like(pattern) },
+		});
+		return { items: unified, total: messageCount + threadMessageCount };
+	}
+
+	async searchDirectMessages(
+		dto: SearchDirectMessagesRequest,
+	): Promise<{ items: DirectMessageResponse[]; total: number }> {
+		const userId = this.cls.get("profile")?.id;
+		if (!userId)
+			throw new WsException({
+				code: "auth_required_err",
+				message: "Authenticate before searching direct messages",
+			});
+		if (!dto.targetUserId)
+			throw new WsException({
+				code: "target_user_required_err",
+				message: "Provide a targetUserId to search direct messages",
+			});
+		if (dto.targetUserId === userId)
+			throw new WsException({
+				code: "invalid_target_err",
+				message: "Cannot search direct messages with yourself",
+			});
+		const q = dto.q?.trim();
+		if (!q) return { items: [], total: 0 };
+		const take = dto?.take && dto.take > 0 ? Math.min(dto.take, 100) : 50;
+		const page = dto?.page && dto.page > 0 ? dto.page : 1;
+		const skip = (page - 1) * take;
+
+		const pattern = `%${q}%`;
+		const messages = await this.directMessageRepo.find({
+			where: [
+				{
+					fromUserId: userId,
+					toUserId: dto.targetUserId,
+					content: Like(pattern),
+				},
+				{
+					fromUserId: dto.targetUserId,
+					toUserId: userId,
+					content: Like(pattern),
+				},
+			],
+			relations: {
+				fromUser: true,
+				toUser: true,
+				codeBlock: true,
+				parentMessage: { fromUser: true },
+			},
+			order: { createdAt: "DESC" },
+			take,
+			skip,
+		});
+		const total = await this.directMessageRepo.count({
+			where: [
+				{
+					fromUserId: userId,
+					toUserId: dto.targetUserId,
+					content: Like(pattern),
+				},
+				{
+					fromUserId: dto.targetUserId,
+					toUserId: userId,
+					content: Like(pattern),
+				},
+			],
+		});
+		return { items: DirectMessageResponse.fromEntities(messages), total };
 	}
 
 	async editThreadMessage(client: Socket, dto: EditThreadMessageRequest) {
