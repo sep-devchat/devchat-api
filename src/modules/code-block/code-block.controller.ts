@@ -32,7 +32,7 @@ export class CodeBlockController {
 	@Get(":id")
 	@SwaggerApiResponse(CodeBlockResponse)
 	async findOne(@Param("id") id: string) {
-		const data = await this.codeBlockService.findOne(id);
+		const data = await this.codeBlockService.findOne(id, false);
 		return new ApiResponseDto(
 			CodeBlockResponse.fromEntity(data),
 			undefined,
