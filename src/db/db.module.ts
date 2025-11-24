@@ -25,6 +25,8 @@ import {
 	AiSessionRepository,
 	AiInteractionRepository,
 	CodeCollaborationRepository,
+	SupportedProgrammingLanguageRepository,
+	UserLanguageCollectionRepository,
 } from "./repositories";
 
 const repositories = [
@@ -50,6 +52,8 @@ const repositories = [
 	AiSessionRepository,
 	AiInteractionRepository,
 	CodeCollaborationRepository,
+	SupportedProgrammingLanguageRepository,
+	UserLanguageCollectionRepository,
 ];
 
 @Module({

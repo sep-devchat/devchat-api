@@ -1,4 +1,9 @@
-import { PasswordResetTokenRepository, UserRepository } from "@db/repositories";
+import {
+	PasswordResetTokenRepository,
+	SupportedProgrammingLanguageRepository,
+	UserLanguageCollectionRepository,
+	UserRepository,
+} from "@db/repositories";
 import { Injectable } from "@nestjs/common";
 import {
 	InvalidGoogleCredentialsError,
@@ -52,6 +57,8 @@ export class AuthService {
 		private readonly githubService: GitHubService,
 		private readonly prRepo: PasswordResetTokenRepository,
 		private readonly userRepo: UserRepository,
+		private readonly languageRepo: SupportedProgrammingLanguageRepository,
+		private readonly collectionRepo: UserLanguageCollectionRepository,
 	) {}
 
 	private signAccessToken(userId: string) {
@@ -174,6 +181,32 @@ export class AuthService {
 
 	getProfileCls() {
 		return this.cls.get("profile");
+	}
+
+	async getProfileWithLanguages() {
+		const profile = this.getProfileCls();
+		if (!profile || !profile.id) {
+			throw new Error("Profile context missing");
+		}
+		// Fetch language collection with joined language details
+		const collections = await this.collectionRepo.find({
+			where: { userId: profile.id },
+			relations: ["language"],
+			order: { orderIndex: "ASC" as const },
+		});
+		const languages = collections.map((c) => ({
+			id: c.id,
+			languageId: c.languageId,
+			proficiencyLevel: c.proficiencyLevel,
+			createdAt: c.createdAt,
+			updatedAt: c.updatedAt,
+			languageCode: c.language?.languageCode,
+			languageName: c.language?.languageName,
+			languageVersion: c.language?.languageVersion ?? null,
+			languageIcon: c.language?.languageIcon ?? null,
+			orderIndex: c.orderIndex,
+		}));
+		return { ...profile, languages } as any;
 	}
 
 	async loginBasic(dto: LoginRequest) {

@@ -21,3 +21,5 @@ export * from "./ai-session.entity";
 export * from "./ai-interaction.entity";
 export * from "./code-collaboration.entity";
 export * from "./thread-message.entity";
+export * from "./supported-programming-language.entity";
+export * from "./user-language-collection.entity";
