@@ -141,6 +141,25 @@ export class UserService implements OnModuleInit {
 		return user;
 	}
 
+	async setActive(id: string, isActive: boolean) {
+		const currentProfile = this.cls.get("profile");
+		const target = await this.userRepo.findOne({ where: { id } });
+		if (!target) throw new UserNotFoundError();
+		// Only admin can change other users' active status; user can change own (optional)
+		if (currentProfile?.id !== id && !currentProfile?.isAdmin) {
+			throw new ForbiddenException(
+				"Not allowed to modify other user active state",
+			);
+		}
+		// Prevent admin self-deactivation edge case (optional safeguard)
+		if (target.isAdmin && !isActive && currentProfile?.id === target.id) {
+			throw new ForbiddenException("Admin cannot deactivate own account");
+		}
+		target.isActive = isActive;
+		await this.userRepo.save(target);
+		return target;
+	}
+
 	async findByUniqueKey(uniqueKey: string, throwIfNotFound = true) {
 		const user = await this.userRepo.findOne({
 			where: [{ id: uniqueKey }, { email: uniqueKey }, { username: uniqueKey }],

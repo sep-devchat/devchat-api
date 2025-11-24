@@ -114,6 +114,23 @@ export class UserController {
 		);
 	}
 
+	@Put(":id/active")
+	@ApiBearerAuth()
+	@ApiOperation({ summary: "Set user active/inactive (admin or self)" })
+	@ApiParam({ name: "id", description: "User ID" })
+	@SwaggerApiResponse(UserResponse)
+	async setUserActive(
+		@Param("id") id: string,
+		@Body() body: { isActive: boolean },
+	) {
+		const updated = await this.userService.setActive(id, body.isActive);
+		return new ApiResponseDto(
+			UserResponse.fromEntity(updated),
+			null,
+			"User active state updated",
+		);
+	}
+
 	@Get("friend-requests/sent")
 	@ApiBearerAuth()
 	@ApiOperation({ summary: "Get friend requests sent by the user" })
