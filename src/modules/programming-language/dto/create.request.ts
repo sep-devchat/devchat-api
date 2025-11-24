@@ -41,4 +41,11 @@ export class CreateProgrammingLanguageRequest {
 	@IsOptional()
 	@IsString()
 	languageIcon?: string;
+
+	@ApiProperty({
+		description: "Indicates if the language supports code execution",
+		required: false,
+	})
+	@IsOptional()
+	isExecutable?: boolean;
 }

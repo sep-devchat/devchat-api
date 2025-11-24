@@ -130,7 +130,7 @@ export class AuthController {
 	@SwaggerApiResponse(Profile)
 	@ApiBearerAuth()
 	async getProfile() {
-		const data = await this.authService.getProfileWithLanguages();
+		const data = await this.authService.getProfileCls();
 		return new ApiResponseDto(data, null, "Get profile successful");
 	}
 

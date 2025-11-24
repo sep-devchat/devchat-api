@@ -62,6 +62,7 @@ export class ProgrammingLanguageService {
 			languageVersion: dto.languageVersion ?? null,
 			syntaxHighlighting: dto.syntaxHighlighting ?? null,
 			languageIcon: dto.languageIcon ?? null,
+			isExecutable: dto.isExecutable ?? false,
 			createdBy: this.getCurrentUserId(),
 			updatedBy: this.getCurrentUserId(),
 		});
@@ -93,6 +94,7 @@ export class ProgrammingLanguageService {
 			languageVersion: dto.languageVersion ?? entity.languageVersion,
 			languageIcon: dto.languageIcon ?? entity.languageIcon,
 			syntaxHighlighting: dto.syntaxHighlighting ?? entity.syntaxHighlighting,
+			isExecutable: dto.isExecutable ?? entity.isExecutable,
 			updatedBy: this.getCurrentUserId(),
 		});
 		return this.repo.save(entity);

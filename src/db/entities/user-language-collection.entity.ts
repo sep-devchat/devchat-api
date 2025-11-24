@@ -32,7 +32,10 @@ export class UserLanguageCollectionEntity {
 	languageId: string;
 
 	@JoinColumn({ name: ColumnName.UserLanguageCollection.languageId })
-	@ManyToOne(() => SupportedProgrammingLanguageEntity)
+	@ManyToOne(
+		() => SupportedProgrammingLanguageEntity,
+		(language) => language.userLanguageCollections,
+	)
 	language: SupportedProgrammingLanguageEntity;
 
 	@Column({

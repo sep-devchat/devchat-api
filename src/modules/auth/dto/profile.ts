@@ -1,4 +1,5 @@
 import { UserEntity } from "@db/entities";
+import { UserLanguageCollectionResponse } from "@modules/user-language-collection";
 import { ApiProperty } from "@nestjs/swagger";
 
 export class Profile {
@@ -41,6 +42,9 @@ export class Profile {
 	@ApiProperty()
 	isAdmin: boolean;
 
+	@ApiProperty({ type: [UserLanguageCollectionResponse], required: false })
+	userLanguages?: UserLanguageCollectionResponse[];
+
 	static fromEntity(entity: UserEntity): Profile {
 		return {
 			id: entity.id,
@@ -56,6 +60,11 @@ export class Profile {
 			lastLogin: entity.lastLogin ?? undefined,
 			timezone: entity.timezone ?? undefined,
 			isAdmin: entity.isAdmin,
+			userLanguages: entity.userLanguages
+				? entity.userLanguages.map((lang) =>
+						UserLanguageCollectionResponse.fromEntity(lang),
+					)
+				: undefined,
 		};
 	}
 }

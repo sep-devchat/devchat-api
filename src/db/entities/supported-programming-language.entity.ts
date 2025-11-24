@@ -58,6 +58,13 @@ export class SupportedProgrammingLanguageEntity {
 	})
 	codeExecutions: number;
 
+	@Column({
+		name: ColumnName.SupportedProgrammingLanguage.isExecutable,
+		type: "boolean",
+		default: false,
+	})
+	isExecutable: boolean;
+
 	@CreateDateColumn({ name: ColumnName.Audit.createdAt })
 	createdAt: Date;
 
@@ -72,4 +79,10 @@ export class SupportedProgrammingLanguageEntity {
 
 	@Column({ name: ColumnName.Audit.isActive, type: "boolean", default: true })
 	isActive: boolean;
+
+	@OneToMany(
+		() => UserLanguageCollectionEntity,
+		(userLanguageCollection) => userLanguageCollection.language,
+	)
+	userLanguageCollections: UserLanguageCollectionEntity[];
 }
