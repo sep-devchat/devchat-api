@@ -40,19 +40,21 @@ export class CodeBlockService {
 		return [entities, count];
 	}
 
-	async findOne(id: string) {
-		const userId = this.cls.get("profile").id;
+	async findOne(id: string, isOwned: boolean = true) {
+		const userId = this.cls.get("profile.id");
 
 		const existingCodeblock = await this.repo.findOne({
 			where: {
 				id,
-				userId,
 				deletedAt: null,
 			},
 			relations: ["user"],
 		});
 
-		if (!existingCodeblock) {
+		if (
+			!existingCodeblock ||
+			(isOwned && existingCodeblock.userId !== userId)
+		) {
 			throw new CodeBlockNotFound();
 		}
 
