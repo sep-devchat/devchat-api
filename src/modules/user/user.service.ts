@@ -24,7 +24,7 @@ import {
 import { UserNotFoundError } from "./errors";
 import { randomBytes } from "crypto";
 import { ClsService } from "nestjs-cls";
-import { In, FindOptionsWhere, ILike } from "typeorm";
+import { In, FindOptionsWhere, Like } from "typeorm";
 import { FriendRequestEntity } from "@db/entities/friend-request.entity";
 import { GroupInvitationEntity, UserFriendEntity } from "@db/entities";
 import { UserFriendQuery } from "@modules/user-friend/dto";
@@ -75,15 +75,47 @@ export class UserService implements OnModuleInit {
 			],
 		});
 
-		if (user) {
+		if (user && user.isActive) {
 			throw new UserExistedError();
 		}
 	}
 
 	async create(dto: CreateUserRequest, emailVerified = false) {
-		await this.validateBeforeCreate(dto);
+		const existingUser = await this.userRepo.findOne({
+			where: [
+				{
+					username: dto.username,
+				},
+				{
+					email: dto.email,
+				},
+			],
+		});
+
+		if (existingUser && existingUser.isActive) {
+			throw new UserExistedError();
+		}
 
 		const hashedPass = bcrypt.hashSync(dto.password, 10);
+
+		if (existingUser && !existingUser.isActive) {
+			existingUser.username = dto.username;
+			existingUser.email = dto.email;
+			existingUser.password = hashedPass;
+			existingUser.firstName = dto.firstName ?? null;
+			existingUser.lastName = dto.lastName ?? null;
+			existingUser.avatarUrl = dto.avatarUrl ?? null;
+			existingUser.timezone = dto.timezone ?? null;
+			existingUser.isActive = true;
+			existingUser.emailVerified = emailVerified;
+			existingUser.emailVerificationToken = emailToken;
+			existingUser.emailVerifiedAt = emailVerified ? new Date() : null;
+
+			await this.userRepo.save(existingUser);
+			await sendVerificationEmail(existingUser.email, emailToken);
+			return { identifiers: [{ id: existingUser.id }] };
+		}
+
 		const user = this.userRepo.create({
 			username: dto.username,
 			email: dto.email,
@@ -145,6 +177,35 @@ export class UserService implements OnModuleInit {
 	async getAll(query: UserQuery) {
 		const { page, limit } = query;
 		const [data, total] = await this.userRepo.findAndCount({
+			where: { isBot: false },
+			skip: (page - 1) * limit,
+			take: limit,
+			order: { createdAt: "DESC" },
+		});
+
+		const pagination = new PaginationDto(page, limit, total);
+
+		return {
+			data,
+			pagination,
+		};
+	}
+
+	async search(query: UserQuery) {
+		const { page, limit, search } = query;
+
+		const base = { isBot: false };
+		const where = search
+			? [
+					{ ...base, username: Like(`%${search}%`) },
+					{ ...base, email: Like(`%${search}%`) },
+					{ ...base, firstName: Like(`%${search}%`) },
+					{ ...base, lastName: Like(`%${search}%`) },
+				]
+			: base;
+
+		const [data, total] = await this.userRepo.findAndCount({
+			where,
 			skip: (page - 1) * limit,
 			take: limit,
 			order: { createdAt: "DESC" },
@@ -184,15 +245,15 @@ export class UserService implements OnModuleInit {
 			where = [
 				{
 					fromUserId: userId,
-					toUser: { firstName: ILike(searchPattern) },
+					toUser: { firstName: Like(searchPattern) },
 				},
 				{
 					fromUserId: userId,
-					toUser: { lastName: ILike(searchPattern) },
+					toUser: { lastName: Like(searchPattern) },
 				},
 				{
 					fromUserId: userId,
-					toUser: { username: ILike(searchPattern) },
+					toUser: { username: Like(searchPattern) },
 				},
 			];
 		} else {
@@ -218,15 +279,15 @@ export class UserService implements OnModuleInit {
 			where = [
 				{
 					toUserId: userId,
-					fromUser: { firstName: ILike(searchPattern) },
+					fromUser: { firstName: Like(searchPattern) },
 				},
 				{
 					toUserId: userId,
-					fromUser: { lastName: ILike(searchPattern) },
+					fromUser: { lastName: Like(searchPattern) },
 				},
 				{
 					toUserId: userId,
-					fromUser: { username: ILike(searchPattern) },
+					fromUser: { username: Like(searchPattern) },
 				},
 			];
 		} else {
@@ -277,27 +338,27 @@ export class UserService implements OnModuleInit {
 				const searchConditions = [
 					{
 						userId,
-						friend: { username: ILike(`%${search}%`) },
+						friend: { username: Like(`%${search}%`) },
 					},
 					{
 						userId,
-						friend: { firstName: ILike(`%${search}%`) },
+						friend: { firstName: Like(`%${search}%`) },
 					},
 					{
 						userId,
-						friend: { lastName: ILike(`%${search}%`) },
+						friend: { lastName: Like(`%${search}%`) },
 					},
 					{
 						friendId: userId,
-						user: { username: ILike(`%${search}%`) },
+						user: { username: Like(`%${search}%`) },
 					},
 					{
 						friendId: userId,
-						user: { firstName: ILike(`%${search}%`) },
+						user: { firstName: Like(`%${search}%`) },
 					},
 					{
 						friendId: userId,
-						user: { lastName: ILike(`%${search}%`) },
+						user: { lastName: Like(`%${search}%`) },
 					},
 				];
 
@@ -517,7 +578,7 @@ export class UserService implements OnModuleInit {
 			const searchPattern = `%${search}%`;
 			where = {
 				toUserId: userId,
-				group: { name: ILike(searchPattern) },
+				group: { name: Like(searchPattern) },
 			};
 		} else {
 			where = { toUserId: userId };
@@ -541,7 +602,7 @@ export class UserService implements OnModuleInit {
 			const searchPattern = `%${search}%`;
 			where = {
 				fromUserId: userId,
-				group: { name: ILike(searchPattern) },
+				group: { name: Like(searchPattern) },
 			};
 		} else {
 			where = { fromUserId: userId };
@@ -629,6 +690,53 @@ export class UserService implements OnModuleInit {
 		return {
 			mutualFriends,
 			count: mutualFriends.length,
+		};
+	}
+
+	async getMutualFriendsCount(targetUserId: string) {
+		const profile = this.cls.get("profile");
+		if (!profile || !profile.id) {
+			throw new UserNotFoundError();
+		}
+		const userId = profile.id;
+
+		const targetUser = await this.userRepo.findOne({
+			where: { id: targetUserId },
+		});
+		if (!targetUser) {
+			throw new UserNotFoundError();
+		}
+
+		const userFriends = await this.userFriendRepo.find({
+			where: [{ userId }, { friendId: userId }],
+			select: ["userId", "friendId"],
+		});
+
+		const targetFriends = await this.userFriendRepo.find({
+			where: [{ userId: targetUserId }, { friendId: targetUserId }],
+			select: ["userId", "friendId"],
+		});
+
+		const userFriendIds = new Set(
+			userFriends.map((friendship) =>
+				friendship.userId === userId ? friendship.friendId : friendship.userId,
+			),
+		);
+
+		const targetFriendIds = new Set(
+			targetFriends.map((friendship) =>
+				friendship.userId === targetUserId
+					? friendship.friendId
+					: friendship.userId,
+			),
+		);
+
+		const mutualFriendIds = [...userFriendIds].filter((id) =>
+			targetFriendIds.has(id),
+		);
+
+		return {
+			count: mutualFriendIds.length,
 		};
 	}
 }

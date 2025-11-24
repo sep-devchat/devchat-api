@@ -22,7 +22,11 @@ import { FetchMessagesRequest } from "./dto/fetch-messages.request";
 import { EditMessageRequest } from "./dto/edit-message.request";
 import { FetchDirectMessagesRequest } from "./dto/fetch-direct-messages.request";
 import { SendDirectMessageRequest } from "./dto/send-direct-message.request";
-import { EditDirectMessageRequest } from "./dto/edit-direct-message.request";
+import {
+	SendThreadMessageRequest,
+	FetchThreadMessagesRequest,
+	EditThreadMessageRequest,
+} from "./dto";
 
 @WebSocketGateway({
 	cors: { origin: "*" },
@@ -103,27 +107,39 @@ export class MessageGateway implements OnGatewayInit {
 		);
 	}
 
-	@SubscribeMessage(SocketEvents.EDIT_DIRECT_MESSAGE)
-	async handleEditDirectMessage(
+	@SubscribeMessage(SocketEvents.SEND_THREAD_MESSAGE)
+	async handleSendThreadMessage(
 		@ConnectedSocket() client: Socket,
-		@MessageBody() payload: EditDirectMessageRequest,
+		@MessageBody() payload: SendThreadMessageRequest,
 	) {
-		return await this.messageService.editDirectMessage(
+		return await this.messageService.sendThreadMessage(
 			client,
 			payload,
 			client.nsp.server,
 		);
 	}
 
-	@SubscribeMessage(SocketEvents.DELETE_DIRECT_MESSAGE)
-	async handleDeleteDirectMessage(
+	@SubscribeMessage(SocketEvents.FETCH_THREAD_MESSAGES)
+	async handleFetchThreadMessages(
+		@ConnectedSocket() client: Socket,
+		@MessageBody() payload: FetchThreadMessagesRequest,
+	) {
+		return await this.messageService.fetchThreadMessages(client, payload);
+	}
+
+	@SubscribeMessage(SocketEvents.EDIT_THREAD_MESSAGE)
+	async handleEditThreadMessage(
+		@ConnectedSocket() client: Socket,
+		@MessageBody() payload: EditThreadMessageRequest,
+	) {
+		return await this.messageService.editThreadMessage(client, payload);
+	}
+
+	@SubscribeMessage(SocketEvents.DELETE_THREAD_MESSAGE)
+	async handleDeleteThreadMessage(
 		@ConnectedSocket() client: Socket,
 		@MessageBody() id: string,
 	) {
-		return await this.messageService.deleteDirectMessage(
-			client,
-			id,
-			client.nsp.server,
-		);
+		return await this.messageService.deleteThreadMessage(client, id);
 	}
 }

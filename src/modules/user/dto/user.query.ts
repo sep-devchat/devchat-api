@@ -1,6 +1,13 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsNumber, Max, Min } from "class-validator";
+import {
+	IsNumber,
+	Max,
+	Min,
+	IsOptional,
+	IsString,
+	MaxLength,
+} from "class-validator";
 
 export class UserQuery {
 	@ApiProperty({ required: true })
@@ -15,4 +22,13 @@ export class UserQuery {
 	@Max(100)
 	@Type(() => Number)
 	limit: number;
+
+	@ApiProperty({
+		required: false,
+		description: "Search term for username, email, first or last name",
+	})
+	@IsOptional()
+	@IsString()
+	@MaxLength(100)
+	search?: string;
 }

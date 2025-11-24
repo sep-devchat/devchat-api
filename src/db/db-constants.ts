@@ -46,6 +46,7 @@ export const DbConstants = {
 			timezone: "timezone",
 			adminRoleId: "admin_role_id",
 			isAdmin: "is_admin",
+			isBot: "is_bot",
 		},
 		Message: {
 			id: "message_id",
@@ -235,6 +236,7 @@ export const DbConstants = {
 			id: "thread_message_id",
 			content: "content",
 			senderId: "sender_id",
+			parentMessageId: "parent_message_id",
 		},
 		SupportedProgrammingLanguage: {
 			id: "supported_programming_language_id",

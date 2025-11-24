@@ -1,16 +1,18 @@
 import { DirectMessageEntity } from "@db/entities";
 import { Profile } from "@modules/auth/dto";
+import { MessageResponse } from "./message.response";
+import { OmitType } from "@nestjs/swagger";
 
-export class DirectMessageResponse {
-	id: string;
+export class DirectMessageResponse extends OmitType(MessageResponse, [
+	"channel",
+	"channelId",
+	"thread",
+	"parentMessage",
+	"sender",
+]) {
 	from: Profile | null;
 	to: Profile | null;
-	content: string;
-	parentMessageId: string | null;
 	parentMessage: DirectMessageResponse | null;
-	codeBlockId?: string;
-	createdAt: Date;
-	updatedAt: Date;
 
 	static fromEntity(entity: DirectMessageEntity): DirectMessageResponse {
 		return {

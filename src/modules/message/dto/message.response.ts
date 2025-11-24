@@ -11,7 +11,6 @@ export class MessageResponse {
 	content: string;
 	createdAt: Date;
 	updatedAt: Date;
-	deletedAt: Date | null;
 	sender: Profile;
 	thread?: ThreadResponse;
 	channel?: ChannelResponse;
@@ -28,7 +27,6 @@ export class MessageResponse {
 			content: entity.content,
 			createdAt: entity.createdAt,
 			updatedAt: entity.updatedAt,
-			deletedAt: entity.deletedAt,
 			sender: entity.sender ? Profile.fromEntity(entity.sender) : undefined,
 			channel: entity.channel && ChannelResponse.fromEntity(entity.channel),
 			thread: entity.thread && ThreadResponse.fromEntity(entity.thread),

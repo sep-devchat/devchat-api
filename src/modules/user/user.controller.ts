@@ -17,7 +17,12 @@ import {
 	SwaggerApiResponse,
 } from "@utils";
 import { CreateUserRequest } from "./dto/create-user.request";
-import { ApiBearerAuth, ApiOperation, ApiParam } from "@nestjs/swagger";
+import {
+	ApiBearerAuth,
+	ApiOperation,
+	ApiParam,
+	ApiQuery,
+} from "@nestjs/swagger";
 import {
 	UpdateUserRequest,
 	UserQuery,
@@ -83,13 +88,29 @@ export class UserController {
 	@Get()
 	@ApiBearerAuth()
 	@ApiOperation({ summary: "Get all users" })
+	@ApiQuery({
+		name: "search",
+		required: false,
+		description: "Search term for username, email, first or last name",
+	})
 	@SwaggerApiResponse(UserResponse, { isArray: true, withPagination: true })
 	async getUsers(@Query() query: UserQuery) {
-		const response = await this.userService.getAll(query);
+		const trimmedSearch = query.search?.trim();
+		let response;
+		if (trimmedSearch) {
+			response = await this.userService.search({
+				...query,
+				search: trimmedSearch,
+			});
+		} else {
+			response = await this.userService.getAll(query);
+		}
 		return new ApiResponseDto<UserResponse[]>(
 			UserResponse.fromEntities(response.data),
 			response.pagination,
-			"Users retrieved successfully",
+			trimmedSearch
+				? "Users searched successfully"
+				: "Users retrieved successfully",
 		);
 	}
 

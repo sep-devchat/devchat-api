@@ -5,10 +5,6 @@ import { IsArray, IsOptional, IsString, ValidateNested } from "class-validator";
 export class SendMessageRequest {
 	@IsString()
 	@IsOptional()
-	threadId?: string;
-
-	@IsString()
-	@IsOptional()
 	parentMessageId?: string;
 
 	@IsString()

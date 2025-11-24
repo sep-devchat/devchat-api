@@ -76,6 +76,9 @@ export class UserEntity {
 	@Column({ name: ColumnName.User.isAdmin, type: "boolean", default: false })
 	isAdmin: boolean;
 
+	@Column({ name: ColumnName.User.isBot, type: "boolean", default: false })
+	isBot: boolean;
+
 	@OneToMany(() => UserGroupEntity, (userGroup) => userGroup.user)
 	userGroups: UserGroupEntity[];
 }

@@ -25,6 +25,7 @@ import {
 	AiSessionRepository,
 	AiInteractionRepository,
 	CodeCollaborationRepository,
+	ThreadMessageRepository,
 	SupportedProgrammingLanguageRepository,
 	UserLanguageCollectionRepository,
 } from "./repositories";
@@ -52,6 +53,7 @@ const repositories = [
 	AiSessionRepository,
 	AiInteractionRepository,
 	CodeCollaborationRepository,
+	ThreadMessageRepository,
 	SupportedProgrammingLanguageRepository,
 	UserLanguageCollectionRepository,
 ];
