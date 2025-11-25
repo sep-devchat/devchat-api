@@ -84,38 +84,12 @@ export class AuthService {
 	}
 
 	async login(dto: LoginRequest) {
-		let user: UserEntity;
-		switch (dto.method) {
-			case LoginMethodEnum.BASIC:
-				user = await this.loginBasic(dto);
-				break;
-			case LoginMethodEnum.GOOGLE:
-				user = await this.loginGoogle(dto);
-				break;
-			case LoginMethodEnum.GITHUB:
-				user = await this.loginGitHub(dto);
-				break;
-			default:
-				throw new LoginMethodNotSupportedError();
-		}
+		const user = await this.authenticateUser(dto);
 		return this.issueTokenPair(user.id);
 	}
 
 	async loginPkce(dto: LoginPkceRequest): Promise<LoginPkceResponse> {
-		let user: UserEntity;
-		switch (dto.method) {
-			case LoginMethodEnum.BASIC:
-				user = await this.loginBasic(dto);
-				break;
-			case LoginMethodEnum.GOOGLE:
-				user = await this.loginGoogle(dto);
-				break;
-			case LoginMethodEnum.GITHUB:
-				user = await this.loginGitHub(dto);
-				break;
-			default:
-				throw new LoginMethodNotSupportedError();
-		}
+		const user = await this.authenticateUser(dto);
 
 		// support plain code_challenge_method only
 		const authCode = jwt.sign(
@@ -180,6 +154,25 @@ export class AuthService {
 
 	getProfileCls(): Profile {
 		return this.cls.get("profile");
+	}
+
+	private async authenticateUser(dto: LoginRequest): Promise<UserEntity> {
+		let user: UserEntity;
+		switch (dto.method) {
+			case LoginMethodEnum.BASIC:
+				user = await this.loginBasic(dto);
+				break;
+			case LoginMethodEnum.GOOGLE:
+				user = await this.loginGoogle(dto);
+				break;
+			case LoginMethodEnum.GITHUB:
+				user = await this.loginGitHub(dto);
+				break;
+			default:
+				throw new LoginMethodNotSupportedError();
+		}
+		await this.userService.markUserLoggedIn(user.id);
+		return user;
 	}
 
 	async loginBasic(dto: LoginRequest) {

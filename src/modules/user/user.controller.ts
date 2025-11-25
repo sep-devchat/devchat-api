@@ -28,6 +28,12 @@ import {
 	UserQuery,
 	FriendRequestSearchQuery,
 	GroupInvitationSearchQuery,
+	UserAnalyticsOverviewQuery,
+	UserAnalyticsOverviewResponse,
+	UserAnalyticsTrendQuery,
+	UserAnalyticsTrendResponse,
+	UserLoginStatsQuery,
+	UserLoginStatsResponse,
 } from "./dto";
 import { UserResponse } from "./dto/user.response";
 import { TaskResponse } from "@modules/task/dto";
@@ -111,6 +117,45 @@ export class UserController {
 			trimmedSearch
 				? "Users searched successfully"
 				: "Users retrieved successfully",
+		);
+	}
+
+	@Get("analytics/overview")
+	@ApiBearerAuth()
+	@ApiOperation({ summary: "Get aggregated user overview stats" })
+	@SwaggerApiResponse(UserAnalyticsOverviewResponse)
+	async getUserOverview(@Query() query: UserAnalyticsOverviewQuery) {
+		const response = await this.userService.getUserOverviewStats(query);
+		return new ApiResponseDto(
+			response,
+			null,
+			"User overview stats retrieved successfully",
+		);
+	}
+
+	@Get("analytics/trend")
+	@ApiBearerAuth()
+	@ApiOperation({ summary: "Get registration and activity trend" })
+	@SwaggerApiResponse(UserAnalyticsTrendResponse, { isArray: true })
+	async getUserTrend(@Query() query: UserAnalyticsTrendQuery) {
+		const response = await this.userService.getUserTrendStats(query);
+		return new ApiResponseDto(
+			response,
+			null,
+			"User trend stats retrieved successfully",
+		);
+	}
+
+	@Get("analytics/login-stats")
+	@ApiBearerAuth()
+	@ApiOperation({ summary: "Get user login statistics" })
+	@SwaggerApiResponse(UserLoginStatsResponse, { isArray: true })
+	async getUserLoginStats(@Query() query: UserLoginStatsQuery) {
+		const response = await this.userService.getUserLoginStats(query);
+		return new ApiResponseDto(
+			response,
+			null,
+			"User login stats retrieved successfully",
 		);
 	}
 

@@ -21,6 +21,12 @@ import {
 	UserQuery,
 	CreateUserRequest,
 	UserLanguageUpdateItem,
+	UserAnalyticsOverviewQuery,
+	UserAnalyticsOverviewResponse,
+	UserAnalyticsTrendQuery,
+	UserAnalyticsTrendResponse,
+	UserLoginStatsQuery,
+	UserLoginStatsResponse,
 } from "./dto";
 import {
 	DevChatCls,
@@ -32,7 +38,7 @@ import {
 import { UserNotFoundError } from "./errors";
 import { randomBytes } from "crypto";
 import { ClsService } from "nestjs-cls";
-import { In, FindOptionsWhere, Like } from "typeorm";
+import { Between, FindOptionsWhere, In, Like, MoreThanOrEqual } from "typeorm";
 import { FriendRequestEntity } from "@db/entities/friend-request.entity";
 import {
 	GroupInvitationEntity,
@@ -40,8 +46,25 @@ import {
 	UserEntity,
 } from "@db/entities";
 import { UserFriendQuery } from "@modules/user-friend/dto";
+import * as dayjs from "dayjs";
 
 const emailToken = randomBytes(32).toString("hex");
+const ANALYTICS_DEFAULT_TZ = "UTC";
+
+type AnalyticsGranularity = "daily" | "monthly";
+
+interface AnalyticsBucket {
+	label: string;
+	startUtc: Date;
+	endUtc: Date;
+	startZoned: dayjs.Dayjs;
+	endZoned: dayjs.Dayjs;
+}
+
+interface DateRange {
+	startUtc: Date;
+	endUtc: Date;
+}
 
 @Injectable()
 export class UserService implements OnModuleInit {
@@ -172,6 +195,10 @@ export class UserService implements OnModuleInit {
 		target.isActive = isActive;
 		await this.userRepo.save(target);
 		return target;
+	}
+
+	async markUserLoggedIn(userId: string, timestamp = new Date()) {
+		await this.userRepo.update(userId, { lastLogin: timestamp });
 	}
 
 	async findByUniqueKey(uniqueKey: string, throwIfNotFound = true) {
@@ -357,6 +384,171 @@ export class UserService implements OnModuleInit {
 		if (found.length !== uniqueIds.length) {
 			throw new BadRequestException("Invalid or inactive languageId supplied");
 		}
+	}
+
+	async getUserOverviewStats(
+		query: UserAnalyticsOverviewQuery,
+	): Promise<UserAnalyticsOverviewResponse> {
+		const timezone = this.resolveTimezone(query.timezone);
+		const now = dayjs().tz(timezone);
+		const todayRange = this.buildUtcRange(now.startOf("day"), now.endOf("day"));
+		const monthRange = this.buildUtcRange(
+			now.startOf("month"),
+			now.endOf("month"),
+		);
+		const activeSinceUtc = now
+			.subtract(30, "day")
+			.startOf("day")
+			.utc()
+			.toDate();
+
+		const [totalUsers, dailyRegistrations, monthlyRegistrations, activeUsers] =
+			await Promise.all([
+				this.userRepo.count({ where: { isBot: false } }),
+				this.userRepo.count({
+					where: {
+						isBot: false,
+						createdAt: Between(todayRange.startUtc, todayRange.endUtc),
+					},
+				}),
+				this.userRepo.count({
+					where: {
+						isBot: false,
+						createdAt: Between(monthRange.startUtc, monthRange.endUtc),
+					},
+				}),
+				this.userRepo.count({
+					where: {
+						isBot: false,
+						lastLogin: MoreThanOrEqual(activeSinceUtc),
+					},
+				}),
+			]);
+
+		return {
+			totalUsers,
+			dailyRegistrations,
+			monthlyRegistrations,
+			activeUsers,
+		};
+	}
+
+	async getUserTrendStats(
+		query: UserAnalyticsTrendQuery,
+	): Promise<UserAnalyticsTrendResponse[]> {
+		const timezone = this.resolveTimezone(query.timezone);
+		const startBoundary = this.parseBoundary(
+			query.start,
+			query.granularity,
+			timezone,
+			"start",
+		);
+		const endBoundary = this.parseBoundary(
+			query.end,
+			query.granularity,
+			timezone,
+			"end",
+		);
+
+		if (!startBoundary || !endBoundary) {
+			throw new BadRequestException("Invalid date range provided");
+		}
+
+		const [normalizedStart, normalizedEnd] = startBoundary.isAfter(endBoundary)
+			? [endBoundary, startBoundary]
+			: [startBoundary, endBoundary];
+
+		const buckets = this.buildBuckets(
+			query.granularity,
+			normalizedStart,
+			normalizedEnd,
+		);
+		const results: UserAnalyticsTrendResponse[] = [];
+
+		for (const bucket of buckets) {
+			const [registrations, logins] = await Promise.all([
+				this.userRepo.count({
+					where: {
+						isBot: false,
+						createdAt: Between(bucket.startUtc, bucket.endUtc),
+					},
+				}),
+				this.userRepo.count({
+					where: {
+						isBot: false,
+						lastLogin: Between(bucket.startUtc, bucket.endUtc),
+					},
+				}),
+			]);
+			const activeWindowStartUtc = bucket.endZoned
+				.clone()
+				.subtract(30, "day")
+				.startOf("day")
+				.utc()
+				.toDate();
+			const activeUsers = await this.userRepo.count({
+				where: {
+					isBot: false,
+					lastLogin: Between(activeWindowStartUtc, bucket.endUtc),
+				},
+			});
+
+			results.push({
+				label: bucket.label,
+				start: bucket.startZoned.toISOString(),
+				end: bucket.endZoned.toISOString(),
+				registrations,
+				activeUsers,
+				logins,
+			});
+		}
+
+		return results;
+	}
+
+	async getUserLoginStats(
+		query: UserLoginStatsQuery,
+	): Promise<UserLoginStatsResponse[]> {
+		const timezone = this.resolveTimezone(query.timezone);
+		const now = dayjs().tz(timezone);
+		const todayRange = this.buildUtcRange(now.startOf("day"), now.endOf("day"));
+		const yesterday = now.subtract(1, "day");
+		const yesterdayRange = this.buildUtcRange(
+			yesterday.startOf("day"),
+			yesterday.endOf("day"),
+		);
+		const sevenDayRange = this.buildUtcRange(
+			now.clone().subtract(6, "day").startOf("day"),
+			now.endOf("day"),
+		);
+
+		const [todayLogins, yesterdayLogins, rollingLogins] = await Promise.all([
+			this.countLogins(todayRange),
+			this.countLogins(yesterdayRange),
+			this.countLogins(sevenDayRange),
+		]);
+		const [todayPeak, yesterdayPeak] = await Promise.all([
+			this.resolvePeakHourLabel(todayRange, timezone),
+			this.resolvePeakHourLabel(yesterdayRange, timezone),
+		]);
+
+		return [
+			{
+				periodLabel: "Today",
+				successfulLogins: todayLogins,
+				peakHour: todayPeak,
+			},
+			{
+				periodLabel: "Yesterday",
+				successfulLogins: yesterdayLogins,
+				peakHour: yesterdayPeak,
+			},
+			{
+				periodLabel: "7-day Avg",
+				successfulLogins: Math.round(rollingLogins / 7),
+				peakHour: null,
+			},
+		];
 	}
 
 	async delete(id: string) {
@@ -871,5 +1063,124 @@ export class UserService implements OnModuleInit {
 		return {
 			count: mutualFriendIds.length,
 		};
+	}
+
+	private resolveTimezone(timezone?: string) {
+		if (timezone && this.isValidTimezoneName(timezone)) {
+			return timezone;
+		}
+		return ANALYTICS_DEFAULT_TZ;
+	}
+
+	private isValidTimezoneName(tz?: string) {
+		if (!tz) return false;
+		try {
+			new Intl.DateTimeFormat("en-US", { timeZone: tz });
+			return true;
+		} catch {
+			return false;
+		}
+	}
+
+	private parseBoundary(
+		value: string,
+		granularity: AnalyticsGranularity,
+		timezone: string,
+		boundary: "start" | "end",
+	): dayjs.Dayjs | null {
+		if (!value) return null;
+		const normalizedValue =
+			granularity === "monthly" && value.length === 7 ? `${value}-01` : value;
+		const parsed = dayjs.tz(normalizedValue, timezone);
+		if (!parsed.isValid()) {
+			return null;
+		}
+		const unit: dayjs.OpUnitType = granularity === "daily" ? "day" : "month";
+		return boundary === "start" ? parsed.startOf(unit) : parsed.endOf(unit);
+	}
+
+	private buildBuckets(
+		granularity: AnalyticsGranularity,
+		start: dayjs.Dayjs,
+		end: dayjs.Dayjs,
+	): AnalyticsBucket[] {
+		const unit: dayjs.OpUnitType = granularity === "daily" ? "day" : "month";
+		const bucketCount =
+			granularity === "daily"
+				? end.startOf("day").diff(start.startOf("day"), "day") + 1
+				: end.startOf("month").diff(start.startOf("month"), "month") + 1;
+		const maxBuckets = granularity === "daily" ? 180 : 48;
+		if (bucketCount > maxBuckets) {
+			throw new BadRequestException(
+				`Requested range is too large (${bucketCount} buckets). Please choose a smaller window.`,
+			);
+		}
+		const labelFormat =
+			granularity === "daily"
+				? bucketCount > 10
+					? "MMM D"
+					: "ddd"
+				: bucketCount > 6
+					? "MMM YYYY"
+					: "MMM";
+
+		const buckets: AnalyticsBucket[] = [];
+		let cursor = start.clone();
+		while (cursor.isBefore(end) || cursor.isSame(end, unit)) {
+			const bucketStart = cursor.clone();
+			const bucketEnd = bucketStart.clone().endOf(unit);
+			buckets.push({
+				label: bucketStart.format(labelFormat),
+				startUtc: bucketStart.utc().toDate(),
+				endUtc: bucketEnd.utc().toDate(),
+				startZoned: bucketStart,
+				endZoned: bucketEnd,
+			});
+			cursor = cursor.add(1, unit);
+		}
+		return buckets;
+	}
+
+	private buildUtcRange(start: dayjs.Dayjs, end: dayjs.Dayjs): DateRange {
+		return {
+			startUtc: start.utc().toDate(),
+			endUtc: end.utc().toDate(),
+		};
+	}
+
+	private countLogins(range: DateRange) {
+		return this.userRepo.count({
+			where: {
+				isBot: false,
+				lastLogin: Between(range.startUtc, range.endUtc),
+			},
+		});
+	}
+
+	private async resolvePeakHourLabel(range: DateRange, timezone: string) {
+		const entries = await this.userRepo.find({
+			where: {
+				isBot: false,
+				lastLogin: Between(range.startUtc, range.endUtc),
+			},
+			select: { id: true, lastLogin: true },
+		});
+		if (!entries.length) {
+			return null;
+		}
+		const bucketCounts = new Map<string, number>();
+		for (const entry of entries) {
+			if (!entry.lastLogin) continue;
+			const zoned = dayjs(entry.lastLogin).tz(timezone);
+			const hourStart = zoned.startOf("hour");
+			const label = `${hourStart.format("HH:mm")} - ${hourStart
+				.add(1, "hour")
+				.format("HH:mm")}`;
+			bucketCounts.set(label, (bucketCounts.get(label) ?? 0) + 1);
+		}
+		if (!bucketCounts.size) {
+			return null;
+		}
+		return [...bucketCounts.entries()].sort((a, b) => b[1] - a[1])[0][0];
 	}
 }
