@@ -28,6 +28,7 @@ import {
 	ThreadMessageRepository,
 	SupportedProgrammingLanguageRepository,
 	UserLanguageCollectionRepository,
+	ReportCategoryRepository,
 } from "./repositories";
 
 const repositories = [
@@ -56,6 +57,7 @@ const repositories = [
 	ThreadMessageRepository,
 	SupportedProgrammingLanguageRepository,
 	UserLanguageCollectionRepository,
+	ReportCategoryRepository,
 ];
 
 @Module({
