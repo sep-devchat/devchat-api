@@ -4,16 +4,24 @@ import {
 	TaskRepository,
 	FriendRequestRepository,
 	GroupInvitationRepository,
+	UserLanguageCollectionRepository,
+	SupportedProgrammingLanguageRepository,
 } from "@db/repositories";
 import {
 	ForbiddenException,
 	Injectable,
 	Logger,
 	OnModuleInit,
+	BadRequestException,
 } from "@nestjs/common";
 import { UserExistedError } from "./errors/user-existed.error";
 import * as bcrypt from "bcryptjs";
-import { UpdateUserRequest, UserQuery, CreateUserRequest } from "./dto";
+import {
+	UpdateUserRequest,
+	UserQuery,
+	CreateUserRequest,
+	UserLanguageUpdateItem,
+} from "./dto";
 import {
 	DevChatCls,
 	Env,
@@ -26,7 +34,11 @@ import { randomBytes } from "crypto";
 import { ClsService } from "nestjs-cls";
 import { In, FindOptionsWhere, Like } from "typeorm";
 import { FriendRequestEntity } from "@db/entities/friend-request.entity";
-import { GroupInvitationEntity, UserFriendEntity } from "@db/entities";
+import {
+	GroupInvitationEntity,
+	UserFriendEntity,
+	UserEntity,
+} from "@db/entities";
 import { UserFriendQuery } from "@modules/user-friend/dto";
 
 const emailToken = randomBytes(32).toString("hex");
@@ -42,6 +54,8 @@ export class UserService implements OnModuleInit {
 		private readonly userFriendRepo: UserFriendRepository,
 		private readonly friendRequestRepo: FriendRequestRepository,
 		private readonly groupInvitationRepo: GroupInvitationRepository,
+		private readonly userLanguageCollectionRepo: UserLanguageCollectionRepository,
+		private readonly supportedProgrammingLanguageRepo: SupportedProgrammingLanguageRepository,
 	) {}
 
 	async onModuleInit() {
@@ -223,7 +237,107 @@ export class UserService implements OnModuleInit {
 		const currentUser = this.cls.get("profile");
 		if (id != currentUser.id && !currentUser.isAdmin)
 			throw new ForbiddenException();
-		await this.userRepo.update(id, updateData);
+
+		const user = await this.userRepo.findOne({
+			where: { id },
+			relations: ["userLanguages"],
+		});
+		if (!user) throw new UserNotFoundError();
+
+		const { userLanguages, ...userFields } = updateData;
+		const sanitizedUserFields = Object.fromEntries(
+			Object.entries(userFields).filter(([, value]) => value !== undefined),
+		);
+		Object.assign(user, sanitizedUserFields);
+
+		if (userLanguages !== undefined) {
+			await this.applyUserLanguageUpdates(user, userLanguages, currentUser.id);
+		}
+
+		await this.userRepo.save(user);
+	}
+
+	private async applyUserLanguageUpdates(
+		user: UserEntity,
+		payload: UserLanguageUpdateItem[],
+		actorUserId: string,
+	) {
+		if (!payload.length) {
+			if ((user.userLanguages?.length ?? 0) > 0) {
+				await this.userLanguageCollectionRepo.delete({ userId: user.id });
+			}
+			user.userLanguages = [];
+			return;
+		}
+
+		const sorted = payload
+			.map((item, idx) => ({
+				languageId: item.languageId,
+				proficiencyLevel: item.proficiencyLevel,
+				requestedOrder: item.orderIndex ?? idx + 1,
+			}))
+			.sort((a, b) => a.requestedOrder - b.requestedOrder);
+
+		const normalized = sorted.map((item, idx) => ({
+			languageId: item.languageId,
+			proficiencyLevel: item.proficiencyLevel,
+			orderIndex: idx + 1,
+		}));
+
+		const seenLanguageIds = new Set<string>();
+		for (const item of normalized) {
+			if (seenLanguageIds.has(item.languageId)) {
+				throw new BadRequestException(
+					"Duplicate languageId entries found in userLanguages",
+				);
+			}
+			seenLanguageIds.add(item.languageId);
+		}
+
+		await this.validateSupportedLanguages([...seenLanguageIds]);
+
+		const existing = user.userLanguages ?? [];
+		const existingMap = new Map(
+			existing.map((entry) => [entry.languageId, entry]),
+		);
+
+		const updatedLanguages = normalized.map((item) => {
+			const current = existingMap.get(item.languageId);
+			if (current) {
+				current.proficiencyLevel = item.proficiencyLevel;
+				current.orderIndex = item.orderIndex;
+				current.updatedBy = actorUserId;
+				existingMap.delete(item.languageId);
+				return current;
+			}
+			return this.userLanguageCollectionRepo.create({
+				userId: user.id,
+				languageId: item.languageId,
+				proficiencyLevel: item.proficiencyLevel,
+				orderIndex: item.orderIndex,
+				createdBy: actorUserId,
+				updatedBy: actorUserId,
+			});
+		});
+
+		const toRemove = Array.from(existingMap.values());
+		if (toRemove.length) {
+			await this.userLanguageCollectionRepo.remove(toRemove);
+		}
+
+		user.userLanguages = updatedLanguages;
+	}
+
+	private async validateSupportedLanguages(languageIds: string[]) {
+		if (!languageIds.length) return;
+		const uniqueIds = Array.from(new Set(languageIds));
+		const found = await this.supportedProgrammingLanguageRepo.findBy({
+			id: In(uniqueIds),
+			isActive: true,
+		});
+		if (found.length !== uniqueIds.length) {
+			throw new BadRequestException("Invalid or inactive languageId supplied");
+		}
 	}
 
 	async delete(id: string) {

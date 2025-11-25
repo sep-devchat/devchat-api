@@ -1,4 +1,8 @@
-import { PasswordResetTokenRepository, UserRepository } from "@db/repositories";
+import {
+	PasswordResetTokenRepository,
+	UserLanguageCollectionRepository,
+	UserRepository,
+} from "@db/repositories";
 import { Injectable } from "@nestjs/common";
 import {
 	InvalidGoogleCredentialsError,
@@ -19,6 +23,7 @@ import {
 	LoginPkceRequest,
 	LoginPkceResponse,
 	PkceIssueTokenRequest,
+	Profile,
 } from "./dto";
 import {
 	DevChatCls,
@@ -52,6 +57,7 @@ export class AuthService {
 		private readonly githubService: GitHubService,
 		private readonly prRepo: PasswordResetTokenRepository,
 		private readonly userRepo: UserRepository,
+		private readonly collectionRepo: UserLanguageCollectionRepository,
 	) {}
 
 	private signAccessToken(userId: string) {
@@ -172,7 +178,7 @@ export class AuthService {
 		return this.issueTokenPair(userId);
 	}
 
-	getProfileCls() {
+	getProfileCls(): Profile {
 		return this.cls.get("profile");
 	}
 

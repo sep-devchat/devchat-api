@@ -9,6 +9,7 @@ import {
 	UpdateDateColumn,
 } from "typeorm";
 import { UserGroupEntity } from "./user-group.entity";
+import { UserLanguageCollectionEntity } from "./user-language-collection.entity";
 
 const { TableName, ColumnName, IndexName } = DbConstants;
 
@@ -81,4 +82,11 @@ export class UserEntity {
 
 	@OneToMany(() => UserGroupEntity, (userGroup) => userGroup.user)
 	userGroups: UserGroupEntity[];
+
+	@OneToMany(
+		() => UserLanguageCollectionEntity,
+		(userLanguageCollection) => userLanguageCollection.user,
+		{ cascade: true },
+	)
+	userLanguages: UserLanguageCollectionEntity[];
 }
