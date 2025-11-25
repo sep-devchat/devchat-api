@@ -24,6 +24,8 @@ export const DbConstants = {
 		AiInteraction: "ai_interaction",
 		CodeCollaboration: "code_collaboration",
 		ThreadMessage: "thread_message",
+		SupportedProgrammingLanguage: "supported_programming_language",
+		UserLanguageCollection: "user_language_collection",
 	},
 	ColumnName: {
 		User: {
@@ -235,6 +237,23 @@ export const DbConstants = {
 			content: "content",
 			senderId: "sender_id",
 			parentMessageId: "parent_message_id",
+		},
+		SupportedProgrammingLanguage: {
+			id: "supported_programming_language_id",
+			languageCode: "language_code",
+			languageName: "language_name",
+			languageIcon: "language_icon",
+			languageVersion: "language_version",
+			syntaxHighlighting: "syntax_highlighting",
+			codeExecutions: "code_executions",
+			isExecutable: "is_executable",
+		},
+		UserLanguageCollection: {
+			id: "user_language_collection_id",
+			userId: "user_id",
+			languageId: "language_id",
+			proficiencyLevel: "proficiency_level",
+			orderIndex: "order_index",
 		},
 	},
 	IndexName: {

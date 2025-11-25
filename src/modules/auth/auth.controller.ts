@@ -129,8 +129,8 @@ export class AuthController {
 	@Get("profile")
 	@SwaggerApiResponse(Profile)
 	@ApiBearerAuth()
-	getProfile() {
-		const data = this.authService.getProfileCls();
+	async getProfile() {
+		const data = await this.authService.getProfileCls();
 		return new ApiResponseDto(data, null, "Get profile successful");
 	}
 

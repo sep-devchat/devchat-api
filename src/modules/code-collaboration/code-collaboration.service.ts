@@ -19,7 +19,10 @@ export class CodeCollaborationService {
 	) {}
 
 	async createOne(dto: CreateCodeCollaborationRequest) {
-		const codeBlock = await this.codeBlockService.findOne(dto.codeBlockId);
+		const codeBlock = await this.codeBlockService.findOne(
+			dto.codeBlockId,
+			false,
+		);
 		await this.codeCollaborationRepo.insert({
 			codeBlockId: codeBlock.id,
 			content: dto.content,

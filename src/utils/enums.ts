@@ -116,3 +116,17 @@ export enum AIRequestTypeEnum {
 	EXPLAIN = "explain",
 	REFACTOR = "refactor",
 }
+
+/**
+ * Represents a user's self-assessed or system-assigned proficiency level
+ * for a supported programming language.
+ *
+ * Order roughly follows progression of skill from learning basics
+ * to deep expertise and leadership.
+ */
+export enum ProgrammingLanguageProficiencyLevel {
+	BEGINNER = "BEGINNER", // Just starting: syntax, simple programs
+	INTERMEDIATE = "INTERMEDIATE", // Comfortable with core concepts & tooling
+	ADVANCED = "ADVANCED", // Strong grasp incl. architecture & optimization
+	EXPERT = "EXPERT", // Deep expertise, mentors others, performance tuning
+}
