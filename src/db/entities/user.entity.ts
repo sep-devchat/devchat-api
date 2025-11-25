@@ -86,6 +86,7 @@ export class UserEntity {
 	@OneToMany(
 		() => UserLanguageCollectionEntity,
 		(userLanguageCollection) => userLanguageCollection.user,
+		{ cascade: true },
 	)
 	userLanguages: UserLanguageCollectionEntity[];
 }

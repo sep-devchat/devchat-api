@@ -9,13 +9,8 @@ import {
 } from "./dto";
 import { UserLanguageCollectionRepository } from "@db/repositories";
 import { UserLanguageCollectionEntity } from "@db/entities";
-import { DevChatCls, PaginationDto } from "@utils";
+import { DevChatCls } from "@utils";
 import { ClsService } from "nestjs-cls";
-
-interface ListResult<T> {
-	data: T[];
-	pagination: PaginationDto;
-}
 
 @Injectable()
 export class UserLanguageCollectionService {
@@ -31,9 +26,10 @@ export class UserLanguageCollectionService {
 	async createOne(
 		dto: CreateUserLanguageCollectionRequest,
 	): Promise<UserLanguageCollectionEntity> {
+		const currentUserId = this.getCurrentUserId();
 		// Prevent duplicate entries for same user & language
 		const existing = await this.repo.findOne({
-			where: { userId: dto.userId, languageId: dto.languageId },
+			where: { userId: currentUserId, languageId: dto.languageId },
 		});
 		if (existing) {
 			throw new BadRequestException(
@@ -42,18 +38,18 @@ export class UserLanguageCollectionService {
 		}
 
 		const lastEntry = await this.repo.findOne({
-			where: { userId: dto.userId },
+			where: { userId: currentUserId },
 			order: { orderIndex: "DESC" },
 		});
 
 		const nextOrderIndex = lastEntry ? lastEntry.orderIndex + 1 : 1;
 		const entity = this.repo.create({
-			userId: dto.userId,
+			userId: currentUserId,
 			languageId: dto.languageId,
 			proficiencyLevel: dto.proficiencyLevel,
 			orderIndex: nextOrderIndex,
-			createdBy: this.getCurrentUserId(),
-			updatedBy: this.getCurrentUserId(),
+			createdBy: currentUserId,
+			updatedBy: currentUserId,
 		});
 		return this.repo.save(entity);
 	}
@@ -62,12 +58,13 @@ export class UserLanguageCollectionService {
 		id: string,
 		dto: UpdateUserLanguageCollectionRequest,
 	): Promise<UserLanguageCollectionEntity> {
-		const entity = await this.repo.findOne({ where: { id } });
+		const currentUserId = this.getCurrentUserId();
+		const entity = await this.repo.findOne({
+			where: { id, userId: currentUserId },
+		});
 		if (!entity)
 			throw new NotFoundException("User language collection entry not found");
 
-		const currentUserId = entity.userId;
-		const targetUserId = dto.userId ?? currentUserId;
 		const currentOrderIndex = entity.orderIndex;
 		const newOrderIndexProvided =
 			dto.orderIndex !== undefined && dto.orderIndex !== null;
@@ -76,7 +73,7 @@ export class UserLanguageCollectionService {
 		// Duplicate language validation (consider potential userId change)
 		if (dto.languageId && dto.languageId !== entity.languageId) {
 			const dup = await this.repo.findOne({
-				where: { userId: targetUserId, languageId: dto.languageId },
+				where: { userId: currentUserId, languageId: dto.languageId },
 			});
 			if (dup)
 				throw new BadRequestException(
@@ -85,22 +82,16 @@ export class UserLanguageCollectionService {
 		}
 
 		// Apply basic field updates first (except orderIndex which we may recompute)
-		entity.userId = targetUserId;
 		entity.languageId = dto.languageId ?? entity.languageId;
 		entity.proficiencyLevel = dto.proficiencyLevel ?? entity.proficiencyLevel;
-		entity.updatedBy = this.getCurrentUserId();
+		entity.updatedBy = currentUserId;
 
-		// Reordering logic if userId changed OR orderIndex changed
-		if (
-			targetUserId !== currentUserId ||
-			(newOrderIndexProvided && requestedOrderIndex !== currentOrderIndex)
-		) {
-			// Fetch all other items for target user (exclude this entity if still present)
+		// Reordering logic only when requested order changes
+		if (newOrderIndexProvided && requestedOrderIndex !== currentOrderIndex) {
 			let siblings = await this.repo.find({
-				where: { userId: targetUserId },
+				where: { userId: currentUserId },
 				order: { orderIndex: "ASC" },
 			});
-			// Remove current entity if it's in siblings set (moving within same user)
 			siblings = siblings.filter((s) => s.id !== entity.id);
 
 			// Determine insertion index
@@ -108,11 +99,6 @@ export class UserLanguageCollectionService {
 			let newIndex = requestedOrderIndex;
 			if (newIndex < 1) newIndex = 1;
 			if (newIndex > maxIndex) newIndex = maxIndex;
-
-			// If userId changed and no explicit orderIndex provided, append at end
-			if (targetUserId !== currentUserId && !newOrderIndexProvided) {
-				newIndex = maxIndex; // append
-			}
 
 			// Insert entity at new position
 			const before = siblings.slice(0, newIndex - 1);
@@ -122,22 +108,22 @@ export class UserLanguageCollectionService {
 			// Reassign sequential orderIndex starting at 1
 			reordered.forEach((item, idx) => {
 				item.orderIndex = idx + 1;
-				item.updatedBy = this.getCurrentUserId();
+				item.updatedBy = currentUserId;
 			});
 
 			await this.repo.save(reordered);
-		} else {
-			// No reorder; preserve existing order index
-			entity.orderIndex = currentOrderIndex;
-			await this.repo.save(entity);
+			return entity;
 		}
 
+		entity.orderIndex = currentOrderIndex;
+		await this.repo.save(entity);
 		return entity;
 	}
 
 	async deleteOne(id: string): Promise<void> {
+		const currentUserId = this.getCurrentUserId();
 		const entity = await this.repo.findOne({
-			where: { id, createdBy: this.getCurrentUserId() },
+			where: { id, userId: currentUserId },
 		});
 		if (!entity)
 			throw new NotFoundException("User language collection entry not found");
