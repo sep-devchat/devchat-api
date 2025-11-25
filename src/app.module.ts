@@ -30,6 +30,10 @@ import { AiModule } from "@modules/ai/ai.module";
 import { CodeCollaborationModule } from "@modules/code-collaboration";
 import { UserScheduler } from "./schedulers";
 import { ScheduleModule } from "@nestjs/schedule";
+import { ProgrammingLanguageModule } from "@modules/programming-language";
+import { UserLanguageCollectionModule } from "@modules/user-language-collection";
+import { ReportCategoryModule } from "@modules/report-category";
+import { ReportModule } from "@modules/report";
 
 @Module({
 	imports: [
@@ -69,6 +73,10 @@ import { ScheduleModule } from "@nestjs/schedule";
 		AiModule,
 		MessageModule,
 		CodeCollaborationModule,
+		ProgrammingLanguageModule,
+		UserLanguageCollectionModule,
+		ReportCategoryModule,
+		ReportModule,
 	],
 	providers: [
 		{

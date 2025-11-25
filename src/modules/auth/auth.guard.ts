@@ -8,6 +8,7 @@ import { Profile } from "./dto";
 import { Reflector } from "@nestjs/core";
 import { SKIP_AUTH_KEY } from "../../utils/skip-auth.decorator";
 import { UserService } from "@modules/user";
+import { UserRepository } from "@db/repositories";
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -16,6 +17,7 @@ export class AuthGuard implements CanActivate {
 		private readonly userService: UserService,
 		private readonly cls: ClsService<DevChatCls>,
 		private readonly reflector: Reflector,
+		private readonly userRepo: UserRepository,
 	) {}
 
 	async canActivate(context: ExecutionContext) {
@@ -32,7 +34,10 @@ export class AuthGuard implements CanActivate {
 		if (!token) throw new InvalidTokenError();
 
 		const decoded = this.authService.verifyAccessToken(token);
-		const user = await this.userService.findById(decoded.sub);
+		const user = await this.userRepo.findOne({
+			where: { id: decoded.sub },
+			relations: ["userLanguages", "userLanguages.language"],
+		});
 
 		const adminRoute =
 			this.reflector.get(ADMIN_ROLE_KEY, context.getClass()) ||
