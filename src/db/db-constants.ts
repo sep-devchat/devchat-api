@@ -27,6 +27,8 @@ export const DbConstants = {
 		SupportedProgrammingLanguage: "supported_programming_language",
 		UserLanguageCollection: "user_language_collection",
 		ReportCategory: "report_category",
+		Report: "report",
+		ReportReportCategory: "report_report_category",
 	},
 	ColumnName: {
 		User: {
@@ -261,6 +263,14 @@ export const DbConstants = {
 			name: "name",
 			description: "description",
 			isRemoved: "is_removed",
+		},
+		Report: {
+			id: "report_id",
+			content: "content",
+			messageType: "message_type",
+		},
+		ReportReportCategory: {
+			id: "report_report_category_id",
 		},
 	},
 	IndexName: {

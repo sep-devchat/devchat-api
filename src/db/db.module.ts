@@ -29,6 +29,8 @@ import {
 	SupportedProgrammingLanguageRepository,
 	UserLanguageCollectionRepository,
 	ReportCategoryRepository,
+	ReportRepository,
+	ReportReportCategoryRepository,
 } from "./repositories";
 
 const repositories = [
@@ -58,6 +60,8 @@ const repositories = [
 	SupportedProgrammingLanguageRepository,
 	UserLanguageCollectionRepository,
 	ReportCategoryRepository,
+	ReportRepository,
+	ReportReportCategoryRepository,
 ];
 
 @Module({

@@ -130,3 +130,9 @@ export enum ProgrammingLanguageProficiencyLevel {
 	ADVANCED = "ADVANCED", // Strong grasp incl. architecture & optimization
 	EXPERT = "EXPERT", // Deep expertise, mentors others, performance tuning
 }
+
+export enum MessageTypeEnum {
+	DIRECT_MESSAGE = "DIRECT_MESSAGE",
+	CHANNEL_MESSAGE = "CHANNEL_MESSAGE",
+	THREAD_MESSAGE = "THREAD_MESSAGE",
+}
