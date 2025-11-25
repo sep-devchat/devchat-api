@@ -18,7 +18,7 @@ export class ReportCategoryResponse {
 	isRemoved: boolean;
 
 	static fromEntity(entity: ReportCategoryEntity): ReportCategoryResponse {
-		return Builder<ReportCategoryResponse>()
+		return Builder(ReportCategoryResponse)
 			.id(entity.id)
 			.name(entity.name)
 			.description(entity.description)

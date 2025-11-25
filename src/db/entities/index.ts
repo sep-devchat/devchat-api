@@ -24,3 +24,5 @@ export * from "./thread-message.entity";
 export * from "./supported-programming-language.entity";
 export * from "./user-language-collection.entity";
 export * from "./report-category.entity";
+export * from "./report.entity";
+export * from "./report-report-category.entity";
