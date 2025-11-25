@@ -46,6 +46,12 @@ export class UserResponse {
 
 	@ApiProperty({
 		example: false,
+		description: "Is user an admin",
+	})
+	isAdmin: boolean;
+
+	@ApiProperty({
+		example: false,
 		description: "Is email verified",
 	})
 	emailVerified: boolean;
@@ -83,6 +89,7 @@ export class UserResponse {
 			lastName: entity.lastName,
 			avatarUrl: entity.avatarUrl,
 			isActive: entity.isActive,
+			isAdmin: entity.isAdmin,
 			emailVerified: entity.emailVerified,
 			createdAt: entity.createdAt,
 			updatedAt: entity.updatedAt,

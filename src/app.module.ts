@@ -32,6 +32,7 @@ import { UserScheduler } from "./schedulers";
 import { ScheduleModule } from "@nestjs/schedule";
 import { ProgrammingLanguageModule } from "@modules/programming-language";
 import { UserLanguageCollectionModule } from "@modules/user-language-collection";
+import { ReportCategoryModule } from "@modules/report-category";
 
 @Module({
 	imports: [
@@ -73,6 +74,7 @@ import { UserLanguageCollectionModule } from "@modules/user-language-collection"
 		CodeCollaborationModule,
 		ProgrammingLanguageModule,
 		UserLanguageCollectionModule,
+		ReportCategoryModule,
 	],
 	providers: [
 		{

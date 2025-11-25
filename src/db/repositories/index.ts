@@ -24,3 +24,4 @@ export * from "./code-collaboration.repository";
 export * from "./thread-message.repository";
 export * from "./supported-programming-language.repository";
 export * from "./user-language-collection.repository";
+export * from "./report-category.repository";

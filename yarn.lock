@@ -2233,6 +2233,11 @@ buildcheck@~0.0.6:
   resolved "https://registry.yarnpkg.com/buildcheck/-/buildcheck-0.0.6.tgz#89aa6e417cfd1e2196e3f8fe915eb709d2fe4238"
   integrity sha512-8f9ZJCUXyT1M35Jx7MkBgmBMo3oHTTBIPLiY9xyL0pl3T5RwcPEY8cUHr5LBNfu/fk6c2T4DJZuVM/8ZZT2D2A==
 
+builder-pattern@^2.2.0:
+  version "2.2.0"
+  resolved "https://registry.yarnpkg.com/builder-pattern/-/builder-pattern-2.2.0.tgz#f1e56f889282486fb5b3852947e91cd09cfe7b79"
+  integrity sha512-cES3qdeBzA4QyJi7rV/l/kAhIFX6AKo3vK66ZPXLNpjcQWCS8sjLKscly8imlfW2YPTo/hquMRMnaWpZ80Kj+g==
+
 busboy@^1.0.0, busboy@^1.6.0:
   version "1.6.0"
   resolved "https://registry.yarnpkg.com/busboy/-/busboy-1.6.0.tgz#966ea36a9502e43cdb9146962523b92f531f6893"

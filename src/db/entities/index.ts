@@ -23,3 +23,4 @@ export * from "./code-collaboration.entity";
 export * from "./thread-message.entity";
 export * from "./supported-programming-language.entity";
 export * from "./user-language-collection.entity";
+export * from "./report-category.entity";
