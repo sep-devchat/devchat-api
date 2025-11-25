@@ -6,14 +6,11 @@ import {
 	Post,
 	Get,
 	Delete,
-	UseGuards,
 } from "@nestjs/common";
 import { ReportService } from "./report.service";
 import { CreateReportRequest, ReportQuery, ReportResponse } from "./dto";
 import { AdminRole, ApiResponseDto, PaginationDto } from "@utils";
-import { ApiBearerAuth, ApiQuery } from "@nestjs/swagger";
-import { GroupGuard } from "@modules/group";
-import { ChannelGuard } from "@modules/channel";
+import { ApiBearerAuth } from "@nestjs/swagger";
 
 @Controller("report")
 @ApiBearerAuth()
@@ -21,14 +18,7 @@ export class ReportController {
 	constructor(private readonly reportService: ReportService) {}
 
 	@Post()
-	@UseGuards(GroupGuard, ChannelGuard)
-	@ApiQuery({ name: "groupId", description: "Group ID", required: true })
-	@ApiQuery({ name: "channelId", description: "Channel ID", required: true })
-	async createOne(
-		@Query("groupId") groupId: string,
-		@Query("channelId") channelId: string,
-		@Body() dto: CreateReportRequest,
-	) {
+	async createOne(@Body() dto: CreateReportRequest) {
 		await this.reportService.createOne(dto);
 		return new ApiResponseDto(null, null, "Created successfully");
 	}

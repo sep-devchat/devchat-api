@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common";
-import { CreateReportRequest, UpdateReportRequest, ReportQuery } from "./dto";
+import { CreateReportRequest, ReportQuery } from "./dto";
 import {
-	MessageRepository,
 	ReportReportCategoryRepository,
 	ReportRepository,
 } from "@db/repositories";
@@ -16,7 +15,6 @@ export class ReportService {
 		private readonly cls: ClsService<DevChatCls>,
 		private readonly reportRepo: ReportRepository,
 		private readonly reportReportCategoryRepo: ReportReportCategoryRepository,
-		private readonly messageRepo: MessageRepository,
 	) {}
 
 	async createOne(dto: CreateReportRequest) {
@@ -26,6 +24,7 @@ export class ReportService {
 			content: dto.content,
 			createdById: currentUserId,
 			messageId: dto.messageId,
+			messageType: dto.messageType,
 			reportReportCategories: dto.reportCategoryIds.map((id) =>
 				this.reportReportCategoryRepo.create({
 					reportCategoryId: id,

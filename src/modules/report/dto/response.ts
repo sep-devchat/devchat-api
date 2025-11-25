@@ -16,6 +16,9 @@ export class ReportResponse {
 	@ApiProperty({ required: false })
 	content: string | null;
 
+	@ApiProperty()
+	messageType: string;
+
 	@ApiProperty({ type: MessageResponse })
 	message: MessageResponse;
 
