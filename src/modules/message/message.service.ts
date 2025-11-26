@@ -355,6 +355,12 @@ export class MessageService {
 	) {
 		const message = await this.messageRepo.findOne({
 			where: { id: dto.messageId },
+			relations: {
+				sender: true,
+				channel: true,
+				parentMessage: { sender: true },
+				thread: true,
+			},
 		});
 		if (!message) throw new EditMessageFailedError("Message not found");
 		if (message.senderId !== client.data.user.id)
@@ -362,7 +368,11 @@ export class MessageService {
 		message.content = dto.content;
 		message.updatedAt = new Date();
 		await this.messageRepo.save(message);
-		server.to(client.data.room).emit(SocketEvents.EDIT_MESSAGE, message.id);
+		const response = MessageResponse.fromEntity(message);
+		server.to(client.data.room).emit(SocketEvents.EDIT_MESSAGE, {
+			messageId: message.id,
+			...response,
+		});
 	}
 
 	async deleteMessage(client: Socket, id: string, server: Socket["server"]) {
