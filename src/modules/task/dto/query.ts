@@ -85,6 +85,24 @@ export class TaskQuery {
 	dueDateTo: Date | null;
 
 	@ApiPropertyOptional({
+		example: "2025-01-01T00:00:00.000Z",
+		description: "Start date for start date range filter",
+	})
+	@IsOptional()
+	@Transform(({ value }) => (value ? new Date(value) : null))
+	@IsDate()
+	startDateFrom: Date | null;
+
+	@ApiPropertyOptional({
+		example: "2025-03-01T00:00:00.000Z",
+		description: "End date for start date range filter",
+	})
+	@IsOptional()
+	@Transform(({ value }) => (value ? new Date(value) : null))
+	@IsDate()
+	startDateTo: Date | null;
+
+	@ApiPropertyOptional({
 		example: false,
 		description: "Include tasks without assignee",
 	})

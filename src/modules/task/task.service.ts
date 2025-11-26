@@ -52,6 +52,7 @@ export class TaskService {
 			description: dto.description,
 			priority: dto.priority,
 			status: dto.status,
+			startDate: dto.startDate,
 			dueDate: dto.dueDate,
 			assigneeId: dto.assigneeId,
 			groupId,
@@ -80,6 +81,8 @@ export class TaskService {
 			overdue,
 			dueDateFrom,
 			dueDateTo,
+			startDateFrom,
+			startDateTo,
 			unassigned,
 		} = query;
 
@@ -117,25 +120,48 @@ export class TaskService {
 
 		// Filter by due date range
 		if (dueDateFrom || dueDateTo) {
-			let startDate: Date | undefined;
-			let endDate: Date | undefined;
+			let dueStart: Date | undefined;
+			let dueEnd: Date | undefined;
 
 			if (dueDateFrom) {
-				startDate = new Date(dueDateFrom);
-				startDate.setHours(0, 0, 0, 0);
+				dueStart = new Date(dueDateFrom);
+				dueStart.setHours(0, 0, 0, 0);
 			}
 
 			if (dueDateTo) {
-				endDate = new Date(dueDateTo);
-				endDate.setHours(23, 59, 59, 999);
+				dueEnd = new Date(dueDateTo);
+				dueEnd.setHours(23, 59, 59, 999);
 			}
 
-			if (startDate && endDate) {
-				where.dueDate = Between(startDate, endDate);
-			} else if (startDate) {
-				where.dueDate = MoreThanOrEqual(startDate);
-			} else if (endDate) {
-				where.dueDate = LessThanOrEqual(endDate);
+			if (dueStart && dueEnd) {
+				where.dueDate = Between(dueStart, dueEnd);
+			} else if (dueStart) {
+				where.dueDate = MoreThanOrEqual(dueStart);
+			} else if (dueEnd) {
+				where.dueDate = LessThanOrEqual(dueEnd);
+			}
+		}
+
+		if (startDateFrom || startDateTo) {
+			let startRange: Date | undefined;
+			let endRange: Date | undefined;
+
+			if (startDateFrom) {
+				startRange = new Date(startDateFrom);
+				startRange.setHours(0, 0, 0, 0);
+			}
+
+			if (startDateTo) {
+				endRange = new Date(startDateTo);
+				endRange.setHours(23, 59, 59, 999);
+			}
+
+			if (startRange && endRange) {
+				where.startDate = Between(startRange, endRange);
+			} else if (startRange) {
+				where.startDate = MoreThanOrEqual(startRange);
+			} else if (endRange) {
+				where.startDate = LessThanOrEqual(endRange);
 			}
 		}
 

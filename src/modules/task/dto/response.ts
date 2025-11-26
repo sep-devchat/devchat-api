@@ -54,6 +54,12 @@ export class TaskResponse {
 	priority: number;
 
 	@ApiPropertyOptional({
+		example: "2025-01-01T09:00:00.000Z",
+		description: "Start date and time for the task",
+	})
+	startDate: Date | null;
+
+	@ApiPropertyOptional({
 		example: "2025-12-31T23:59:59.000Z",
 		description: "Due date and time for the task",
 	})
@@ -105,6 +111,7 @@ export class TaskResponse {
 			description: entity.description,
 			status: entity.status,
 			priority: entity.priority,
+			startDate: entity.startDate,
 			dueDate: entity.dueDate,
 			assignee: entity.assignee
 				? UserResponse.fromEntity(entity.assignee)

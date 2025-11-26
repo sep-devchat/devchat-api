@@ -54,6 +54,15 @@ export class CreateTaskRequest {
 	@IsOptional()
 	@Transform(({ value }) => (value ? new Date(value) : null))
 	@IsDate()
+	startDate: Date | null;
+
+	@ApiPropertyOptional({
+		example: "2025-12-31T23:59:59.000Z",
+		description: "Due date and time for the task",
+	})
+	@IsOptional()
+	@Transform(({ value }) => (value ? new Date(value) : null))
+	@IsDate()
 	dueDate: Date | null;
 
 	@ApiProperty({

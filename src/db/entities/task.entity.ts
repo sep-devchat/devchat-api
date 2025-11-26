@@ -82,6 +82,13 @@ export class TaskEntity {
 	group: GroupEntity;
 
 	@Column({
+		name: ColumnName.Task.startDate,
+		type: "timestamp",
+		nullable: true,
+	})
+	startDate: Date | null;
+
+	@Column({
 		name: ColumnName.Task.dueDate,
 		type: "timestamp",
 		nullable: true,
