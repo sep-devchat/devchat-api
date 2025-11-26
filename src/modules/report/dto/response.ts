@@ -44,6 +44,7 @@ export class ReportResponse {
 			.message(
 				entity.message ? MessageResponse.fromEntity(entity.message) : null,
 			)
+			.messageType(entity.messageType)
 			.directMessage(
 				entity.directMessage
 					? DirectMessageResponse.fromEntity(entity.directMessage)

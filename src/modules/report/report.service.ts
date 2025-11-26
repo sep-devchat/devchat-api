@@ -36,8 +36,9 @@ export class ReportService {
 	async findMany(query: ReportQuery) {
 		const where: FindOptionsWhere<ReportEntity> = {};
 
-		if (query.messageId) {
+		if (query.messageId && query.messageType) {
 			where.messageId = query.messageId;
+			where.messageType = query.messageType;
 		}
 
 		if (query.createdById) {
@@ -60,7 +61,7 @@ export class ReportService {
 			relations: {
 				createdBy: true,
 				message: { sender: true },
-				directMessage: { toUser: true },
+				directMessage: { fromUser: true, toUser: true },
 				threadMessage: { sender: true },
 				reportReportCategories: {
 					reportCategory: true,
@@ -70,8 +71,4 @@ export class ReportService {
 
 		return { data, total };
 	}
-
-	async findOne(id: string | number) {}
-
-	async deleteOne(id: string | number) {}
 }

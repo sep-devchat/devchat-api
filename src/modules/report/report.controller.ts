@@ -1,12 +1,4 @@
-import {
-	Controller,
-	Param,
-	Body,
-	Query,
-	Post,
-	Get,
-	Delete,
-} from "@nestjs/common";
+import { Controller, Body, Query, Post, Get } from "@nestjs/common";
 import { ReportService } from "./report.service";
 import { CreateReportRequest, ReportQuery, ReportResponse } from "./dto";
 import { AdminRole, ApiResponseDto, PaginationDto } from "@utils";
@@ -32,19 +24,5 @@ export class ReportController {
 			new PaginationDto(query.page, query.limit, total),
 			"Success",
 		);
-	}
-
-	@Get(":id")
-	@AdminRole()
-	async findOne(@Param("id") id: string) {
-		const data = await this.reportService.findOne(id);
-		return new ApiResponseDto(data);
-	}
-
-	@Delete(":id")
-	@AdminRole()
-	async deleteOne(@Param("id") id: string) {
-		await this.reportService.deleteOne(id);
-		return new ApiResponseDto(null, null, "Deleted successfully");
 	}
 }
