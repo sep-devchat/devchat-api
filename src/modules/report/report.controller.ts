@@ -1,7 +1,26 @@
 import { Controller, Body, Query, Post, Get } from "@nestjs/common";
 import { ReportService } from "./report.service";
-import { CreateReportRequest, ReportQuery, ReportResponse } from "./dto";
-import { AdminRole, ApiResponseDto, PaginationDto } from "@utils";
+import {
+	CreateReportRequest,
+	ReportAnalyticsCategoryQuery,
+	ReportAnalyticsRangeQuery,
+	ReportAnalyticsReporterQuery,
+	ReportAnalyticsSummaryQuery,
+	ReportAnalyticsTrendQuery,
+	ReportAnalyticsSummaryResponse,
+	ReportCategoryStatResponse,
+	ReportReporterStatResponse,
+	ReportTrendPointResponse,
+	ReportTypeDistributionResponse,
+	ReportQuery,
+	ReportResponse,
+} from "./dto";
+import {
+	AdminRole,
+	ApiResponseDto,
+	PaginationDto,
+	SwaggerApiResponse,
+} from "@utils";
 import { ApiBearerAuth } from "@nestjs/swagger";
 
 @Controller("report")
@@ -24,5 +43,45 @@ export class ReportController {
 			new PaginationDto(query.page, query.limit, total),
 			"Success",
 		);
+	}
+
+	@Get("analytics/summary")
+	@AdminRole()
+	@SwaggerApiResponse(ReportAnalyticsSummaryResponse)
+	async getAnalyticsSummary(@Query() query: ReportAnalyticsSummaryQuery) {
+		const response = await this.reportService.getSummary(query);
+		return new ApiResponseDto(response, null, "Success");
+	}
+
+	@Get("analytics/trend")
+	@AdminRole()
+	@SwaggerApiResponse(ReportTrendPointResponse, { isArray: true })
+	async getAnalyticsTrend(@Query() query: ReportAnalyticsTrendQuery) {
+		const response = await this.reportService.getTrend(query);
+		return new ApiResponseDto(response, null, "Success");
+	}
+
+	@Get("analytics/message-types")
+	@AdminRole()
+	@SwaggerApiResponse(ReportTypeDistributionResponse, { isArray: true })
+	async getMessageTypeDistribution(@Query() query: ReportAnalyticsRangeQuery) {
+		const response = await this.reportService.getMessageTypeDistribution(query);
+		return new ApiResponseDto(response, null, "Success");
+	}
+
+	@Get("analytics/categories")
+	@AdminRole()
+	@SwaggerApiResponse(ReportCategoryStatResponse, { isArray: true })
+	async getCategoryBreakdown(@Query() query: ReportAnalyticsCategoryQuery) {
+		const response = await this.reportService.getCategoryBreakdown(query);
+		return new ApiResponseDto(response, null, "Success");
+	}
+
+	@Get("analytics/reporters")
+	@AdminRole()
+	@SwaggerApiResponse(ReportReporterStatResponse, { isArray: true })
+	async getReporterLeaderboard(@Query() query: ReportAnalyticsReporterQuery) {
+		const response = await this.reportService.getReporterLeaderboard(query);
+		return new ApiResponseDto(response, null, "Success");
 	}
 }
