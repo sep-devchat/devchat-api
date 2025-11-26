@@ -1,4 +1,11 @@
-import { Controller, Query, Get, UseGuards, Param } from "@nestjs/common";
+import {
+	Controller,
+	Query,
+	Get,
+	UseGuards,
+	Param,
+	ParseUUIDPipe,
+} from "@nestjs/common";
 import { CodeBlockService } from "./code-block.service";
 import { CodeBlockQuery, CodeBlockResponse } from "./dto";
 import { ApiResponseDto, PaginationDto, SwaggerApiResponse } from "@utils";
@@ -33,6 +40,48 @@ export class CodeBlockController {
 	@SwaggerApiResponse(CodeBlockResponse)
 	async findOne(@Param("id") id: string) {
 		const data = await this.codeBlockService.findOne(id, false);
+		return new ApiResponseDto(
+			CodeBlockResponse.fromEntity(data),
+			undefined,
+			"Code block retrieved successfully",
+		);
+	}
+}
+
+@Controller("direct-message/:targetUserId/code-block")
+@ApiBearerAuth()
+@ApiParam({ name: "targetUserId", description: "Peer user ID" })
+export class DirectCodeBlockController {
+	constructor(private readonly codeBlockService: CodeBlockService) {}
+
+	@Get()
+	@ApiOperation({ summary: "Get direct message code blocks" })
+	@SwaggerApiResponse(CodeBlockResponse, {
+		withPagination: true,
+		isArray: true,
+	})
+	async findMany(
+		@Param("targetUserId", new ParseUUIDPipe()) targetUserId: string,
+		@Query() query: CodeBlockQuery,
+	) {
+		const [entities, count] = await this.codeBlockService.findManyForDirect(
+			targetUserId,
+			query,
+		);
+		return new ApiResponseDto(
+			CodeBlockResponse.fromEntities(entities),
+			new PaginationDto(query.page, query.limit, count),
+			"Code blocks retrieved successfully",
+		);
+	}
+
+	@Get(":id")
+	@SwaggerApiResponse(CodeBlockResponse)
+	async findOne(
+		@Param("targetUserId", new ParseUUIDPipe()) targetUserId: string,
+		@Param("id", new ParseUUIDPipe()) id: string,
+	) {
+		const data = await this.codeBlockService.findOneForDirect(id, targetUserId);
 		return new ApiResponseDto(
 			CodeBlockResponse.fromEntity(data),
 			undefined,

@@ -1,4 +1,11 @@
-import { Controller, Param, Query, Get, UseGuards } from "@nestjs/common";
+import {
+	Controller,
+	Param,
+	Query,
+	Get,
+	UseGuards,
+	ParseUUIDPipe,
+} from "@nestjs/common";
 import { AttachmentService } from "./attachment.service";
 import { AttachmentQuery } from "./dto";
 import { ApiResponseDto, PaginationDto, SwaggerApiResponse } from "@utils";
@@ -33,6 +40,46 @@ export class AttachmentController {
 	@SwaggerApiResponse(AttachmentResponse)
 	async findOne(@Param("id") id: string) {
 		const data = await this.attachmentService.findOne(id);
+		return new ApiResponseDto(data, null, "Fetched successfully");
+	}
+}
+
+@ApiBearerAuth()
+@Controller("direct-message/:targetUserId/attachment")
+@ApiParam({ name: "targetUserId", description: "Peer user ID" })
+export class DirectAttachmentController {
+	constructor(private readonly attachmentService: AttachmentService) {}
+
+	@Get()
+	@SwaggerApiResponse(AttachmentResponse, {
+		isArray: true,
+		withPagination: true,
+	})
+	async findMany(
+		@Param("targetUserId", new ParseUUIDPipe()) targetUserId: string,
+		@Query() query: AttachmentQuery,
+	) {
+		const [entities, count] = await this.attachmentService.findManyForDirect(
+			targetUserId,
+			query,
+		);
+		return new ApiResponseDto(
+			AttachmentResponse.fromEntities(entities),
+			new PaginationDto(query.page, query.size, count),
+			"Fetched successfully",
+		);
+	}
+
+	@Get(":id")
+	@SwaggerApiResponse(AttachmentResponse)
+	async findOne(
+		@Param("targetUserId", new ParseUUIDPipe()) targetUserId: string,
+		@Param("id", new ParseUUIDPipe()) id: string,
+	) {
+		const data = await this.attachmentService.findOneForDirect(
+			id,
+			targetUserId,
+		);
 		return new ApiResponseDto(data, null, "Fetched successfully");
 	}
 }
