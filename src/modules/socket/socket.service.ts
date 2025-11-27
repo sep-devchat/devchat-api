@@ -3,12 +3,19 @@ import { InvalidTokenError } from "@modules/auth/errors";
 import { UserService } from "@modules/user";
 import { Injectable } from "@nestjs/common";
 import { Server, Socket } from "socket.io";
-import { AuthenticateRequest, JoinRoomRequest } from "./dto";
+import {
+	AuthenticateRequest,
+	ChatViewRequest,
+	ChatViewType,
+	JoinRoomRequest,
+} from "./dto";
 import { SocketEvents } from "./socket.constants";
 import { ChannelRepository, GroupRepository } from "@db/repositories";
 import { JoinRoomFailedError } from "./errors";
 import { NotificationEntity } from "@db/entities";
 import { NotificationResponse } from "@modules/notification/dto";
+import { ChatPresenceService } from "./chat-presence.service";
+import { WsException } from "@nestjs/websockets";
 
 @Injectable()
 export class SocketService {
@@ -18,6 +25,7 @@ export class SocketService {
 		private readonly userService: UserService,
 		private readonly groupRepo: GroupRepository,
 		private readonly channelRepo: ChannelRepository,
+		private readonly chatPresence: ChatPresenceService,
 	) {}
 
 	constructRoomName(groupId: string, channelId: string) {
@@ -106,6 +114,70 @@ export class SocketService {
 			groupId,
 			channelId,
 		});
+	}
+
+	async updateChatView(client: Socket, payload: ChatViewRequest) {
+		const userId = client.data.user?.id;
+		if (!userId)
+			throw new WsException({
+				code: "auth_required_err",
+				message: "Authenticate before updating chat view",
+			});
+
+		switch (payload.type) {
+			case ChatViewType.GROUP:
+				if (payload.active) {
+					this.chatPresence.setGroupView(
+						userId,
+						client.id,
+						payload.groupId!,
+						payload.channelId!,
+					);
+				} else {
+					this.chatPresence.clearGroupView(userId, client.id);
+				}
+				break;
+			case ChatViewType.DIRECT:
+				if (payload.active) {
+					this.chatPresence.setDirectView(
+						userId,
+						client.id,
+						payload.peerUserId!,
+					);
+				} else {
+					this.chatPresence.clearDirectView(userId, client.id);
+				}
+				break;
+			case ChatViewType.THREAD:
+				if (payload.active) {
+					this.chatPresence.setThreadView(
+						userId,
+						client.id,
+						payload.channelId!,
+						payload.threadId!,
+					);
+					// Ensure group view stays in sync as well
+					if (payload.groupId && payload.channelId) {
+						this.chatPresence.setGroupView(
+							userId,
+							client.id,
+							payload.groupId,
+							payload.channelId,
+						);
+					}
+				} else {
+					this.chatPresence.clearThreadView(userId, client.id);
+				}
+				break;
+			default:
+				break;
+		}
+	}
+
+	clearPresenceForSocket(client: Socket) {
+		const userId = client.data.user?.id;
+		if (!userId) return;
+		this.chatPresence.clearAllForSocket(userId, client.id);
 	}
 
 	sendNotification(notification: NotificationEntity) {

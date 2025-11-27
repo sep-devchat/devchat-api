@@ -31,9 +31,10 @@ import { Socket } from "socket.io";
 import { SocketEvents } from "@modules/socket/socket.constants";
 import { AttachmentService } from "@modules/attachment";
 import { In, Like } from "typeorm";
-import { SocketService } from "@modules/socket";
+import { SocketService, ChatPresenceService } from "@modules/socket";
 import { ThreadMessageResponse } from "./dto";
 import { ChannelRepository, UserGroupRepository } from "@db/repositories";
+import { NotificationService } from "@modules/notification";
 
 @Injectable()
 export class MessageService {
@@ -49,6 +50,8 @@ export class MessageService {
 		private readonly attachmentService: AttachmentService,
 		private readonly socketService: SocketService,
 		private readonly threadMessageRepo: ThreadMessageRepository,
+		private readonly notificationService: NotificationService,
+		private readonly chatPresence: ChatPresenceService,
 	) {}
 
 	async getDirectMessagePeers() {
@@ -160,24 +163,6 @@ export class MessageService {
 		return DirectMessageResponse.fromEntities(messages);
 	}
 
-	async createMessageNotification(
-		message: MessageEntity,
-		server: Socket["server"],
-	) {
-		const listUsers = await this.userRepo.find({
-			where: { userGroups: { groupId: message.channel.groupId } },
-		});
-		listUsers.forEach((user) => {
-			if (user.id !== message.senderId) {
-				this.socketService.sendEventToUser(
-					user.id,
-					SocketEvents.MESSAGE_NOTIFICATION,
-					MessageResponse.fromEntity(message),
-				);
-			}
-		});
-	}
-
 	async sendMessage(
 		client: Socket,
 		payload: SendMessageRequest,
@@ -218,7 +203,13 @@ export class MessageService {
 		const resp = MessageResponse.fromEntity(message!);
 
 		server.to(client.data.room).emit(SocketEvents.MESSAGE, resp);
-		this.createMessageNotification(message!, server);
+		await this.notifyGroupMessageDigest({
+			context: "channel",
+			message: message!,
+			groupId: client.data.group?.id ?? message!.channel.groupId,
+			groupName: client.data.group?.name,
+			channelName: client.data.channel?.name ?? message!.channel.name,
+		});
 
 		// Delegate AI mention handling to helper
 		await this.maybeProcessAiMentionAndRespond(
@@ -275,7 +266,17 @@ export class MessageService {
 			if (aiMsg) {
 				const aiResp = MessageResponse.fromEntity(aiMsg);
 				server.to(client.data.room).emit(SocketEvents.MESSAGE, aiResp);
-				this.createMessageNotification(aiMsg, server);
+				await this.notifyGroupMessageDigest({
+					context: "channel",
+					message: aiMsg,
+					groupId:
+						client.data.group?.id ??
+						aiMsg.channel.group?.id ??
+						aiMsg.channel.groupId,
+					groupName:
+						client.data.group?.name ?? aiMsg.channel.group?.name ?? undefined,
+					channelName: client.data.channel?.name ?? aiMsg.channel.name,
+				});
 			}
 		} catch (err) {
 			// Swallow AI failures to avoid breaking the user send flow
@@ -345,6 +346,10 @@ export class MessageService {
 			SocketEvents.DIRECT_MESSAGE,
 			resp,
 		);
+		await this.notifyDirectMessageDigest({
+			recipientId: dto.toUserId,
+			sender: dm!.fromUser,
+		});
 		return resp;
 	}
 
@@ -438,6 +443,18 @@ export class MessageService {
 				SocketEvents.SEND_THREAD_MESSAGE,
 				ThreadMessageResponse.fromEntity(threadMessage!),
 			);
+
+		await this.notifyGroupMessageDigest({
+			context: "thread",
+			message: {
+				channelId: client.data.channel.id,
+				senderId: threadMessage!.senderId,
+			},
+			groupId: client.data.group?.id ?? client.data.channel.groupId,
+			groupName: client.data.group?.name,
+			channelName: client.data.channel?.name,
+			threadId: dto.threadId,
+		});
 	}
 
 	async fetchThreadMessages(client: Socket, dto: FetchThreadMessagesRequest) {
@@ -694,5 +711,112 @@ export class MessageService {
 			.to(client.data.room)
 			.emit(SocketEvents.DELETE_THREAD_MESSAGE, id);
 		return id;
+	}
+
+	private async notifyGroupMessageDigest(params: {
+		context: "channel" | "thread";
+		message: Pick<MessageEntity, "channelId" | "senderId">;
+		groupId?: string;
+		groupName?: string;
+		channelName?: string;
+		threadId?: string;
+	}) {
+		const { groupId } = params;
+		if (!groupId) return;
+
+		const members = await this.userRepo.find({
+			where: { userGroups: { groupId } },
+		});
+		if (!members.length) return;
+
+		const noun = params.context === "thread" ? "thread message" : "message";
+		const pluralized = (count: number) =>
+			`${count} new ${noun}${count > 1 ? "s" : ""}`;
+		const channelLabel = params.channelName?.trim() || undefined;
+		const groupLabel = params.groupName ?? "this group";
+		const baseSource = `/chat/group/${groupId}?channel=${params.message.channelId}`;
+		const notificationSource = params.threadId
+			? `${baseSource}&thread=${params.threadId}`
+			: baseSource;
+		const channelSuffix = channelLabel ? ` (#${channelLabel})` : "";
+		const titleChannel = channelLabel ? `#${channelLabel}` : "this channel";
+
+		const recipients = members.filter((member) => {
+			if (member.id === params.message.senderId) return false;
+			if (
+				params.groupId &&
+				this.chatPresence.isViewingGroupChannel(
+					member.id,
+					params.groupId,
+					params.message.channelId,
+				)
+			)
+				return false;
+			if (
+				params.context === "thread" &&
+				params.threadId &&
+				this.chatPresence.isViewingThread(
+					member.id,
+					params.message.channelId,
+					params.threadId,
+				)
+			)
+				return false;
+			return true;
+		});
+		if (!recipients.length) return;
+
+		await Promise.all(
+			recipients.map((member) =>
+				this.notificationService.createOrIncrementCountNotification({
+					toUserId: member.id,
+					notificationSource,
+					buildTitle: (count) => `${pluralized(count)} in ${titleChannel}`,
+					buildContent: (count) =>
+						`You have ${count} new ${noun}${count > 1 ? "s" : ""} in group ${groupLabel}${channelSuffix}`,
+				}),
+			),
+		);
+	}
+
+	private async notifyDirectMessageDigest(params: {
+		recipientId: string;
+		sender: {
+			id: string;
+			firstName?: string | null;
+			lastName?: string | null;
+			username?: string | null;
+			email?: string | null;
+		};
+	}) {
+		if (
+			this.chatPresence.isViewingDirectConversation(
+				params.recipientId,
+				params.sender.id,
+			)
+		)
+			return;
+		await this.notificationService.createOrIncrementCountNotification({
+			toUserId: params.recipientId,
+			notificationSource: `/chat/user/${params.sender.id}`,
+			buildTitle: (count) =>
+				`${count} new direct message${count > 1 ? "s" : ""}`,
+			buildContent: (count) =>
+				`You have ${count} new direct message${count > 1 ? "s" : ""} from ${this.getUserDisplayName(params.sender)}`,
+		});
+	}
+
+	private getUserDisplayName(user: {
+		firstName?: string | null;
+		lastName?: string | null;
+		username?: string | null;
+		email?: string | null;
+	}) {
+		const fullName = `${user.firstName ?? ""} ${user.lastName ?? ""}`
+			.trim()
+			.replace(/\s+/g, " ");
+		if (fullName) return fullName;
+		if (user.username) return `@${user.username}`;
+		return user.email ?? "this user";
 	}
 }

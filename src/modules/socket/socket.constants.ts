@@ -21,4 +21,5 @@ export const SocketEvents = {
 	FETCH_THREAD_MESSAGES: "fetch_thread_messages",
 	EDIT_THREAD_MESSAGE: "edit_thread_message",
 	DELETE_THREAD_MESSAGE: "delete_thread_message",
+	CHAT_VIEW: "chat_view",
 };

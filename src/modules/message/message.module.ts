@@ -7,6 +7,7 @@ import { UserModule } from "@modules/user";
 import { SocketModule } from "@modules/socket";
 import { AiModule } from "@modules/ai";
 import { AttachmentModule } from "@modules/attachment";
+import { NotificationModule } from "@modules/notification";
 
 @Module({
 	imports: [
@@ -16,6 +17,7 @@ import { AttachmentModule } from "@modules/attachment";
 		AiModule,
 		AttachmentModule,
 		SocketModule,
+		NotificationModule,
 	],
 	providers: [MessageService, MessageGateway],
 	controllers: [MessageController],

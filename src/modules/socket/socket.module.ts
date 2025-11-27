@@ -4,10 +4,11 @@ import { SocketGateway } from "./socket.gateway";
 import { AuthModule } from "@modules/auth";
 import { UserModule } from "@modules/user";
 import { AiModule } from "@modules/ai";
+import { ChatPresenceService } from "./chat-presence.service";
 
 @Module({
-	providers: [SocketService, SocketGateway],
+	providers: [SocketService, SocketGateway, ChatPresenceService],
 	imports: [UserModule, AuthModule, AiModule],
-	exports: [SocketService],
+	exports: [SocketService, ChatPresenceService],
 })
 export class SocketModule {}

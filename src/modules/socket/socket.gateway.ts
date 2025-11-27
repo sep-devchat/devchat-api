@@ -18,7 +18,7 @@ import {
 	ValidationPipe,
 } from "@nestjs/common";
 import { SocketExceptionFilter } from "./socket.exception-filter";
-import { AuthenticateRequest, JoinRoomRequest } from "./dto";
+import { AuthenticateRequest, ChatViewRequest, JoinRoomRequest } from "./dto";
 import { SocketGuard } from "./socket.guard";
 import { SkipAuth } from "@utils";
 
@@ -55,6 +55,7 @@ export class SocketGateway
 
 	handleDisconnect(client: Socket) {
 		console.log("Client disconnected:", client.id);
+		this.socketService.clearPresenceForSocket(client);
 	}
 
 	@SubscribeMessage(SocketEvents.AUTHENTICATE)
@@ -73,5 +74,13 @@ export class SocketGateway
 	) {
 		console.log("Join room request from client:", client.id, payload);
 		return await this.socketService.joinRoom(client, payload);
+	}
+
+	@SubscribeMessage(SocketEvents.CHAT_VIEW)
+	async handleChatView(
+		@ConnectedSocket() client: Socket,
+		@MessageBody() payload: ChatViewRequest,
+	) {
+		return await this.socketService.updateChatView(client, payload);
 	}
 }
