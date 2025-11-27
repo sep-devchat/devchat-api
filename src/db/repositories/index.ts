@@ -27,3 +27,4 @@ export * from "./user-language-collection.repository";
 export * from "./report-category.repository";
 export * from "./report.repository";
 export * from "./report-report-category.repository";
+export * from "./group-invite-link.repository";

@@ -29,6 +29,7 @@ export const DbConstants = {
 		ReportCategory: "report_category",
 		Report: "report",
 		ReportReportCategory: "report_report_category",
+		GroupInviteLink: "group_invite_link",
 	},
 	ColumnName: {
 		User: {
@@ -272,6 +273,18 @@ export const DbConstants = {
 		},
 		ReportReportCategory: {
 			id: "report_report_category_id",
+		},
+		GroupInviteLink: {
+			id: "group_invite_link_id",
+			groupId: "group_id",
+			createdBy: "created_by",
+			token: "token",
+			name: "name",
+			description: "description",
+			expiresAt: "expires_at",
+			maxUses: "max_uses",
+			usedCount: "used_count",
+			isActive: "is_active",
 		},
 	},
 	IndexName: {

@@ -26,3 +26,4 @@ export * from "./user-language-collection.entity";
 export * from "./report-category.entity";
 export * from "./report.entity";
 export * from "./report-report-category.entity";
+export * from "./group-invite-link.entity";

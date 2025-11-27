@@ -15,6 +15,10 @@ import {
 	UpdateGroupInvitationRequest,
 	GroupInvitationQuery,
 	GroupInvitationResponse,
+	CreateGroupInviteLinkDto,
+	CreateGroupInviteLinkResponse,
+	JoinViaLinkDto,
+	GroupInviteLinkPublicResponse,
 } from "./dto";
 import {
 	ApiResponseDto,
@@ -22,6 +26,7 @@ import {
 	AuditLog,
 	SwaggerApiResponse,
 	SwaggerApiMessageResponse,
+	Env,
 } from "@utils";
 import {
 	ApiBearerAuth,
@@ -201,5 +206,58 @@ export class GroupInvitationController {
 	async deleteGroupInvitation(@Param("id") id: string) {
 		await this.groupInvitationService.deleteOne(id);
 		return new ApiMessageResponseDto("Group invitation deleted successfully");
+	}
+
+	@Post("invite-link")
+	@ApiOperation({ summary: "Create a new invite link for a group" })
+	@SwaggerApiResponse(CreateGroupInviteLinkResponse)
+	@AuditLog({
+		action: "GROUP_INVITE_LINK_CREATE",
+		entityType: "GroupInviteLink",
+		captureResponse: true,
+	})
+	async createInviteLink(@Body() dto: CreateGroupInviteLinkDto) {
+		const inviteLink = await this.groupInvitationService.createInviteLink(dto);
+		const payload = CreateGroupInviteLinkResponse.fromToken(inviteLink.token);
+
+		return new ApiResponseDto(
+			payload,
+			null,
+			"Invite link created successfully",
+		);
+	}
+
+	@Get("public/invite-link/:token")
+	@ApiParam({ name: "token", description: "Invite Link Token" })
+	@ApiOperation({
+		summary: "Get public info for an invite link",
+		description:
+			"Get public information about an invite link (no authentication required)",
+	})
+	@SwaggerApiResponse(GroupInviteLinkPublicResponse)
+	async getInviteLinkPublicInfo(@Param("token") token: string) {
+		const data =
+			await this.groupInvitationService.getInviteLinkPublicInfo(token);
+		return new ApiResponseDto(
+			GroupInviteLinkPublicResponse.fromEntity(data),
+			null,
+			"Invite link information retrieved successfully",
+		);
+	}
+
+	@Post("join-via-link")
+	@ApiOperation({
+		summary: "Join a group via invite link",
+		description: "Join a group using an invite link token",
+	})
+	@SwaggerApiMessageResponse()
+	@AuditLog({
+		action: "GROUP_JOIN_VIA_LINK",
+		entityType: "GroupInviteLink",
+		captureResponse: true,
+	})
+	async joinViaLink(@Body() dto: JoinViaLinkDto) {
+		const response = await this.groupInvitationService.joinViaLink(dto);
+		return new ApiMessageResponseDto(response.message);
 	}
 }
