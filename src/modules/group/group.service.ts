@@ -59,7 +59,7 @@ export class GroupService {
 	}
 
 	async findMany() {
-		const userId = this.cls.get("profile.id");
+		const userId = this.cls.get("profile").id;
 		return await this.groupRepo.find({
 			where: [
 				{
@@ -75,7 +75,7 @@ export class GroupService {
 	}
 
 	async findOne(id: string) {
-		const userId = this.cls.get("profile.id");
+		const userId = this.cls.get("profile").id;
 		const group = await this.groupRepo.findOne({
 			where: [
 				{

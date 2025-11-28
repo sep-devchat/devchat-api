@@ -28,13 +28,7 @@ import {
 	UserLoginStatsQuery,
 	UserLoginStatsResponse,
 } from "./dto";
-import {
-	DevChatCls,
-	Env,
-	PaginationDto,
-	sendVerificationEmail,
-	TaskStatusEnum,
-} from "@utils";
+import { DevChatCls, Env, PaginationDto, sendVerificationEmail } from "@utils";
 import { UserNotFoundError } from "./errors";
 import { randomBytes } from "crypto";
 import { ClsService } from "nestjs-cls";
@@ -947,7 +941,6 @@ export class UserService implements OnModuleInit {
 			where: {
 				assigneeId: userId,
 				groupId: groupId,
-				status: In([TaskStatusEnum.IN_PROGRESS, TaskStatusEnum.TODO]),
 			},
 			relations: ["assignee", "creator", "group"],
 		});

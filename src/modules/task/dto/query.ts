@@ -11,6 +11,28 @@ import {
 	IsDate,
 } from "class-validator";
 
+const toNumberArray = (value: unknown): number[] | undefined => {
+	if (value === undefined || value === null || value === "") {
+		return undefined;
+	}
+
+	const raw = Array.isArray(value)
+		? value
+		: String(value)
+				.split(",")
+				.map((chunk) => chunk.trim())
+				.filter(Boolean);
+
+	const parsed = raw
+		.map((entry) => {
+			const intValue = Number(entry);
+			return Number.isNaN(intValue) ? null : intValue;
+		})
+		.filter((entry): entry is number => entry !== null);
+
+	return parsed.length ? parsed : undefined;
+};
+
 export class TaskQuery {
 	@ApiProperty({ required: true })
 	@IsNumber()
@@ -31,24 +53,28 @@ export class TaskQuery {
 	assigneeId: string;
 
 	@ApiPropertyOptional({
-		example: TaskStatusEnum.TODO,
+		example: [TaskStatusEnum.TODO, TaskStatusEnum.DONE],
 		enum: TaskStatusEnum,
-		description: "Filter by task status (0-Todo, 1-InProgress, 2-Done)",
+		description:
+			"Filter by task status (accepts comma-separated or repeated params)",
+		isArray: true,
 	})
-	@IsEnum(TaskStatusEnum)
+	@IsEnum(TaskStatusEnum, { each: true })
 	@IsOptional()
-	@Type(() => Number)
-	status?: TaskStatusEnum;
+	@Transform(({ value }) => toNumberArray(value))
+	status?: TaskStatusEnum[];
 
 	@ApiPropertyOptional({
-		example: TaskPriorityEnum.HIGH,
+		example: [TaskPriorityEnum.HIGH, TaskPriorityEnum.LOW],
 		enum: TaskPriorityEnum,
-		description: "Filter by task priority (0-Low, 1-Medium, 2-High)",
+		description:
+			"Filter by task priority (accepts comma-separated or repeated params)",
+		isArray: true,
 	})
-	@IsEnum(TaskPriorityEnum)
+	@IsEnum(TaskPriorityEnum, { each: true })
 	@IsOptional()
-	@Type(() => Number)
-	priority?: TaskPriorityEnum;
+	@Transform(({ value }) => toNumberArray(value))
+	priority?: TaskPriorityEnum[];
 
 	@ApiPropertyOptional({
 		example: "authentication",
@@ -57,50 +83,6 @@ export class TaskQuery {
 	@IsString()
 	@IsOptional()
 	search?: string;
-
-	@ApiPropertyOptional({
-		example: true,
-		description: "Filter overdue tasks (past due date)",
-	})
-	@IsOptional()
-	@Type(() => Boolean)
-	overdue?: boolean;
-
-	@ApiPropertyOptional({
-		example: "2025-01-01T00:00:00.000Z",
-		description: "Start date for due date range filter",
-	})
-	@IsOptional()
-	@Transform(({ value }) => (value ? new Date(value) : null))
-	@IsDate()
-	dueDateFrom: Date | null;
-
-	@ApiPropertyOptional({
-		example: "2025-12-31T23:59:59.000Z",
-		description: "End date for due date range filter",
-	})
-	@IsOptional()
-	@Transform(({ value }) => (value ? new Date(value) : null))
-	@IsDate()
-	dueDateTo: Date | null;
-
-	@ApiPropertyOptional({
-		example: "2025-01-01T00:00:00.000Z",
-		description: "Start date for start date range filter",
-	})
-	@IsOptional()
-	@Transform(({ value }) => (value ? new Date(value) : null))
-	@IsDate()
-	startDateFrom: Date | null;
-
-	@ApiPropertyOptional({
-		example: "2025-03-01T00:00:00.000Z",
-		description: "End date for start date range filter",
-	})
-	@IsOptional()
-	@Transform(({ value }) => (value ? new Date(value) : null))
-	@IsDate()
-	startDateTo: Date | null;
 
 	@ApiPropertyOptional({
 		example: false,

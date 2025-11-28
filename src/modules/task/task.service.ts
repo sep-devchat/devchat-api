@@ -1,20 +1,12 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { CreateTaskRequest, UpdateTaskRequest, TaskQuery } from "./dto";
 import { TaskRepository } from "@db/repositories";
 import { ClsService } from "nestjs-cls";
-import { DevChatCls, PaginationDto } from "@utils";
+import { DevChatCls, PaginationDto, TaskStatusEnum } from "@utils";
 import { UserService } from "@modules/user";
-import {
-	FindOptionsWhere,
-	ILike,
-	IsNull,
-	LessThan,
-	Between,
-	MoreThanOrEqual,
-	LessThanOrEqual,
-} from "typeorm";
+import { FindOptionsWhere, ILike, IsNull, In } from "typeorm";
 import { TaskEntity } from "@db/entities";
-import { AssigneeIsNotGroupMember, TaskNotFound } from "./errors";
+import { AssigneeIsNotGroupMember, TaskLocked, TaskNotFound } from "./errors";
 import { GroupService } from "@modules/group";
 import { UserGroupService } from "@modules/user-group";
 
@@ -71,20 +63,8 @@ export class TaskService {
 	async findByGroup(query: TaskQuery) {
 		const groupId = this.cls.get("group").id;
 
-		const {
-			page,
-			limit,
-			assigneeId,
-			status,
-			priority,
-			search,
-			overdue,
-			dueDateFrom,
-			dueDateTo,
-			startDateFrom,
-			startDateTo,
-			unassigned,
-		} = query;
+		const { page, limit, assigneeId, status, priority, search, unassigned } =
+			query;
 
 		// Build where conditions
 		const where: FindOptionsWhere<TaskEntity> = {
@@ -98,14 +78,14 @@ export class TaskService {
 			where.assigneeId = assigneeId;
 		}
 
-		// Filter by status
-		if (status !== undefined) {
-			where.status = status;
+		// Filter by status (supports multiple values)
+		if (status?.length) {
+			where.status = In(status);
 		}
 
-		// Filter by priority
-		if (priority !== undefined) {
-			where.priority = priority;
+		// Filter by priority (supports multiple values)
+		if (priority?.length) {
+			where.priority = In(priority);
 		}
 
 		// Filter unassigned tasks
@@ -113,57 +93,7 @@ export class TaskService {
 			where.assigneeId = IsNull();
 		}
 
-		// Filter overdue tasks
-		if (overdue === true) {
-			where.dueDate = LessThan(new Date());
-		}
-
-		// Filter by due date range
-		if (dueDateFrom || dueDateTo) {
-			let dueStart: Date | undefined;
-			let dueEnd: Date | undefined;
-
-			if (dueDateFrom) {
-				dueStart = new Date(dueDateFrom);
-				dueStart.setHours(0, 0, 0, 0);
-			}
-
-			if (dueDateTo) {
-				dueEnd = new Date(dueDateTo);
-				dueEnd.setHours(23, 59, 59, 999);
-			}
-
-			if (dueStart && dueEnd) {
-				where.dueDate = Between(dueStart, dueEnd);
-			} else if (dueStart) {
-				where.dueDate = MoreThanOrEqual(dueStart);
-			} else if (dueEnd) {
-				where.dueDate = LessThanOrEqual(dueEnd);
-			}
-		}
-
-		if (startDateFrom || startDateTo) {
-			let startRange: Date | undefined;
-			let endRange: Date | undefined;
-
-			if (startDateFrom) {
-				startRange = new Date(startDateFrom);
-				startRange.setHours(0, 0, 0, 0);
-			}
-
-			if (startDateTo) {
-				endRange = new Date(startDateTo);
-				endRange.setHours(23, 59, 59, 999);
-			}
-
-			if (startRange && endRange) {
-				where.startDate = Between(startRange, endRange);
-			} else if (startRange) {
-				where.startDate = MoreThanOrEqual(startRange);
-			} else if (endRange) {
-				where.startDate = LessThanOrEqual(endRange);
-			}
-		}
+		// Date range filters removed per latest requirements
 
 		const findOptions = {
 			where,
@@ -202,6 +132,7 @@ export class TaskService {
 	}
 	async updateOne(id: string, dto: UpdateTaskRequest) {
 		const existingTask = await this.findOne(id);
+		this.ensureTaskIsEditable(existingTask);
 
 		if (dto.assigneeId && dto.assigneeId !== existingTask.assigneeId) {
 			await this.userService.findById(dto.assigneeId);
@@ -247,6 +178,7 @@ export class TaskService {
 
 	async updateTaskStatus(id: string, dto: { status: number }) {
 		const existingTask = await this.findOne(id);
+		this.ensureTaskIsEditable(existingTask);
 
 		await this.repo.update(id, {
 			status: dto.status,
@@ -263,6 +195,7 @@ export class TaskService {
 	async deleteOne(id: string) {
 		const userId = this.cls.get("profile").id;
 		const existingTask = await this.findOne(id);
+		this.ensureTaskIsEditable(existingTask);
 
 		if (existingTask.createdBy === userId) {
 			// throw new NotAllowDelete()
@@ -274,5 +207,21 @@ export class TaskService {
 		});
 
 		return { message: "Task deleted successfully" };
+	}
+
+	private isTaskLocked(task: TaskEntity): boolean {
+		if (task.status !== TaskStatusEnum.DONE || !task.updatedAt) {
+			return false;
+		}
+
+		const threeDaysInMs = 3 * 24 * 60 * 60 * 1000;
+		const lockThreshold = Date.now() - threeDaysInMs;
+		return task.updatedAt.getTime() <= lockThreshold;
+	}
+
+	private ensureTaskIsEditable(task: TaskEntity) {
+		if (this.isTaskLocked(task)) {
+			throw new TaskLocked();
+		}
 	}
 }
