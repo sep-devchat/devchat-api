@@ -50,7 +50,7 @@ export class GroupInvitationEntity {
 	@Column({
 		name: ColumnName.Audit.updatedAt,
 		type: "timestamp",
-		onUpdate: "CURRENT_TIMESTAMP",
+		default: () => "CURRENT_TIMESTAMP",
 	})
 	updatedAt: Date;
 

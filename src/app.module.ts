@@ -17,7 +17,6 @@ import { UserGroupModule } from "@modules/user-group";
 import { ChannelModule } from "@modules/channel";
 import { ThreadModule } from "@modules/thread";
 import { CodeModule } from "@modules/code";
-import { PermissionModule } from "@modules/permission";
 import { UserFriendModule } from "@modules/user-friend";
 import { AuditLogInterceptor } from "./interceptors";
 import { TaskModule } from "@modules/task";
@@ -63,7 +62,6 @@ import { ReportModule } from "@modules/report";
 		ChannelModule,
 		ThreadModule,
 		CodeModule,
-		PermissionModule,
 		TaskModule,
 		TodoModule,
 		CodeBlockModule,

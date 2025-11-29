@@ -11,6 +11,7 @@
 		"start:dev": "nest start --watch",
 		"start:debug": "nest start --debug --watch",
 		"start:prod": "node dist/main",
+		"seed": "ts-node -r tsconfig-paths/register src/modules/seeder/index.ts",
 		"lint": "eslint --ext ts,tsx src/",
 		"lint:fix": "eslint --fix --ext ts,tsx src/",
 		"prettier": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
@@ -67,6 +68,7 @@
 	"devDependencies": {
 		"@commitlint/cli": "^19.3.0",
 		"@commitlint/config-conventional": "^19.2.2",
+		"@faker-js/faker": "^10.1.0",
 		"@nestjs/cli": "^10.0.0",
 		"@nestjs/config": "^4.0.2",
 		"@nestjs/schematics": "^10.0.0",
