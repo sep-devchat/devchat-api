@@ -423,11 +423,16 @@ export class MessageService {
 						userId: client.data.user.id,
 					}
 				: undefined,
+			parentMessageId: dto.parentMessageId ?? null,
 		});
 
 		threadMessage = await this.threadMessageRepo.findOne({
 			where: { id: threadMessage.id },
-			relations: { sender: true, codeBlock: true },
+			relations: {
+				sender: true,
+				codeBlock: true,
+				parentMessage: { sender: true },
+			},
 		});
 
 		if (dto.attachmentIds && dto.attachmentIds.length > 0 && threadMessage) {
@@ -480,7 +485,11 @@ export class MessageService {
 
 		const messages = await this.threadMessageRepo.find({
 			where: { threadId: dto.threadId, channelId: client.data.channel.id },
-			relations: { sender: true, codeBlock: true },
+			relations: {
+				sender: true,
+				codeBlock: true,
+				parentMessage: { sender: true },
+			},
 			order: { createdAt: "DESC" },
 			take,
 			skip,
@@ -700,6 +709,7 @@ export class MessageService {
 				code: "auth_required_err",
 				message: "Authenticate before deleting thread messages",
 			});
+		console.log("Deleting thread message with id:", id);
 		const tm = await this.threadMessageRepo.findOne({ where: { id } });
 		if (!tm) throw new DeleteMessageFailedError("Thread message not found");
 		if (tm.senderId !== client.data.user.id)
