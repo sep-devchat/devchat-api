@@ -121,6 +121,7 @@ export class Docker {
 	async execCommand(
 		container: Dockerode.Container,
 		cmd: string[],
+		timeoutMs = 2000,
 	): Promise<CodeExecutionResult> {
 		const exec = await container.exec({
 			Cmd: cmd,
@@ -142,7 +143,7 @@ export class Docker {
 			} catch (err) {
 				console.error("Error stopping exec on timeout:", err);
 			}
-		}, 2000);
+		}, timeoutMs);
 		let buff = Buffer.alloc(0);
 		for await (const chunk of stream) {
 			buff = Buffer.concat([buff, chunk]);

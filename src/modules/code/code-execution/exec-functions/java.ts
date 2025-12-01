@@ -16,10 +16,11 @@ export const javaExecFunction: CodeExecutionFunction = async (code: string) => {
 	fs.writeFileSync(`${execDir}/Main.java`, code);
 
 	// Compile
-	const compileResult = await docker.execCommand(container, [
-		"javac",
-		"Main.java",
-	]);
+	const compileResult = await docker.execCommand(
+		container,
+		["javac", "Main.java"],
+		5000,
+	);
 
 	// Run
 	const execResult = await docker.execCommand(container, ["java", "Main"]);

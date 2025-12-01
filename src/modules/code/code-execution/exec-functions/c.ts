@@ -16,12 +16,11 @@ export const cExecFunction: CodeExecutionFunction = async (code: string) => {
 	fs.writeFileSync(`${execDir}/main.c`, code);
 
 	// Compile
-	const compileResult = await docker.execCommand(container, [
-		"gcc",
-		"main.c",
-		"-o",
-		"main",
-	]);
+	const compileResult = await docker.execCommand(
+		container,
+		["gcc", "main.c", "-o", "main"],
+		5000,
+	);
 
 	// Run
 	const execResult = await docker.execCommand(container, ["./main"]);
