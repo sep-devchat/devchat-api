@@ -15,19 +15,29 @@ export const javaExecFunction: CodeExecutionFunction = async (code: string) => {
 	console.log("Preparing Java file...");
 	fs.writeFileSync(`${execDir}/Main.java`, code);
 
+	let output = "";
+
 	// Compile
 	const compileResult = await docker.execCommand(
 		container,
 		["javac", "Main.java"],
-		5000,
+		20000,
 	);
 
-	// Run
-	const execResult = await docker.execCommand(container, ["java", "Main"]);
+	let isTimeout = compileResult.timeout;
+	output += compileResult.output;
+
+	if (!isTimeout) {
+		// Run
+		const execResult = await docker.execCommand(container, ["java", "Main"]);
+		output += execResult.output;
+		isTimeout = execResult.timeout;
+	}
 
 	docker.cleanupContainer(container, runId);
 
 	return {
-		output: compileResult.output + execResult.output,
+		output,
+		timeout: isTimeout,
 	};
 };

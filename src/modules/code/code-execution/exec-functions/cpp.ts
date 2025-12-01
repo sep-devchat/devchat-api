@@ -15,19 +15,29 @@ export const cppExecFunction: CodeExecutionFunction = async (code: string) => {
 	console.log("Preparing C++ file...");
 	fs.writeFileSync(`${execDir}/main.cpp`, code);
 
+	let output = "";
+
 	// Compile
 	const compileResult = await docker.execCommand(
 		container,
 		["g++", "main.cpp", "-o", "main"],
-		5000,
+		20000,
 	);
 
-	// Run
-	const execResult = await docker.execCommand(container, ["./main"]);
+	let isTimeout = compileResult.timeout;
+	output += compileResult.output;
+
+	if (!isTimeout) {
+		// Run
+		const execResult = await docker.execCommand(container, ["./main"]);
+		output += execResult.output;
+		isTimeout = execResult.timeout;
+	}
 
 	docker.cleanupContainer(container, runId);
 
 	return {
-		output: compileResult.output + execResult.output,
+		output,
+		timeout: isTimeout,
 	};
 };

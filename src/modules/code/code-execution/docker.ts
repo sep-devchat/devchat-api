@@ -135,9 +135,11 @@ export class Docker {
 			Tty: true,
 		});
 
+		let isTimeout = false;
 		const timeout = setTimeout(async () => {
 			console.log("Exec timeout reached. Stopping exec...");
 			try {
+				isTimeout = true;
 				await container.kill();
 				console.log("Exec stopped due to timeout.");
 			} catch (err) {
@@ -156,6 +158,7 @@ export class Docker {
 
 		return {
 			output: buff.toString("utf-8"),
+			timeout: isTimeout,
 		};
 	}
 }

@@ -4,4 +4,7 @@ import { CodeExecutionResult } from "../code-execution";
 export class CodeExecutionResponse implements CodeExecutionResult {
 	@ApiProperty()
 	output: string;
+
+	@ApiProperty()
+	timeout: boolean;
 }
