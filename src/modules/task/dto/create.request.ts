@@ -65,12 +65,12 @@ export class CreateTaskRequest {
 	@IsDate()
 	dueDate: Date | null;
 
-	@ApiProperty({
+	@ApiPropertyOptional({
 		example: "123e4567-e89b-12d3-a456-426614174000",
 		description: "ID of the user assigned to this task",
 	})
-	@IsString()
 	@IsOptional()
+	@IsString()
 	@IsUUID()
-	assigneeId: string;
+	assigneeId?: string;
 }
