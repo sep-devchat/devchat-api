@@ -66,8 +66,9 @@ export class Docker {
 			Env: ["FORCE_COLOR=0", "NO_COLOR=1"],
 			WorkingDir: this.containerWorkingDir,
 			HostConfig: {
-				Memory: 256 * 1024 * 1024, // 256 MB
+				Memory: 256 * 1024 * 1024, // 256 MB,
 				MemorySwap: 0,
+				NanoCpus: 500_000_000, // limit to half a vCPU
 				Binds: runId
 					? [`${this.getExecDir(runId)}:${this.containerWorkingDir}`]
 					: undefined,
@@ -133,7 +134,7 @@ export class Docker {
 			} catch (err) {
 				console.error("Error stopping exec on timeout:", err);
 			}
-		}, 5000);
+		}, 2000);
 		let buff = Buffer.alloc(0);
 		for await (const chunk of stream) {
 			buff = Buffer.concat([buff, chunk]);
