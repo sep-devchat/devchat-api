@@ -1,0 +1,65 @@
+%%{init: {"themeCSS": ".actor-line{stroke-dasharray:6 6;}.actor-bottom, text.actor-bottom{display:none;}"}}%%
+sequenceDiagram
+    autonumber
+    actor User as user:Client
+    participant Web as web:DevChatWeb
+    participant Controller as controller:UserController
+    participant Service as service:UserService
+    participant Repo as repo:UserRepository
+    participant DB as db:Database
+    participant Token as token:TokenService
+
+    User->>Web: Fill registration form
+    activate Web
+    Web->>Controller: POST /api/user
+    deactivate Web
+
+    activate Controller
+    Controller->>Service: createUser(dto)
+    deactivate Controller
+
+    activate Service
+    Service->>Repo: findByEmail(dto.email)
+    activate Repo
+    Repo->>DB: queryUserByEmail
+    activate DB
+    DB-->>Repo: Existing user?
+    deactivate DB
+    Repo-->>Service: User entity | null
+    deactivate Repo
+
+    alt User already exists
+        Service-->>Controller: throw ConflictException
+        activate Controller
+        Controller-->>Web: 409 Email already taken
+        deactivate Controller
+        activate Web
+        Web-->>User: Show validation error
+        deactivate Web
+    else New user
+        Service->>Service: hash password + create entity
+        Service->>Repo: save(user)
+        activate Repo
+        Repo->>DB: insertUser
+        activate DB
+        DB-->>Repo: Insert result
+        deactivate DB
+        Repo-->>Service: Persisted user
+        deactivate Repo
+
+        Service->>Token: sendVerificationEmail(user)
+        activate Token
+        Token-->>Service: Email dispatched
+        deactivate Token
+        Service-->>Controller: RegistrationSuccess
+
+        activate Controller
+        Controller-->>Web: 201 Created (verify email)
+        deactivate Controller
+
+        activate Web
+        Web->>Web: Navigate to verify-email notice
+        Web-->>User: Prompt to check inbox
+        deactivate Web
+    end
+    deactivate Service

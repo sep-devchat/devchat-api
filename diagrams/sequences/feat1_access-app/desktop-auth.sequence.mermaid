@@ -1,0 +1,60 @@
+%%{init: {"themeCSS": ".actor-line{stroke-dasharray:6 6;}.actor-bottom, text.actor-bottom{display:none;}"} }%%
+sequenceDiagram
+    autonumber
+    actor U as User
+    participant D as DevChat Desktop
+    participant W as DevChat Web
+    participant API as DevChat API
+    participant DB as DevChat Database
+    participant GG as Google/GitHub Login
+
+    U->>D: Request Login
+    activate D
+    D->>W: Open Login Page (code challenge)
+    deactivate D
+
+    activate W
+    W->>GG: Redirect
+    deactivate W
+
+    activate GG
+    GG-->>W: Authorization code
+    deactivate GG
+
+    activate W
+    W->>API: Authorization code
+    deactivate W
+
+    activate API
+    API->>GG: Authorization code
+    deactivate API
+
+    activate GG
+    GG-->>API: User email
+    deactivate GG
+
+    activate API
+    API->>DB: Find user with email
+    activate DB
+    DB-->>API: Query response
+    deactivate DB
+    alt User Not Found
+        API->>DB: Insert new user
+        activate DB
+        DB-->>API: Query response
+        deactivate DB
+    end
+    API-->>W: Desktop auth code
+    deactivate API
+
+    activate W
+    W-->>D: Desktop auth code
+    deactivate W
+
+    activate D
+    D->>API: Desktop auth code + code verifier
+    activate API
+    API-->>D: Access token
+    deactivate API
+    deactivate D
+    D-->>U: Login completion

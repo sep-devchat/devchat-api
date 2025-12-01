@@ -1,0 +1,47 @@
+%%{init: {"themeCSS": ".actor-line{stroke-dasharray:6 6;}.actor-bottom, text.actor-bottom{display:none;}"}}%%
+sequenceDiagram
+    autonumber
+    actor User
+    participant Web as DevChat Web
+    participant Provider as Google/GitHub Login
+    participant API as DevChat API
+    participant DB as DevChat Database
+
+    User->>Web: Request Login
+    activate Web
+    Web->>Provider: Redirect
+    deactivate Web
+
+    activate Provider
+    Provider-->>Web: Authorization code
+    deactivate Provider
+
+    activate Web
+    Web->>API: Authorization code
+    deactivate Web
+
+    activate API
+    API->>Provider: Authorization code
+    deactivate API
+
+    activate Provider
+    Provider-->>API: User email
+    deactivate Provider
+
+    activate API
+    API->>DB: Find user with email
+    activate DB
+    DB-->>API: Query response
+    deactivate DB
+    alt User Not Found
+        API->>DB: Insert new user
+        activate DB
+        DB-->>API: Query response
+        deactivate DB
+    end
+    API-->>Web: Access token
+    deactivate API
+
+    activate Web
+    Web-->>User: Login completion
+    deactivate Web

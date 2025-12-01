@@ -1,0 +1,57 @@
+%%{init: {"sequence": {"mirrorActors": false}, "themeCSS": ".actor-line{stroke-dasharray:6 6;}.actor-bottom, text.actor-bottom{display:none;}"}}%%
+sequenceDiagram
+    autonumber
+    actor User as user:Client
+    participant Web as web:DevChatWeb
+    participant Controller as controller:AuthController
+    participant Service as service:AuthService
+    participant Repo as repo:UserRepository
+    participant DB as db:Database
+    participant Token as token:TokenService
+
+    User->>Web: Enter email & password
+    activate Web
+    Web->>Controller: POST /auth/login
+    deactivate Web
+
+    activate Controller
+    Controller->>Service: validateLogin(dto)
+    deactivate Controller
+
+    activate Service
+    Service->>Repo: findByEmail(dto.email)
+    activate Repo
+    Repo->>DB: queryUserByEmail
+    activate DB
+    DB-->>Repo: User data
+    deactivate DB
+    Repo-->>Service: Map to User entity
+    deactivate Repo
+
+    Service->>Service: compare password hash
+    alt Invalid credentials
+        Service-->>Controller: throw Unauthorized
+        activate Controller
+        Controller-->>Web: 401 Unauthorized
+        deactivate Controller
+        activate Web
+        Web-->>User: Show error message
+        deactivate Web
+    else Valid credentials
+        Service->>Service: sanitize profile data
+        Service->>Token: issueTokens(user)
+        activate Token
+        Token-->>Service: Access & refresh tokens
+        deactivate Token
+        Service-->>Controller: AuthResponse
+
+        activate Controller
+        Controller-->>Web: 200 OK + tokens
+        deactivate Controller
+
+        activate Web
+        Web->>Web: Persist session & tokens
+        Web-->>User: Redirect to dashboard
+        deactivate Web
+    end
+    deactivate Service
