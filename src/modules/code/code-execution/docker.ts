@@ -57,6 +57,11 @@ export class Docker {
 	async createExecContainer(image: string, runId?: string) {
 		await this.pullImageIfNotExists(image);
 
+		const cpuLimitCores = 0.5; // half a core
+		const cpuPeriod = 100_000; // Docker default period (in microseconds)
+		const memoryLimit = 256 * 1024 * 1024; // 256 MB
+		const cpuQuota = Math.floor(cpuPeriod * cpuLimitCores);
+
 		console.log("Creating container for image:", image);
 		const container = await this.dockerode.createContainer({
 			Image: image,
@@ -66,9 +71,13 @@ export class Docker {
 			Env: ["FORCE_COLOR=0", "NO_COLOR=1"],
 			WorkingDir: this.containerWorkingDir,
 			HostConfig: {
-				Memory: 256 * 1024 * 1024, // 256 MB,
-				MemorySwap: 0,
-				NanoCpus: 500_000_000, // limit to half a vCPU
+				Memory: memoryLimit,
+				MemorySwap: memoryLimit, // disable swap by matching memory limit
+				NanoCpus: cpuLimitCores * 1_000_000_000,
+				CpuPeriod: cpuPeriod,
+				CpuQuota: cpuQuota,
+				CpuShares: 128,
+				PidsLimit: 64,
 				Binds: runId
 					? [`${this.getExecDir(runId)}:${this.containerWorkingDir}`]
 					: undefined,
