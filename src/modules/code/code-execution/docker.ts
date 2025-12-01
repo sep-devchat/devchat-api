@@ -73,7 +73,6 @@ export class Docker {
 			HostConfig: {
 				Memory: memoryLimit,
 				MemorySwap: memoryLimit, // disable swap by matching memory limit
-				NanoCpus: cpuLimitCores * 1_000_000_000,
 				CpuPeriod: cpuPeriod,
 				CpuQuota: cpuQuota,
 				CpuShares: 128,
