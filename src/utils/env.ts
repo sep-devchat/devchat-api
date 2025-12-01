@@ -41,6 +41,9 @@ export const Env = {
 	OPENAI_MODEL: process.env.OPENAI_MODEL || "",
 	GOOGLE_API_KEY: process.env.GOOGLE_API_KEY || "",
 	GOOGLE_MODEL: process.env.GOOGLE_MODEL || "",
+	CODE_RUNNER_SANDBOX_POOL_SIZE: Number(
+		process.env.CODE_RUNNER_SANDBOX_POOL_SIZE || "0",
+	),
 } as const;
 
 console.log(Env);

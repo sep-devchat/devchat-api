@@ -1,33 +1,33 @@
 import { Docker } from "../docker";
 import { CodeExecutionFunction } from "../types";
 import * as fs from "fs";
-import { v4 as uuidv4 } from "uuid";
 
 export const javaExecFunction: CodeExecutionFunction = async (code: string) => {
 	const docker = Docker.getInstance();
+	const image = "openjdk:21-jdk";
+	const sandbox = await docker.acquireSandbox(image);
+	try {
+		const execDir = docker.getExecDir(sandbox.runId);
+		fs.mkdirSync(execDir, { recursive: true });
+		fs.writeFileSync(`${execDir}/Main.java`, code);
 
-	const runId = uuidv4();
-	const container = await docker.createExecContainer("openjdk:21-jdk", runId);
-	await container.start();
+		const compileResult = await docker.execCommand(
+			sandbox.container,
+			["javac", "Main.java"],
+			5000,
+		);
 
-	// Prepare java file
-	const execDir = docker.getExecDir(runId);
-	console.log("Preparing Java file...");
-	fs.writeFileSync(`${execDir}/Main.java`, code);
+		const execResult = await docker.execCommand(sandbox.container, [
+			"java",
+			"Main",
+		]);
 
-	// Compile
-	const compileResult = await docker.execCommand(
-		container,
-		["javac", "Main.java"],
-		5000,
-	);
-
-	// Run
-	const execResult = await docker.execCommand(container, ["java", "Main"]);
-
-	docker.cleanupContainer(container, runId);
-
-	return {
-		output: compileResult.output + execResult.output,
-	};
+		await docker.releaseSandbox(sandbox);
+		return {
+			output: compileResult.output + execResult.output,
+		};
+	} catch (error) {
+		await docker.destroySandbox(image, sandbox);
+		throw error;
+	}
 };

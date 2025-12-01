@@ -2,7 +2,20 @@ import { Env } from "@utils";
 import * as Dockerode from "dockerode";
 import * as fs from "fs";
 import * as path from "path";
+import { randomUUID } from "crypto";
 import { CodeExecutionResult } from "./types";
+
+type Sandbox = {
+	container: Dockerode.Container;
+	runId: string;
+	busy: boolean;
+	image: string;
+};
+
+type PendingRequest = {
+	fulfill: (sandbox: Sandbox) => void;
+	reject: (error: Error) => void;
+};
 
 export class Docker {
 	private static instance: Docker;
@@ -14,6 +27,14 @@ export class Docker {
 	readonly dockerode: Dockerode;
 	readonly codeExecutionDir = path.join(process.cwd(), "code-execution-tmp");
 	readonly containerWorkingDir = "/app";
+	private readonly sandboxPools = new Map<string, Sandbox[]>();
+	private readonly pendingRequests = new Map<string, PendingRequest[]>();
+	private readonly maxSandboxPerImage = Math.max(
+		1,
+		Env.CODE_RUNNER_SANDBOX_POOL_SIZE || 2,
+	);
+	private readonly sandboxAcquireTimeoutMs = 5000;
+
 	private constructor() {
 		this.dockerode = new Dockerode(
 			Env.USE_DOCKER_DIND
@@ -27,6 +48,10 @@ export class Docker {
 					}
 				: undefined,
 		);
+
+		if (!fs.existsSync(this.codeExecutionDir)) {
+			fs.mkdirSync(this.codeExecutionDir, { recursive: true });
+		}
 	}
 
 	imageNameToContainerName(image: string) {
@@ -54,8 +79,18 @@ export class Docker {
 		}
 	}
 
+	private ensureExecDir(runId: string) {
+		const dir = this.getExecDir(runId);
+		fs.mkdirSync(dir, { recursive: true });
+		return dir;
+	}
+
 	async createExecContainer(image: string, runId?: string) {
 		await this.pullImageIfNotExists(image);
+
+		if (runId) {
+			this.ensureExecDir(runId);
+		}
 
 		const cpuLimitCores = 0.5; // half a core
 		const cpuPeriod = 100_000; // Docker default period (in microseconds)
@@ -85,6 +120,148 @@ export class Docker {
 		console.log("Created container for image:", image);
 
 		return container;
+	}
+
+	private async createSandbox(image: string): Promise<Sandbox> {
+		const runId = randomUUID();
+		const container = await this.createExecContainer(image, runId);
+		await container.start();
+		return { container, runId, busy: false, image };
+	}
+
+	private getOrCreatePool(image: string) {
+		let pool = this.sandboxPools.get(image);
+		if (!pool) {
+			pool = [];
+			this.sandboxPools.set(image, pool);
+		}
+		return pool;
+	}
+
+	private getOrCreatePendingQueue(image: string) {
+		let pending = this.pendingRequests.get(image);
+		if (!pending) {
+			pending = [];
+			this.pendingRequests.set(image, pending);
+		}
+		return pending;
+	}
+
+	private removePendingRequest(image: string, request: PendingRequest) {
+		const queue = this.pendingRequests.get(image);
+		if (!queue) return;
+		const idx = queue.indexOf(request);
+		if (idx >= 0) {
+			queue.splice(idx, 1);
+		}
+		if (queue.length === 0) {
+			this.pendingRequests.delete(image);
+		}
+	}
+
+	private async findAvailableSandbox(image: string): Promise<Sandbox | null> {
+		const pool = this.getOrCreatePool(image);
+		const available = pool.find((sb) => !sb.busy);
+		if (available) {
+			available.busy = true;
+			return available;
+		}
+		if (pool.length < this.maxSandboxPerImage) {
+			const sandbox = await this.createSandbox(image);
+			sandbox.busy = true;
+			pool.push(sandbox);
+			return sandbox;
+		}
+		return null;
+	}
+
+	async acquireSandbox(image: string): Promise<Sandbox> {
+		const immediate = await this.findAvailableSandbox(image);
+		if (immediate) {
+			return immediate;
+		}
+
+		return new Promise((resolve, reject) => {
+			let timeoutId: NodeJS.Timeout;
+			const request: PendingRequest = {
+				fulfill: (sandbox) => {
+					clearTimeout(timeoutId);
+					resolve(sandbox);
+				},
+				reject: (error) => {
+					clearTimeout(timeoutId);
+					reject(error);
+				},
+			};
+			timeoutId = setTimeout(() => {
+				this.removePendingRequest(image, request);
+				request.reject(
+					new Error(
+						`Timed out after ${this.sandboxAcquireTimeoutMs}ms waiting for sandbox of ${image}`,
+					),
+				);
+			}, this.sandboxAcquireTimeoutMs);
+			this.getOrCreatePendingQueue(image).push(request);
+		});
+	}
+
+	async releaseSandbox(sandbox: Sandbox) {
+		this.resetExecDir(sandbox.runId);
+		const queue = this.pendingRequests.get(sandbox.image);
+		if (queue && queue.length > 0) {
+			const next = queue.shift();
+			if (next) {
+				sandbox.busy = true;
+				next.fulfill(sandbox);
+				if (queue.length === 0) {
+					this.pendingRequests.delete(sandbox.image);
+				}
+				return;
+			}
+		}
+		sandbox.busy = false;
+	}
+
+	async destroySandbox(image: string, sandbox: Sandbox) {
+		await this.cleanupContainer(sandbox.container, sandbox.runId);
+		const pool = this.sandboxPools.get(image);
+		if (pool) {
+			const idx = pool.indexOf(sandbox);
+			if (idx >= 0) {
+				pool.splice(idx, 1);
+			}
+		}
+		await this.fulfillPendingRequests(image);
+	}
+
+	private resetExecDir(runId: string) {
+		const execDir = this.getExecDir(runId);
+		try {
+			if (fs.existsSync(execDir)) {
+				fs.rmSync(execDir, { recursive: true, force: true });
+			}
+			fs.mkdirSync(execDir, { recursive: true });
+		} catch (err) {
+			console.error("Error resetting exec dir:", err);
+		}
+	}
+
+	private async fulfillPendingRequests(image: string) {
+		const queue = this.pendingRequests.get(image);
+		if (!queue || queue.length === 0) return;
+		while (queue.length) {
+			const sandbox = await this.findAvailableSandbox(image);
+			if (!sandbox) {
+				break;
+			}
+			const next = queue.shift();
+			if (next) {
+				next.fulfill(sandbox);
+			}
+		}
+		if (queue.length === 0) {
+			this.pendingRequests.delete(image);
+		}
 	}
 
 	async cleanupContainer(container: Dockerode.Container, runId?: string) {

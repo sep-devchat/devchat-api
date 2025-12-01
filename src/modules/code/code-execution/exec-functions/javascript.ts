@@ -1,16 +1,27 @@
 import { Docker } from "../docker";
 import { CodeExecutionFunction } from "../types";
+import * as fs from "fs";
 
 export const javascriptExecFunction: CodeExecutionFunction = async (
 	code: string,
 ) => {
 	const docker = Docker.getInstance();
-	const container = await docker.createExecContainer("node:22");
-	await container.start();
+	const image = "node:22";
+	const sandbox = await docker.acquireSandbox(image);
+	try {
+		const execDir = docker.getExecDir(sandbox.runId);
+		fs.mkdirSync(execDir, { recursive: true });
+		fs.writeFileSync(`${execDir}/script.js`, code);
 
-	const result = await docker.execCommand(container, ["node", "-e", code]);
+		const result = await docker.execCommand(sandbox.container, [
+			"node",
+			"script.js",
+		]);
 
-	docker.cleanupContainer(container);
-
-	return result;
+		await docker.releaseSandbox(sandbox);
+		return result;
+	} catch (error) {
+		await docker.destroySandbox(image, sandbox);
+		throw error;
+	}
 };
