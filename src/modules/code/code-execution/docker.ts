@@ -2,6 +2,7 @@ import { Env } from "@utils";
 import * as Dockerode from "dockerode";
 import * as fs from "fs";
 import * as path from "path";
+import { CodeExecutionResult } from "./types";
 
 export class Docker {
 	private static instance: Docker;
@@ -64,11 +65,13 @@ export class Docker {
 			Tty: true,
 			Env: ["FORCE_COLOR=0", "NO_COLOR=1"],
 			WorkingDir: this.containerWorkingDir,
-			HostConfig: runId
-				? {
-						Binds: [`${this.getExecDir(runId)}:${this.containerWorkingDir}`],
-					}
-				: undefined,
+			HostConfig: {
+				Memory: 256 * 1024 * 1024, // 256 MB
+				MemorySwap: 0,
+				Binds: runId
+					? [`${this.getExecDir(runId)}:${this.containerWorkingDir}`]
+					: undefined,
+			},
 		});
 		console.log("Created container for image:", image);
 
@@ -82,7 +85,6 @@ export class Docker {
 		} catch (err) {
 			console.error("Error stopping container:", err);
 			console.log(err);
-			return;
 		}
 
 		console.log("Removing container...");
@@ -92,7 +94,6 @@ export class Docker {
 		} catch (err) {
 			console.error("Error removing container:", err);
 			console.log(err);
-			return;
 		}
 
 		if (runId) {
@@ -104,8 +105,47 @@ export class Docker {
 			} catch (err) {
 				console.error("Error removing exec dir:", err);
 				console.log(err);
-				return;
 			}
 		}
+	}
+
+	async execCommand(
+		container: Dockerode.Container,
+		cmd: string[],
+	): Promise<CodeExecutionResult> {
+		const exec = await container.exec({
+			Cmd: cmd,
+			AttachStdout: true,
+			AttachStderr: true,
+			Tty: true,
+		});
+
+		console.log("Starting exec...");
+		const stream = await exec.start({
+			Tty: true,
+		});
+
+		const timeout = setTimeout(async () => {
+			console.log("Exec timeout reached. Stopping exec...");
+			try {
+				await container.kill();
+				console.log("Exec stopped due to timeout.");
+			} catch (err) {
+				console.error("Error stopping exec on timeout:", err);
+			}
+		}, 5000);
+		let buff = Buffer.alloc(0);
+		for await (const chunk of stream) {
+			buff = Buffer.concat([buff, chunk]);
+		}
+		clearTimeout(timeout);
+
+		const execInfo = await exec.inspect();
+		console.log("Exec info:");
+		console.log(JSON.stringify(execInfo, null, 2));
+
+		return {
+			output: buff.toString("utf-8"),
+		};
 	}
 }

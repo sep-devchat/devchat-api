@@ -1,4 +1,4 @@
-import { ProgrammingLanguageEnum } from "../code.enums";
+import { ProgrammingLanguageEnum } from "@utils";
 import {
 	javaExecFunction,
 	javascriptExecFunction,

@@ -16,49 +16,17 @@ export const javaExecFunction: CodeExecutionFunction = async (code: string) => {
 	fs.writeFileSync(`${execDir}/Main.java`, code);
 
 	// Compile
-	let exec = await container.exec({
-		Cmd: ["javac", "Main.java"],
-		AttachStdout: true,
-		AttachStderr: true,
-		Tty: true,
-	});
-
-	console.log("Compiling Java file...");
-	let buff = Buffer.alloc(0);
-	let stream = await exec.start({
-		Tty: true,
-	});
-	for await (const chunk of stream) {
-		buff = Buffer.concat([buff, chunk]);
-	}
+	const compileResult = await docker.execCommand(container, [
+		"javac",
+		"Main.java",
+	]);
 
 	// Run
-	exec = await container.exec({
-		Cmd: ["java", "Main"],
-		AttachStdout: true,
-		AttachStderr: true,
-		Tty: true,
-	});
-
-	let execInfo = await exec.inspect();
-
-	console.log("Running Java file...");
-	stream = await exec.start({
-		Tty: true,
-	});
-
-	for await (const chunk of stream) {
-		buff = Buffer.concat([buff, chunk]);
-	}
-	console.log("Exec finished.");
-
-	execInfo = await exec.inspect();
-	console.log("Exec info:");
-	console.log(JSON.stringify(execInfo, null, 2));
+	const execResult = await docker.execCommand(container, ["java", "Main"]);
 
 	docker.cleanupContainer(container, runId);
 
 	return {
-		output: buff.toString("utf-8"),
+		output: compileResult.output + execResult.output,
 	};
 };

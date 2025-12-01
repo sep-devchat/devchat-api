@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
+import { ProgrammingLanguageEnum } from "@utils";
 import { IsEnum, IsNotEmpty, IsString, MaxLength } from "class-validator";
-import { ProgrammingLanguageEnum } from "../code.enums";
 
 export class RunCodeRequest {
 	@ApiProperty({

@@ -136,3 +136,9 @@ export enum MessageTypeEnum {
 	CHANNEL_MESSAGE = "CHANNEL_MESSAGE",
 	THREAD_MESSAGE = "THREAD_MESSAGE",
 }
+
+export enum ProgrammingLanguageEnum {
+	JAVASCRIPT = "javascript",
+	JAVA = "java",
+	PYTHON = "python",
+}

@@ -17,32 +17,9 @@ export const pythonExecFunction: CodeExecutionFunction = async (
 	console.log("Preparing Python file...");
 	fs.writeFileSync(`${execDir}/script.py`, code);
 
-	const exec = await container.exec({
-		Cmd: ["python", "script.py"],
-		AttachStdout: true,
-		AttachStderr: true,
-		Tty: true,
-	});
-
-	console.log("Starting exec...");
-	const stream = await exec.start({
-		Tty: true,
-	});
-
-	let buff = Buffer.alloc(0);
-	for await (const chunk of stream) {
-		buff = Buffer.concat([buff, chunk]);
-		// process.stdout.write(chunk);
-	}
-	console.log("Exec finished.");
-
-	const execInfo = await exec.inspect();
-	console.log("Exec info:");
-	console.log(JSON.stringify(execInfo, null, 2));
+	const result = await docker.execCommand(container, ["python", "script.py"]);
 
 	docker.cleanupContainer(container, runId);
 
-	return {
-		output: buff.toString("utf-8"),
-	};
+	return result;
 };
