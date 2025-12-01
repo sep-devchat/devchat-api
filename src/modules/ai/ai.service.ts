@@ -250,8 +250,23 @@ export class AiService {
 			}),
 		});
 
-		const response = await agent.invoke({
-			messages: [new HumanMessage(JSON.stringify({ language, code }))],
+		let response = await new Promise<any>((resolve, reject) => {
+			const timeout = setTimeout(() => {
+				reject(new Error("Code check timed out after 10 seconds"));
+			}, 10000);
+
+			agent
+				.invoke({
+					messages: [new HumanMessage(JSON.stringify({ language, code }))],
+				})
+				.then((res) => {
+					clearTimeout(timeout);
+					resolve(res);
+				})
+				.catch((err) => {
+					clearTimeout(timeout);
+					reject(err);
+				});
 		});
 
 		return Builder(CheckCodeResponse)
