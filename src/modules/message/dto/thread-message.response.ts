@@ -10,6 +10,8 @@ export class ThreadMessageResponse {
 	updatedAt: Date;
 	sender?: Profile;
 	codeBlockId?: string | null;
+	parentMessageId?: string | null;
+	parentMessage?: ThreadMessageResponse | null;
 
 	static fromEntity(entity: ThreadMessageEntity): ThreadMessageResponse {
 		return {
@@ -21,6 +23,10 @@ export class ThreadMessageResponse {
 			updatedAt: entity.updatedAt,
 			sender: entity.sender ? Profile.fromEntity(entity.sender) : undefined,
 			codeBlockId: entity.codeBlockId,
+			parentMessageId: entity.parentMessageId,
+			parentMessage: entity.parentMessage
+				? this.fromEntity(entity.parentMessage)
+				: null,
 		};
 	}
 
