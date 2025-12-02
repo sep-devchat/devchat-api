@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, ForbiddenException } from "@nestjs/common";
 import {
 	DeleteMemberRequest,
 	UpdateUserGroupRequest,
@@ -14,7 +14,7 @@ import { DevChatCls, PaginationDto } from "@utils";
 import { GroupService } from "@modules/group";
 import { UserService } from "@modules/user/user.service";
 import { MemberNotFoundError } from "./errors";
-import { FindOptionsWhere } from "typeorm";
+import { FindOptionsWhere, Not } from "typeorm";
 import { UserEntity, UserGroupEntity } from "@db/entities";
 
 /**
@@ -67,6 +67,7 @@ export class UserGroupService {
 
 	async getGroupMembers() {
 		const groupId = this.cls.get("group").id;
+		const currentUserId = this.cls.get("profile").id;
 		this.logger.log(`Getting members for group: ${groupId}`);
 
 		const members = await this.userRepo.find({
@@ -88,6 +89,7 @@ export class UserGroupService {
 
 	async findMany() {
 		const groupId = this.cls.get("group").id;
+		const currentUserId = this.cls.get("profile").id;
 		this.logger.log(`Finding all user-group records for group: ${groupId}`);
 
 		return this.userGroupRepo.find({
@@ -134,9 +136,23 @@ export class UserGroupService {
 	// Remove member of a group
 	async removeMemberByGroupAndUser(request: DeleteMemberRequest) {
 		const groupId = this.cls.get("group").id;
+		const currentUserId = this.cls.get("profile").id;
 		const { userId } = request;
 
 		this.logger.log(`Removing user ${userId} from group ${groupId}`);
+
+		// Fetch the group to check ownership
+		const group = await this.groupService.findOne(groupId);
+
+		// Verify that the current user is the group owner
+		if (group.createdBy !== currentUserId) {
+			this.logger.warn(
+				`User ${currentUserId} attempted to remove member from group ${groupId} without authorization`,
+			);
+			throw new ForbiddenException(
+				"Only the group owner can remove members from this group",
+			);
+		}
 
 		const member = await this.getMemberByGroupAndUser(groupId, userId);
 
