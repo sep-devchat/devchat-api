@@ -10,6 +10,7 @@ export interface SupportedProgrammingLanguageFilters {
 	search?: string;
 	page?: number;
 	take?: number;
+	isActive?: boolean;
 }
 
 @Injectable()
@@ -21,7 +22,15 @@ export class SupportedProgrammingLanguageRepository extends BaseRepository<Suppo
 	async findFiltered(
 		filters: SupportedProgrammingLanguageFilters,
 	): Promise<[SupportedProgrammingLanguageEntity[], number]> {
-		const { code, name, version, search, page = 1, take = 20 } = filters;
+		const {
+			code,
+			name,
+			version,
+			search,
+			isActive,
+			page = 1,
+			take = 20,
+		} = filters;
 		const skip = (page - 1) * take;
 		const qb = this.createQueryBuilder("lang");
 		if (code) qb.andWhere("lang.languageCode = :code", { code });
@@ -33,6 +42,9 @@ export class SupportedProgrammingLanguageRepository extends BaseRepository<Suppo
 				"(lang.languageCode LIKE :search OR lang.languageName LIKE :search)",
 				{ search: `%${search}%` },
 			);
+		if (typeof isActive === "boolean") {
+			qb.andWhere("lang.isActive = :isActive", { isActive });
+		}
 		qb.orderBy("lang.languageName", "ASC");
 		qb.skip(skip).take(take);
 		return qb.getManyAndCount();

@@ -235,6 +235,11 @@ export class UserService implements OnModuleInit {
 			skip: (page - 1) * limit,
 			take: limit,
 			order: { createdAt: "DESC" },
+			relations: {
+				userLanguages: {
+					language: true,
+				},
+			},
 		});
 
 		const pagination = new PaginationDto(page, limit, total);
@@ -263,6 +268,11 @@ export class UserService implements OnModuleInit {
 			skip: (page - 1) * limit,
 			take: limit,
 			order: { createdAt: "DESC" },
+			relations: {
+				userLanguages: {
+					language: true,
+				},
+			},
 		});
 
 		const pagination = new PaginationDto(page, limit, total);

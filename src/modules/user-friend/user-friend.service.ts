@@ -7,13 +7,21 @@ import {
 } from "@db/repositories";
 import { ClsService } from "nestjs-cls";
 import { DevChatCls, PaginationDto } from "@utils";
-import { FindOptionsWhere, ILike } from "typeorm";
-import { UserFriendEntity } from "@db/entities";
+import { FindOptionsWhere, ILike, In } from "typeorm";
+import { UserEntity, UserFriendEntity } from "@db/entities";
 import { FriendshipNotFoundError, UserNotFoundError } from "./errors";
 
 @Injectable()
 export class UserFriendService {
 	private readonly logger = new Logger(UserFriendService.name);
+	private readonly userFriendRelations = [
+		"user",
+		"user.userLanguages",
+		"user.userLanguages.language",
+		"friend",
+		"friend.userLanguages",
+		"friend.userLanguages.language",
+	];
 
 	constructor(
 		private readonly userFriendRepo: UserFriendRepository,
@@ -21,6 +29,15 @@ export class UserFriendService {
 		private readonly userRepo: UserRepository,
 		private readonly cls: ClsService<DevChatCls>,
 	) {}
+
+	private sortUserLanguages(user?: UserEntity | null) {
+		if (!user || !user.userLanguages) return;
+		user.userLanguages = [...user.userLanguages].sort(
+			(a, b) =>
+				(a.orderIndex ?? Number.MAX_SAFE_INTEGER) -
+				(b.orderIndex ?? Number.MAX_SAFE_INTEGER),
+		);
+	}
 
 	async unfriend(friendId: string) {
 		const userId = this.cls.get("profile").id;
@@ -75,7 +92,7 @@ export class UserFriendService {
 
 			const findOptions = {
 				where,
-				relations: ["user", "friend"],
+				relations: this.userFriendRelations,
 				skip: (page - 1) * limit,
 				take: limit,
 				order: { createdAt: "DESC" as const },
@@ -119,7 +136,7 @@ export class UserFriendService {
 				try {
 					[data, total] = await this.userFriendRepo.findAndCount({
 						where: searchConditions,
-						relations: findOptions.relations,
+						relations: this.userFriendRelations,
 						skip: findOptions.skip,
 						take: findOptions.take,
 						order: findOptions.order,
@@ -144,6 +161,7 @@ export class UserFriendService {
 				const friends = data.map((friendship) => {
 					const friend =
 						friendship.userId === userId ? friendship.friend : friendship.user;
+					this.sortUserLanguages(friend);
 
 					this.logger.log(
 						`Processing friendship: ${JSON.stringify({
@@ -189,6 +207,7 @@ export class UserFriendService {
 			const friends = data.map((friendship) => {
 				const friend =
 					friendship.userId === userId ? friendship.friend : friendship.user;
+				this.sortUserLanguages(friend);
 
 				this.logger.log(
 					`Processing friendship: ${JSON.stringify({
@@ -309,13 +328,14 @@ export class UserFriendService {
 			targetFriendIds.has(id),
 		);
 
-		// Get mutual friends data
-		const mutualFriends = [];
-		for (const friendId of mutualFriendIds) {
-			const friend = await this.userRepo.findOne({ where: { id: friendId } });
-			if (friend) {
-				mutualFriends.push(friend);
-			}
+		// Get mutual friends data with languages
+		let mutualFriends: UserEntity[] = [];
+		if (mutualFriendIds.length) {
+			mutualFriends = await this.userRepo.find({
+				where: { id: In(mutualFriendIds) },
+				relations: ["userLanguages", "userLanguages.language"],
+			});
+			mutualFriends.forEach((friend) => this.sortUserLanguages(friend));
 		}
 
 		return {
@@ -345,11 +365,14 @@ export class UserFriendService {
 				{ userId, friendId },
 				{ userId: friendId, friendId: userId },
 			]),
-			relations: ["user", "friend"],
+			relations: this.userFriendRelations,
 		});
 
-		return friendships.map((friendship) =>
-			friendship.userId === userId ? friendship.friend : friendship.user,
-		);
+		return friendships.map((friendship) => {
+			const friend =
+				friendship.userId === userId ? friendship.friend : friendship.user;
+			this.sortUserLanguages(friend);
+			return friend;
+		});
 	}
 }

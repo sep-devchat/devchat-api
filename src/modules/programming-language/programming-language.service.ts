@@ -103,7 +103,15 @@ export class ProgrammingLanguageService {
 	async findMany(
 		query: ProgrammingLanguageQuery,
 	): Promise<ListResult<SupportedProgrammingLanguageEntity>> {
-		const { page = 1, take = 20, code, name, version, search } = query;
+		const {
+			page = 1,
+			take = 20,
+			code,
+			name,
+			version,
+			search,
+			isActive,
+		} = query;
 		const [entities, total] = await this.repo.findFiltered({
 			page,
 			take,
@@ -111,6 +119,7 @@ export class ProgrammingLanguageService {
 			name,
 			version,
 			search,
+			isActive,
 		});
 		return { data: entities, pagination: new PaginationDto(page, take, total) };
 	}
