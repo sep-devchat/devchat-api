@@ -36,13 +36,19 @@ function systemInstruction(type: AIRequestTypeEnum): string {
  * - input: the user's prompt
  * - context: optional JSON string with extra context
  */
-export function buildPrompt(type: AIRequestTypeEnum): ChatPromptTemplate {
+export function buildPrompt(
+	type: AIRequestTypeEnum,
+	input: string,
+	context?: string,
+): ChatPromptTemplate {
 	const sys = systemInstruction(type);
 	return ChatPromptTemplate.fromMessages([
 		["system", sys],
 		[
 			"user",
-			["Context (JSON):\n{context}\n\n", "User input:\n{input}"].join("\n"),
+			[`Context (JSON):\n${context ?? ""}\n\n`, `User input:\n${input}`].join(
+				"\n",
+			),
 		],
 	]);
 }
