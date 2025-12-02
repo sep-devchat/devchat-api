@@ -40,7 +40,7 @@ export class AiSessionEntity {
 
 	@Index(IndexName.AiSession.threadId)
 	@Column({ name: ColumnName.AiSession.threadId, type: "uuid", nullable: true })
-	threadId: string | null;
+	threadId?: string | null;
 
 	@ManyToOne(() => ThreadEntity, { nullable: true })
 	@JoinColumn({ name: ColumnName.AiSession.threadId })

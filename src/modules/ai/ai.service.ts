@@ -151,7 +151,7 @@ export class AiService {
 			const newSession = this.sessions.create({
 				userId: userId!,
 				channelId: msg.channelId ?? null,
-				threadId: msg.thread.id ?? null,
+				threadId: msg.thread?.id ?? null,
 				sessionType: "chat",
 				startedAt: new Date(),
 				endedAt: null,
@@ -165,11 +165,21 @@ export class AiService {
 		let parsedProvider: ModelProvider | undefined;
 		let parsedType: AIRequestTypeEnum = AIRequestTypeEnum.CHAT;
 		let strippedInput = raw;
-		const m = raw.match(/^@([a-zA-Z0-9_-]+)\/(\w+)(?:\s+(.*))?$/);
+		const splitOnce = (input: string) => {
+			const index = input.indexOf(" ");
+			if (index === -1) return [input, ""];
+			return [input.substring(0, index), input.substring(index + 1)];
+		};
+		const splitInput = splitOnce(raw);
+		const m = splitInput[0].match(/^@([a-zA-Z0-9_-]+)\/(\w+)(?:\s+(.*))?$/);
 		if (m) {
 			const prov = m[1].toLowerCase();
 			const typ = m[2].toLowerCase();
-			strippedInput = m[3] ?? "";
+			strippedInput = splitInput[1] ?? "";
+			console.log(
+				`[AiService] Parsed AI ask directive: provider=${prov}, type=${typ}`,
+			);
+			// map provider
 			if (prov === "openai") parsedProvider = AIProviderEnum.OPENAI;
 			if (prov === "google" || prov === "gemini")
 				parsedProvider = AIProviderEnum.GEMINI;
@@ -194,9 +204,14 @@ export class AiService {
 
 		// Input text is the stripped content after any @provider/type directive
 		const inputText = strippedInput.trim();
+		console.log(`[AiService] Using input text: ${inputText}`);
 		if (!inputText) throw new MissingPromptOrMessageError();
 
-		const prompt = buildPrompt(parsedType);
+		const prompt = buildPrompt(
+			parsedType,
+			inputText,
+			dto.context ? JSON.stringify(dto.context, null, 2) : undefined,
+		);
 		const chain = prompt.pipe(model);
 		const vars = {
 			input: inputText,

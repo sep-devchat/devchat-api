@@ -236,9 +236,6 @@ export class MessageService {
 		if (!isAiMention) return;
 
 		try {
-			const { answer } = await this.aiService.ask({
-				messageId: parentMessageId,
-			});
 			// Determine which AI provider was mentioned and map to a system AI user id.
 			// Expect environment variables OPENAI_USER_ID / GEMINI_USER_ID to hold user IDs of
 			// dedicated AI accounts. Fallback to original sender if not configured so flow still works.
@@ -252,6 +249,10 @@ export class MessageService {
 			});
 			aiUserId = aiUser?.id || client.data.user.id;
 
+			const { answer } = await this.aiService.ask({
+				messageId: parentMessageId,
+			});
+
 			// persist AI answer as a message in same channel/thread, parented to original
 			const aiInsert = await this.messageRepo.insert({
 				channelId: client.data.channel.id,
@@ -261,7 +262,11 @@ export class MessageService {
 			});
 			const aiMsg = await this.messageRepo.findOne({
 				where: { id: aiInsert.identifiers[0].id },
-				relations: { sender: true, channel: { group: true } },
+				relations: {
+					sender: true,
+					channel: { group: true },
+					parentMessage: { sender: true },
+				},
 			});
 			if (aiMsg) {
 				const aiResp = MessageResponse.fromEntity(aiMsg);
