@@ -24,11 +24,14 @@ export class MessageEntity {
 	@Column({ name: ColumnName.Channel.id, type: "uuid" })
 	channelId: string;
 
-	@ManyToOne(() => ChannelEntity)
+	@ManyToOne(() => ChannelEntity, { createForeignKeyConstraints: false })
 	@JoinColumn({ name: ColumnName.Channel.id })
 	channel: ChannelEntity;
 
-	@OneToOne(() => ThreadEntity, (thread) => thread.message, { nullable: true })
+	@OneToOne(() => ThreadEntity, (thread) => thread.message, {
+		nullable: true,
+		createForeignKeyConstraints: false,
+	})
 	thread: ThreadEntity | null;
 
 	@Column({
@@ -38,7 +41,10 @@ export class MessageEntity {
 	})
 	parentMessageId: string | null;
 
-	@ManyToOne(() => MessageEntity, { nullable: true })
+	@ManyToOne(() => MessageEntity, {
+		nullable: true,
+		createForeignKeyConstraints: false,
+	})
 	@JoinColumn({ name: ColumnName.Message.parentMessageId })
 	parentMessage: MessageEntity | null;
 
@@ -61,7 +67,7 @@ export class MessageEntity {
 	@Column({ name: ColumnName.Message.senderId, type: "uuid" })
 	senderId: string;
 
-	@ManyToOne(() => UserEntity)
+	@ManyToOne(() => UserEntity, { createForeignKeyConstraints: false })
 	@JoinColumn({ name: ColumnName.Message.senderId })
 	sender: UserEntity;
 
@@ -71,6 +77,7 @@ export class MessageEntity {
 	@OneToOne(() => CodeBlockEntity, (codeBlock) => codeBlock.message, {
 		nullable: true,
 		cascade: true,
+		createForeignKeyConstraints: false,
 	})
 	@JoinColumn({ name: ColumnName.CodeBlock.id })
 	codeBlock: CodeBlockEntity;

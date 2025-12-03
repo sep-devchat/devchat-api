@@ -19,14 +19,14 @@ export class FriendRequestEntity {
 	fromUserId: string;
 
 	@JoinColumn({ name: ColumnName.FriendRequest.fromUserId })
-	@ManyToOne(() => UserEntity)
+	@ManyToOne(() => UserEntity, { createForeignKeyConstraints: false })
 	fromUser: UserEntity;
 
 	@Column({ name: ColumnName.FriendRequest.toUserId })
 	toUserId: string;
 
 	@JoinColumn({ name: ColumnName.FriendRequest.toUserId })
-	@ManyToOne(() => UserEntity)
+	@ManyToOne(() => UserEntity, { createForeignKeyConstraints: false })
 	toUser: UserEntity;
 
 	@Column({ name: ColumnName.FriendRequest.message, nullable: true })

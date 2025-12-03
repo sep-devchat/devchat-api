@@ -63,19 +63,19 @@ export class TaskEntity {
 	})
 	priority: number;
 
-	@ManyToOne(() => UserEntity)
+	@ManyToOne(() => UserEntity, { createForeignKeyConstraints: false })
 	@JoinColumn({
 		name: ColumnName.Task.assigneeId,
 	})
 	assignee: UserEntity | null;
 
-	@ManyToOne(() => UserEntity)
+	@ManyToOne(() => UserEntity, { createForeignKeyConstraints: false })
 	@JoinColumn({
 		name: ColumnName.Audit.createdBy,
 	})
 	creator: UserEntity;
 
-	@ManyToOne(() => GroupEntity)
+	@ManyToOne(() => GroupEntity, { createForeignKeyConstraints: false })
 	@JoinColumn({
 		name: ColumnName.Group.id,
 	})

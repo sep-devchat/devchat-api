@@ -11,12 +11,8 @@ import {
 import { SupportedProgrammingLanguageRepository } from "@db/repositories";
 import { SupportedProgrammingLanguageEntity } from "@db/entities";
 import { DevChatCls, PaginationDto } from "@utils";
+import { FindOptionsWhere } from "typeorm";
 import { ClsService } from "nestjs-cls";
-
-interface ListResult<T> {
-	data: T[];
-	pagination: PaginationDto;
-}
 
 @Injectable()
 export class ProgrammingLanguageService {
@@ -47,7 +43,7 @@ export class ProgrammingLanguageService {
 			} else {
 				Object.assign(existing, {
 					languageName: dto.languageName,
-					syntaxHighlighting: dto.syntaxHighlighting ?? null,
+					preset: dto.preset ?? null,
 					languageIcon: dto.languageIcon ?? null,
 					isActive: true,
 					updatedBy: this.getCurrentUserId(),
@@ -60,7 +56,7 @@ export class ProgrammingLanguageService {
 			languageCode: dto.languageCode,
 			languageName: dto.languageName,
 			languageVersion: dto.languageVersion ?? null,
-			syntaxHighlighting: dto.syntaxHighlighting ?? null,
+			preset: dto.preset ?? null,
 			languageIcon: dto.languageIcon ?? null,
 			isExecutable: dto.isExecutable ?? false,
 			createdBy: this.getCurrentUserId(),
@@ -69,18 +65,26 @@ export class ProgrammingLanguageService {
 		return this.repo.save(entity);
 	}
 
+	async getActiveLanguages(): Promise<SupportedProgrammingLanguageEntity[]> {
+		return this.repo.find({
+			where: {
+				isActive: true,
+			},
+		});
+	}
+
 	async updateOne(
 		id: string,
 		dto: UpdateProgrammingLanguageRequest,
 	): Promise<SupportedProgrammingLanguageEntity> {
 		const entity = await this.repo.findOne({ where: { id } });
 		if (!entity) throw new NotFoundException("Programming language not found");
+
 		if (dto.languageCode && dto.languageCode !== entity.languageCode) {
 			const duplicate = await this.repo.findOne({
 				where: {
 					languageCode: dto.languageCode,
-					languageVersion:
-						dto.languageVersion ?? entity.languageVersion ?? null,
+					languageVersion: dto.languageVersion ?? null,
 				},
 			});
 			if (duplicate)
@@ -89,39 +93,43 @@ export class ProgrammingLanguageService {
 				);
 		}
 		Object.assign(entity, {
-			languageCode: dto.languageCode ?? entity.languageCode,
-			languageName: dto.languageName ?? entity.languageName,
-			languageVersion: dto.languageVersion ?? entity.languageVersion,
-			languageIcon: dto.languageIcon ?? entity.languageIcon,
-			syntaxHighlighting: dto.syntaxHighlighting ?? entity.syntaxHighlighting,
-			isExecutable: dto.isExecutable ?? entity.isExecutable,
+			languageCode: dto.languageCode,
+			languageName: dto.languageName,
+			languageVersion: dto.languageVersion ?? null,
+			languageIcon: dto.languageIcon ?? null,
+			preset: dto.preset ?? null,
+			isExecutable: dto.isExecutable ?? false,
 			updatedBy: this.getCurrentUserId(),
 		});
 		return this.repo.save(entity);
 	}
 
-	async findMany(
-		query: ProgrammingLanguageQuery,
-	): Promise<ListResult<SupportedProgrammingLanguageEntity>> {
-		const {
-			page = 1,
-			take = 20,
-			code,
-			name,
-			version,
-			search,
-			isActive,
-		} = query;
-		const [entities, total] = await this.repo.findFiltered({
-			page,
-			take,
-			code,
-			name,
-			version,
-			search,
-			isActive,
+	async findMany(query: ProgrammingLanguageQuery): Promise<{
+		data: SupportedProgrammingLanguageEntity[];
+		pagination: PaginationDto;
+	}> {
+		const page = Number(query.page) > 0 ? Number(query.page) : 1;
+		const limit = Number(query.limit) > 0 ? Number(query.limit) : 20;
+
+		const where: FindOptionsWhere<SupportedProgrammingLanguageEntity> = {};
+		if (typeof query.isActive === "boolean") {
+			where.isActive = query.isActive;
+		}
+		if (typeof query.isExecutable === "boolean") {
+			where.isExecutable = query.isExecutable;
+		}
+
+		const [data, total] = await this.repo.findAndCount({
+			where,
+			skip: (page - 1) * limit,
+			take: limit,
+			order: { createdAt: "DESC" },
 		});
-		return { data: entities, pagination: new PaginationDto(page, take, total) };
+
+		return {
+			data,
+			pagination: new PaginationDto(page, limit, total),
+		};
 	}
 
 	async findOne(id: string): Promise<SupportedProgrammingLanguageEntity> {
@@ -130,12 +138,13 @@ export class ProgrammingLanguageService {
 		return entity;
 	}
 
-	async deleteOne(id: string): Promise<void> {
+	async toggleIsActive(
+		id: string,
+	): Promise<SupportedProgrammingLanguageEntity> {
 		const entity = await this.repo.findOne({ where: { id } });
 		if (!entity) throw new NotFoundException("Programming language not found");
-		await this.repo.update(id, {
-			isActive: false,
-			updatedBy: this.getCurrentUserId(),
-		});
+		entity.isActive = !entity.isActive;
+		entity.updatedBy = this.getCurrentUserId();
+		return this.repo.save(entity);
 	}
 }

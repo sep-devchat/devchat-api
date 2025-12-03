@@ -20,21 +20,21 @@ export class GroupInvitationEntity {
 	fromUserId: string;
 
 	@JoinColumn({ name: ColumnName.GroupInvitation.fromUserId })
-	@ManyToOne(() => UserEntity)
+	@ManyToOne(() => UserEntity, { createForeignKeyConstraints: false })
 	fromUser: UserEntity;
 
 	@Column({ name: ColumnName.GroupInvitation.toUserId })
 	toUserId: string;
 
 	@JoinColumn({ name: ColumnName.GroupInvitation.toUserId })
-	@ManyToOne(() => UserEntity)
+	@ManyToOne(() => UserEntity, { createForeignKeyConstraints: false })
 	toUser: UserEntity;
 
 	@Column({ name: ColumnName.GroupInvitation.groupId })
 	groupId: string;
 
 	@JoinColumn({ name: ColumnName.GroupInvitation.groupId })
-	@ManyToOne(() => GroupEntity)
+	@ManyToOne(() => GroupEntity, { createForeignKeyConstraints: false })
 	group: GroupEntity;
 
 	@Column({ name: ColumnName.GroupInvitation.message, nullable: true })

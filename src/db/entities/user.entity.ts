@@ -80,13 +80,15 @@ export class UserEntity {
 	@Column({ name: ColumnName.User.isBot, type: "boolean", default: false })
 	isBot: boolean;
 
-	@OneToMany(() => UserGroupEntity, (userGroup) => userGroup.user)
+	@OneToMany(() => UserGroupEntity, (userGroup) => userGroup.user, {
+		createForeignKeyConstraints: false,
+	})
 	userGroups: UserGroupEntity[];
 
 	@OneToMany(
 		() => UserLanguageCollectionEntity,
 		(userLanguageCollection) => userLanguageCollection.user,
-		{ cascade: true },
+		{ cascade: true, createForeignKeyConstraints: false },
 	)
 	userLanguages: UserLanguageCollectionEntity[];
 }

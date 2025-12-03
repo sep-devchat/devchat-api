@@ -28,22 +28,25 @@ export class CodeBlockEntity {
 	@Column({ name: ColumnName.CodeBlock.toUserId, type: "uuid", nullable: true })
 	toUserId: string;
 
-	@ManyToOne(() => UserEntity)
+	@ManyToOne(() => UserEntity, { createForeignKeyConstraints: false })
 	@JoinColumn({ name: ColumnName.CodeBlock.userId })
 	user: UserEntity;
 
 	@OneToOne(() => MessageEntity, (message) => message.codeBlock, {
 		onDelete: "CASCADE",
+		createForeignKeyConstraints: false,
 	})
 	message: MessageEntity;
 
 	@OneToOne(() => DirectMessageEntity, (dm) => dm.codeBlock, {
 		onDelete: "CASCADE",
+		createForeignKeyConstraints: false,
 	})
 	directMessage: DirectMessageEntity;
 
 	@OneToOne(() => ThreadMessageEntity, (tm) => tm.codeBlock, {
 		onDelete: "CASCADE",
+		createForeignKeyConstraints: false,
 	})
 	threadMessage: ThreadMessageEntity;
 

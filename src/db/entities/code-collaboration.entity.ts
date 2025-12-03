@@ -26,7 +26,7 @@ export class CodeCollaborationEntity {
 	@Column({ name: ColumnName.Audit.createdBy })
 	createdById: string;
 
-	@ManyToOne(() => UserEntity)
+	@ManyToOne(() => UserEntity, { createForeignKeyConstraints: false })
 	@JoinColumn({ name: ColumnName.Audit.createdBy })
 	createdBy: UserEntity;
 

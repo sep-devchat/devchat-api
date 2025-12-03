@@ -25,14 +25,14 @@ export class ThreadMessageEntity {
 	@Column({ name: ColumnName.ThreadMessage.parentMessageId, nullable: true })
 	parentMessageId: string | null;
 
-	@ManyToOne(() => ThreadMessageEntity)
+	@ManyToOne(() => ThreadMessageEntity, { createForeignKeyConstraints: false })
 	@JoinColumn({ name: ColumnName.ThreadMessage.parentMessageId })
 	parentMessage: ThreadMessageEntity | null;
 
 	@Column({ name: ColumnName.ThreadMessage.senderId })
 	senderId: string;
 
-	@ManyToOne(() => UserEntity)
+	@ManyToOne(() => UserEntity, { createForeignKeyConstraints: false })
 	@JoinColumn({ name: ColumnName.ThreadMessage.senderId })
 	sender: UserEntity;
 
@@ -48,6 +48,7 @@ export class ThreadMessageEntity {
 	@OneToOne(() => CodeBlockEntity, (codeBlock) => codeBlock.threadMessage, {
 		cascade: true,
 		nullable: true,
+		createForeignKeyConstraints: false,
 	})
 	@JoinColumn({ name: ColumnName.CodeBlock.id })
 	codeBlock: CodeBlockEntity | null;

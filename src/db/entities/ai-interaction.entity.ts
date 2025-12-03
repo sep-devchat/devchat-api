@@ -23,7 +23,11 @@ export class AiInteractionEntity {
 	@Column({ name: ColumnName.AiInteraction.sessionId, type: "uuid" })
 	sessionId: string;
 
-	@ManyToOne(() => AiSessionEntity, { nullable: false, onDelete: "CASCADE" })
+	@ManyToOne(() => AiSessionEntity, {
+		nullable: false,
+		onDelete: "CASCADE",
+		createForeignKeyConstraints: false,
+	})
 	@JoinColumn({ name: ColumnName.AiInteraction.sessionId })
 	session: AiSessionEntity;
 
@@ -35,7 +39,10 @@ export class AiInteractionEntity {
 	})
 	messageId: string | null;
 
-	@ManyToOne(() => MessageEntity, { nullable: true })
+	@ManyToOne(() => MessageEntity, {
+		nullable: true,
+		createForeignKeyConstraints: false,
+	})
 	@JoinColumn({ name: ColumnName.AiInteraction.messageId })
 	message?: MessageEntity | null;
 

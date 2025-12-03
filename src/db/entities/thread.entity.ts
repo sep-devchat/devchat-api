@@ -24,7 +24,9 @@ export class ThreadEntity {
 	@Column({ name: ColumnName.Message.id })
 	messageId: string;
 
-	@OneToOne(() => MessageEntity, (message) => message.thread)
+	@OneToOne(() => MessageEntity, (message) => message.thread, {
+		createForeignKeyConstraints: false,
+	})
 	@JoinColumn({ name: ColumnName.Message.id })
 	message: MessageEntity;
 
@@ -34,7 +36,7 @@ export class ThreadEntity {
 	@Column({ name: ColumnName.Audit.createdBy })
 	createdById: string;
 
-	@ManyToOne(() => UserEntity)
+	@ManyToOne(() => UserEntity, { createForeignKeyConstraints: false })
 	@JoinColumn({ name: ColumnName.Audit.createdBy })
 	createdBy: UserEntity;
 

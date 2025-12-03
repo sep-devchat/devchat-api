@@ -26,12 +26,11 @@ export class CreateProgrammingLanguageRequest {
 	languageVersion?: string;
 
 	@ApiProperty({
-		description: "Optional syntax highlighting definition or reference",
 		required: false,
 	})
 	@IsOptional()
 	@IsString()
-	syntaxHighlighting?: string;
+	preset?: string;
 
 	@ApiProperty({
 		description:

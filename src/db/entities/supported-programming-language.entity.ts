@@ -45,25 +45,18 @@ export class SupportedProgrammingLanguageEntity {
 	languageVersion: string | null;
 
 	@Column({
-		name: ColumnName.SupportedProgrammingLanguage.syntaxHighlighting,
-		type: "text",
-		nullable: true,
-	})
-	syntaxHighlighting: string | null;
-
-	@Column({
-		name: ColumnName.SupportedProgrammingLanguage.codeExecutions,
-		type: "int",
-		default: 0,
-	})
-	codeExecutions: number;
-
-	@Column({
 		name: ColumnName.SupportedProgrammingLanguage.isExecutable,
 		type: "boolean",
 		default: false,
 	})
 	isExecutable: boolean;
+
+	@Column({
+		name: ColumnName.SupportedProgrammingLanguage.preset,
+		type: "text",
+		nullable: true,
+	})
+	preset: string | null;
 
 	@CreateDateColumn({ name: ColumnName.Audit.createdAt })
 	createdAt: Date;
@@ -83,6 +76,7 @@ export class SupportedProgrammingLanguageEntity {
 	@OneToMany(
 		() => UserLanguageCollectionEntity,
 		(userLanguageCollection) => userLanguageCollection.language,
+		{ createForeignKeyConstraints: false },
 	)
 	userLanguageCollections: UserLanguageCollectionEntity[];
 }

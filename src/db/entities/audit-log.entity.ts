@@ -22,7 +22,7 @@ export class AuditLogEntity {
 	@Column({ name: ColumnName.AuditLog.userId, type: "uuid" })
 	userId: string;
 
-	@ManyToOne(() => UserEntity)
+	@ManyToOne(() => UserEntity, { createForeignKeyConstraints: false })
 	@JoinColumn({ name: ColumnName.AuditLog.userId })
 	user?: UserEntity | null;
 

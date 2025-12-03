@@ -19,7 +19,7 @@ export class NotificationEntity {
 	@Column({ name: ColumnName.Notification.toUserId })
 	toUserId: string;
 
-	@ManyToOne(() => UserEntity)
+	@ManyToOne(() => UserEntity, { createForeignKeyConstraints: false })
 	@Index(IndexName.Notification.userId)
 	toUser: UserEntity;
 

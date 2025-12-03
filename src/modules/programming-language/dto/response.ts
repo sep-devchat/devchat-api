@@ -17,12 +17,6 @@ export class ProgrammingLanguageResponse {
 	@ApiProperty({ required: false })
 	languageIcon?: string | null;
 
-	@ApiProperty({ required: false })
-	syntaxHighlighting?: string | null;
-
-	@ApiProperty()
-	codeExecutions: number;
-
 	@ApiProperty()
 	createdAt: Date;
 
@@ -31,6 +25,12 @@ export class ProgrammingLanguageResponse {
 
 	@ApiProperty()
 	isExecutable: boolean;
+
+	@ApiProperty()
+	preset: string;
+
+	@ApiProperty()
+	isActive: boolean;
 
 	static fromEntity(
 		entity: SupportedProgrammingLanguageEntity,
@@ -41,11 +41,17 @@ export class ProgrammingLanguageResponse {
 			languageName: entity.languageName,
 			languageVersion: entity.languageVersion,
 			languageIcon: entity.languageIcon,
-			syntaxHighlighting: entity.syntaxHighlighting,
-			codeExecutions: entity.codeExecutions,
 			createdAt: entity.createdAt,
 			updatedAt: entity.updatedAt,
 			isExecutable: entity.isExecutable,
+			preset: entity.preset,
+			isActive: entity.isActive,
 		};
+	}
+
+	static fromEntities(
+		entities: SupportedProgrammingLanguageEntity[],
+	): ProgrammingLanguageResponse[] {
+		return entities.map((entity) => this.fromEntity(entity));
 	}
 }

@@ -19,14 +19,18 @@ export class ReportReportCategoryEntity {
 	@Column({ name: ColumnName.Report.id })
 	reportId: string;
 
-	@ManyToOne(() => ReportEntity, (report) => report.reportReportCategories)
+	@ManyToOne(() => ReportEntity, (report) => report.reportReportCategories, {
+		createForeignKeyConstraints: false,
+	})
 	@JoinColumn({ name: ColumnName.Report.id })
 	report: ReportEntity;
 
 	@Column({ name: ColumnName.ReportCategory.id })
 	reportCategoryId: string;
 
-	@ManyToOne(() => ReportCategoryEntity)
+	@ManyToOne(() => ReportCategoryEntity, {
+		createForeignKeyConstraints: false,
+	})
 	@JoinColumn({ name: ColumnName.ReportCategory.id })
 	reportCategory: ReportCategoryEntity;
 }

@@ -21,14 +21,14 @@ export class UserFriendEntity {
 	userId: string;
 
 	@JoinColumn({ name: ColumnName.UserFriend.userId })
-	@ManyToOne(() => UserEntity)
+	@ManyToOne(() => UserEntity, { createForeignKeyConstraints: false })
 	user: UserEntity;
 
 	@Column({ name: ColumnName.UserFriend.friendId })
 	friendId: string;
 
 	@JoinColumn({ name: ColumnName.UserFriend.friendId })
-	@ManyToOne(() => UserEntity)
+	@ManyToOne(() => UserEntity, { createForeignKeyConstraints: false })
 	friend: UserEntity;
 
 	@Column({

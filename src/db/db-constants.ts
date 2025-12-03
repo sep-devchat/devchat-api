@@ -248,9 +248,8 @@ export const DbConstants = {
 			languageName: "language_name",
 			languageIcon: "language_icon",
 			languageVersion: "language_version",
-			syntaxHighlighting: "syntax_highlighting",
-			codeExecutions: "code_executions",
 			isExecutable: "is_executable",
+			preset: "preset",
 		},
 		UserLanguageCollection: {
 			id: "user_language_collection_id",

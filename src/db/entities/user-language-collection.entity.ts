@@ -25,7 +25,9 @@ export class UserLanguageCollectionEntity {
 	userId: string;
 
 	@JoinColumn({ name: ColumnName.UserLanguageCollection.userId })
-	@ManyToOne(() => UserEntity, (user) => user.userLanguages)
+	@ManyToOne(() => UserEntity, (user) => user.userLanguages, {
+		createForeignKeyConstraints: false,
+	})
 	user: UserEntity;
 
 	@Column({ name: ColumnName.UserLanguageCollection.languageId })
@@ -35,6 +37,7 @@ export class UserLanguageCollectionEntity {
 	@ManyToOne(
 		() => SupportedProgrammingLanguageEntity,
 		(language) => language.userLanguageCollections,
+		{ createForeignKeyConstraints: false },
 	)
 	language: SupportedProgrammingLanguageEntity;
 

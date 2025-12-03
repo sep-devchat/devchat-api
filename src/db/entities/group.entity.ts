@@ -39,6 +39,8 @@ export class GroupEntity {
 	@Column({ name: ColumnName.Group.isActive, type: "boolean", default: true })
 	isActive: boolean;
 
-	@OneToMany(() => UserGroupEntity, (userGroup) => userGroup.group)
+	@OneToMany(() => UserGroupEntity, (userGroup) => userGroup.group, {
+		createForeignKeyConstraints: false,
+	})
 	userGroups: UserGroupEntity[];
 }

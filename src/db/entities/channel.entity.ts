@@ -25,7 +25,7 @@ export class ChannelEntity {
 	@Index(IndexName.Channel.groupId)
 	groupId: string;
 
-	@ManyToOne(() => GroupEntity)
+	@ManyToOne(() => GroupEntity, { createForeignKeyConstraints: false })
 	@JoinColumn({ name: ColumnName.Group.id })
 	group: GroupEntity;
 

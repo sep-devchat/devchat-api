@@ -22,7 +22,7 @@ export class PasswordResetTokenEntity {
 	@Index(IndexName.PasswordResetToken.userId)
 	userId: string;
 
-	@ManyToOne(() => UserEntity)
+	@ManyToOne(() => UserEntity, { createForeignKeyConstraints: false })
 	@JoinColumn({ name: ColumnName.PasswordResetToken.userId })
 	user: UserEntity;
 

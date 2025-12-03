@@ -19,7 +19,9 @@ export class UserGroupEntity {
 	@Column({ name: ColumnName.UserGroup.groupId })
 	groupId: string;
 
-	@ManyToOne(() => GroupEntity, (group) => group.userGroups)
+	@ManyToOne(() => GroupEntity, (group) => group.userGroups, {
+		createForeignKeyConstraints: false,
+	})
 	@JoinColumn({ name: ColumnName.UserGroup.groupId })
 	group: GroupEntity;
 
@@ -29,11 +31,13 @@ export class UserGroupEntity {
 	@Column({ name: ColumnName.UserGroup.addedBy })
 	addedById: string;
 
-	@ManyToOne(() => UserEntity, (user) => user.userGroups)
+	@ManyToOne(() => UserEntity, (user) => user.userGroups, {
+		createForeignKeyConstraints: false,
+	})
 	@JoinColumn({ name: ColumnName.UserGroup.userId })
 	user: UserEntity;
 
-	@ManyToOne(() => UserEntity)
+	@ManyToOne(() => UserEntity, { createForeignKeyConstraints: false })
 	@JoinColumn({ name: ColumnName.UserGroup.addedBy })
 	addedBy: UserEntity;
 

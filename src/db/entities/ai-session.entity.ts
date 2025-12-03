@@ -22,7 +22,10 @@ export class AiSessionEntity {
 	@Column({ name: ColumnName.AiSession.userId, type: "uuid" })
 	userId: string;
 
-	@ManyToOne(() => UserEntity, { nullable: false })
+	@ManyToOne(() => UserEntity, {
+		nullable: false,
+		createForeignKeyConstraints: false,
+	})
 	@JoinColumn({ name: ColumnName.AiSession.userId })
 	user: UserEntity;
 
@@ -34,7 +37,10 @@ export class AiSessionEntity {
 	})
 	channelId: string | null;
 
-	@ManyToOne(() => ChannelEntity, { nullable: true })
+	@ManyToOne(() => ChannelEntity, {
+		nullable: true,
+		createForeignKeyConstraints: false,
+	})
 	@JoinColumn({ name: ColumnName.AiSession.channelId })
 	channel?: ChannelEntity | null;
 
@@ -42,7 +48,10 @@ export class AiSessionEntity {
 	@Column({ name: ColumnName.AiSession.threadId, type: "uuid", nullable: true })
 	threadId?: string | null;
 
-	@ManyToOne(() => ThreadEntity, { nullable: true })
+	@ManyToOne(() => ThreadEntity, {
+		nullable: true,
+		createForeignKeyConstraints: false,
+	})
 	@JoinColumn({ name: ColumnName.AiSession.threadId })
 	thread?: ThreadEntity | null;
 

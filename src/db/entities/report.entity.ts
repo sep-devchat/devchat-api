@@ -28,7 +28,7 @@ export class ReportEntity {
 	@Column({ name: ColumnName.Audit.createdBy })
 	createdById: string;
 
-	@ManyToOne(() => UserEntity)
+	@ManyToOne(() => UserEntity, { createForeignKeyConstraints: false })
 	@JoinColumn({ name: ColumnName.Audit.createdBy })
 	createdBy: UserEntity;
 
@@ -41,20 +41,21 @@ export class ReportEntity {
 	@Column({ name: ColumnName.Report.messageType })
 	messageType: MessageTypeEnum;
 
-	@ManyToOne(() => MessageEntity)
+	@ManyToOne(() => MessageEntity, { createForeignKeyConstraints: false })
 	@JoinColumn({ name: ColumnName.Message.id })
 	message: MessageEntity;
 
-	@ManyToOne(() => DirectMessageEntity)
+	@ManyToOne(() => DirectMessageEntity, { createForeignKeyConstraints: false })
 	@JoinColumn({ name: ColumnName.Message.id })
 	directMessage: DirectMessageEntity;
 
-	@ManyToOne(() => ThreadMessageEntity)
+	@ManyToOne(() => ThreadMessageEntity, { createForeignKeyConstraints: false })
 	@JoinColumn({ name: ColumnName.Message.id })
 	threadMessage: ThreadMessageEntity;
 
 	@OneToMany(() => ReportReportCategoryEntity, (rrc) => rrc.report, {
 		cascade: true,
+		createForeignKeyConstraints: false,
 	})
 	reportReportCategories: ReportReportCategoryEntity[];
 }
