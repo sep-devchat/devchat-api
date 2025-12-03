@@ -1,15 +1,31 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { RunCodeRequest } from "./dto";
 import { CodeExecutionResult, execMap } from "./code-execution";
 import { AiService } from "@modules/ai";
+import { SupportedProgrammingLanguageRepository } from "@db/repositories";
 // import { Builder } from "builder-pattern";
 // import { CheckCodeResponse } from "@modules/ai/dto";
 
 @Injectable()
 export class CodeService {
-	constructor(private readonly aiService: AiService) {}
+	constructor(
+		private readonly aiService: AiService,
+		private readonly programmingLanguageRepo: SupportedProgrammingLanguageRepository,
+	) {}
 
 	async runCode(dto: RunCodeRequest): Promise<CodeExecutionResult> {
+		const language = await this.programmingLanguageRepo.findOne({
+			where: { languageCode: dto.language, isActive: true },
+		});
+
+		if (!language) {
+			throw new NotFoundException("Programming language not found");
+		}
+
+		if (!language.isExecutable || !execMap[language.languageCode]) {
+			throw new NotFoundException("Programming language is not executable");
+		}
+
 		// let aiOutput: CheckCodeResponse;
 		// try {
 		// 	aiOutput = await this.aiService.checkCode(dto.language, dto.code);
@@ -25,7 +41,7 @@ export class CodeService {
 		// 		.build();
 		// }
 
-		const result = await execMap[dto.language](dto.code);
+		const result = await execMap[language.languageCode](dto.code);
 		return result;
 	}
 }
