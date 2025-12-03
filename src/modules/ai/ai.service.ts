@@ -6,13 +6,7 @@ import {
 } from "@db/repositories";
 import { AiInteractionEntity, AiSessionEntity } from "@db/entities";
 import { ClsService } from "nestjs-cls";
-import {
-	AIProviderEnum,
-	AIRequestTypeEnum,
-	DevChatCls,
-	Env,
-	ProgrammingLanguageEnum,
-} from "@utils";
+import { AIProviderEnum, AIRequestTypeEnum, DevChatCls, Env } from "@utils";
 import { AskDto, CheckCodeResponse, StartSessionDto } from "./dto";
 import { createAgent, HumanMessage } from "langchain";
 import { ChatOpenAI } from "@langchain/openai";
@@ -255,7 +249,7 @@ export class AiService {
 		return { session, interaction, answer };
 	}
 
-	async checkCode(language: ProgrammingLanguageEnum, code: string) {
+	async checkCode(language: string, code: string) {
 		const agent = createAgent({
 			model: "google-genai:gemini-2.5-flash",
 			systemPrompt: CHECK_CODE_SYSTEM_PROMPT,
