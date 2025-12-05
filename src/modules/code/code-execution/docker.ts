@@ -2,6 +2,7 @@ import { Env } from "@utils";
 import * as Dockerode from "dockerode";
 import * as fs from "fs";
 import * as path from "path";
+import * as tar from "tar-stream";
 import { CodeExecutionResult } from "./types";
 
 type SandboxInstance = {
@@ -13,7 +14,8 @@ type SandboxInstance = {
 
 export type SandboxContext = {
 	container: Dockerode.Container;
-	execDir?: string;
+	runId: string;
+	hostWorkspaceDir?: string;
 };
 
 export class Docker {
@@ -26,6 +28,7 @@ export class Docker {
 	readonly dockerode: Dockerode;
 	readonly codeExecutionDir = path.join(process.cwd(), "code-execution-tmp");
 	readonly containerWorkingDir = "/app";
+	private readonly useDind = Env.USE_DOCKER_DIND;
 	private readonly sandboxes = new Map<string, SandboxInstance>();
 	private constructor() {
 		this.dockerode = new Dockerode(
@@ -147,13 +150,88 @@ export class Docker {
 		console.log(`Sandbox ${key} initialized with image ${image}`);
 	}
 
+	private async resetSandboxWorkspace(
+		sandbox: SandboxInstance,
+	): Promise<string | undefined> {
+		if (this.useDind) {
+			const cleanupResult = await this.execCommand(
+				sandbox.container,
+				[
+					"sh",
+					"-c",
+					`rm -rf ${this.containerWorkingDir}/* && mkdir -p ${this.containerWorkingDir}`,
+				],
+				5000,
+			);
+			if (cleanupResult.timeout) {
+				throw new Error(`Timeout while cleaning sandbox ${sandbox.key}`);
+			}
+			return undefined;
+		}
+
+		return this.resetExecDirectory(sandbox.runId);
+	}
+
 	async prepareSandbox(key: string): Promise<SandboxContext> {
 		const sandbox = this.getSandbox(key);
 		await this.ensureContainerRunning(sandbox.container);
-		const execDir = sandbox.runId
-			? this.resetExecDirectory(sandbox.runId)
-			: undefined;
-		return { container: sandbox.container, execDir };
+		const hostWorkspaceDir = await this.resetSandboxWorkspace(sandbox);
+		return {
+			container: sandbox.container,
+			runId: sandbox.runId,
+			hostWorkspaceDir,
+		};
+	}
+
+	async writeFileToSandbox(
+		sandbox: SandboxContext,
+		relativePath: string,
+		contents: string,
+	) {
+		if (sandbox.hostWorkspaceDir) {
+			const targetPath = path.join(sandbox.hostWorkspaceDir, relativePath);
+			const targetDir = path.dirname(targetPath);
+			fs.mkdirSync(targetDir, { recursive: true });
+			fs.writeFileSync(targetPath, contents);
+			return;
+		}
+
+		await this.writeFileInsideContainer(
+			sandbox.container,
+			relativePath,
+			contents,
+		);
+	}
+
+	private async writeFileInsideContainer(
+		container: Dockerode.Container,
+		relativePath: string,
+		contents: string,
+	) {
+		const normalizedPath = relativePath.replace(/\\/g, "/");
+		const dirname = path.posix.dirname(normalizedPath);
+		const pack = tar.pack();
+		if (dirname && dirname !== ".") {
+			pack.entry({ name: dirname, type: "directory", mode: 0o755 });
+		}
+		pack.entry(
+			{ name: normalizedPath, type: "file", mode: 0o644 },
+			Buffer.from(contents, "utf-8"),
+		);
+		pack.finalize();
+		await new Promise<void>((resolve, reject) => {
+			container.putArchive(
+				pack,
+				{ path: this.containerWorkingDir },
+				(err?: Error) => {
+					if (err) {
+						reject(err);
+						return;
+					}
+					resolve();
+				},
+			);
+		});
 	}
 
 	async pullImageIfNotExists(image: string) {
@@ -200,9 +278,10 @@ export class Docker {
 				CpuQuota: cpuQuota,
 				CpuShares: 128,
 				PidsLimit: 64,
-				Binds: runId
-					? [`${this.getExecDir(runId)}:${this.containerWorkingDir}`]
-					: undefined,
+				Binds:
+					!this.useDind && runId
+						? [`${this.getExecDir(runId)}:${this.containerWorkingDir}`]
+						: undefined,
 			},
 		});
 		console.log("Created container for image:", image);

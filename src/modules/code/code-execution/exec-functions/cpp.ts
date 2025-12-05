@@ -1,22 +1,16 @@
 import { ProgrammingLanguageEnum } from "@utils";
 import { Docker } from "../docker";
 import { CodeExecutionFunction } from "../types";
-import * as fs from "fs";
-import * as path from "path";
 
 export const cppExecFunction: CodeExecutionFunction = async (code: string) => {
 	const docker = Docker.getInstance();
-	const { container, execDir } = await docker.prepareSandbox(
-		ProgrammingLanguageEnum.CPP,
-	);
-
-	if (!execDir) {
-		throw new Error("C++ sandbox execution directory is not available");
-	}
+	const sandbox = await docker.prepareSandbox(ProgrammingLanguageEnum.CPP);
 
 	// Prepare C++ file
 	console.log("Preparing C++ file...");
-	fs.writeFileSync(path.join(execDir, "main.cpp"), code);
+	await docker.writeFileToSandbox(sandbox, "main.cpp", code);
+
+	const { container } = sandbox;
 
 	let output = "";
 

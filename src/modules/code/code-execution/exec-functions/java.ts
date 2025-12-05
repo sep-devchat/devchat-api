@@ -1,22 +1,16 @@
 import { ProgrammingLanguageEnum } from "@utils";
 import { Docker } from "../docker";
 import { CodeExecutionFunction } from "../types";
-import * as fs from "fs";
-import * as path from "path";
 
 export const javaExecFunction: CodeExecutionFunction = async (code: string) => {
 	const docker = Docker.getInstance();
-	const { container, execDir } = await docker.prepareSandbox(
-		ProgrammingLanguageEnum.JAVA,
-	);
-
-	if (!execDir) {
-		throw new Error("Java sandbox execution directory is not available");
-	}
+	const sandbox = await docker.prepareSandbox(ProgrammingLanguageEnum.JAVA);
 
 	// Prepare java file
 	console.log("Preparing Java file...");
-	fs.writeFileSync(path.join(execDir, "Main.java"), code);
+	await docker.writeFileToSandbox(sandbox, "Main.java", code);
+
+	const { container } = sandbox;
 
 	let output = "";
 

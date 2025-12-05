@@ -6,9 +6,9 @@ export const javascriptExecFunction: CodeExecutionFunction = async (
 	code: string,
 ) => {
 	const docker = Docker.getInstance();
-	const { container } = await docker.prepareSandbox(
+	const sandbox = await docker.prepareSandbox(
 		ProgrammingLanguageEnum.JAVASCRIPT,
 	);
 
-	return docker.execCommand(container, ["node", "-e", code]);
+	return docker.execCommand(sandbox.container, ["node", "-e", code]);
 };
