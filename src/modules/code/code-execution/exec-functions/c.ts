@@ -1,3 +1,4 @@
+import { ProgrammingLanguageEnum } from "@utils";
 import { Docker } from "../docker";
 import { CodeExecutionFunction } from "../types";
 import * as fs from "fs";
@@ -7,8 +8,8 @@ export const cExecFunction: CodeExecutionFunction = async (code: string) => {
 	const docker = Docker.getInstance();
 
 	const runId = uuidv4();
-	const container = await docker.createExecContainer("gcc:latest", runId);
-	await container.start();
+	const container = await docker.prepareContainer(ProgrammingLanguageEnum.C);
+	await docker.prepareExecDir(runId);
 
 	// Prepare C file
 	const execDir = docker.getExecDir(`${runId}`);
@@ -20,6 +21,7 @@ export const cExecFunction: CodeExecutionFunction = async (code: string) => {
 	// Compile
 	const compileResult = await docker.execCommand(
 		container,
+		runId,
 		["gcc", "main.c", "-o", "main"],
 		20000,
 	);
@@ -29,12 +31,12 @@ export const cExecFunction: CodeExecutionFunction = async (code: string) => {
 
 	if (!isTimeout) {
 		// Run
-		const execResult = await docker.execCommand(container, ["./main"]);
+		const execResult = await docker.execCommand(container, runId, ["./main"]);
 		output += execResult.output;
 		isTimeout = execResult.timeout;
 	}
 
-	docker.cleanupContainer(container, runId);
+	await docker.cleanupExecDir(runId);
 
 	return {
 		output,

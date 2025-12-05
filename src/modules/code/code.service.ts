@@ -26,23 +26,23 @@ export class CodeService {
 			throw new NotFoundException("Programming language is not executable");
 		}
 
-		let aiOutput: CheckCodeResponse;
-		try {
-			aiOutput = await this.aiService.checkCode(
-				language.languageCode,
-				dto.code,
-			);
-		} catch (err) {
-			console.error("Error during code check:", err);
-		}
+		// let aiOutput: CheckCodeResponse;
+		// try {
+		// 	aiOutput = await this.aiService.checkCode(
+		// 		language.languageCode,
+		// 		dto.code,
+		// 	);
+		// } catch (err) {
+		// 	console.error("Error during code check:", err);
+		// }
 
-		if (aiOutput && !aiOutput.passed) {
-			return Builder<CodeExecutionResult>()
-				.output(
-					`Code check failed. Output from AI:\n${aiOutput.output || "No output provided."}`,
-				)
-				.build();
-		}
+		// if (aiOutput && !aiOutput.passed) {
+		// 	return Builder<CodeExecutionResult>()
+		// 		.output(
+		// 			`Code check failed. Output from AI:\n${aiOutput.output || "No output provided."}`,
+		// 		)
+		// 		.build();
+		// }
 
 		const result = await execMap[language.languageCode](dto.code);
 		return result;

@@ -1,3 +1,4 @@
+import { ProgrammingLanguageEnum } from "@utils";
 import { Docker } from "../docker";
 import { CodeExecutionFunction } from "../types";
 import * as fs from "fs";
@@ -8,18 +9,24 @@ export const pythonExecFunction: CodeExecutionFunction = async (
 ) => {
 	const docker = Docker.getInstance();
 
+	const container = await docker.prepareContainer(
+		ProgrammingLanguageEnum.PYTHON,
+	);
 	const runId = uuidv4();
-	const container = await docker.createExecContainer("python:3.14", runId);
-	await container.start();
 
 	// Prepare python file
+	await docker.prepareExecDir(runId);
+
 	const execDir = docker.getExecDir(runId);
 	console.log("Preparing Python file...");
 	fs.writeFileSync(`${execDir}/script.py`, code);
 
-	const result = await docker.execCommand(container, ["python", "script.py"]);
+	const result = await docker.execCommand(container, runId, [
+		"python",
+		"script.py",
+	]);
 
-	docker.cleanupContainer(container, runId);
+	await docker.cleanupExecDir(runId);
 
 	return result;
 };

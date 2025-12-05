@@ -1,8 +1,9 @@
-import { Env } from "@utils";
+import { Env, ProgrammingLanguageEnum } from "@utils";
 import * as Dockerode from "dockerode";
 import * as fs from "fs";
 import * as path from "path";
 import { CodeExecutionResult } from "./types";
+import { imageMap } from "./image-map";
 
 export class Docker {
 	private static instance: Docker;
@@ -37,6 +38,35 @@ export class Docker {
 		return `${this.codeExecutionDir}/${runId}`;
 	}
 
+	getContainerName(programmingLanguage: ProgrammingLanguageEnum) {
+		return `devchat-${programmingLanguage}`;
+	}
+
+	async prepareContainer(programmingLanguage: ProgrammingLanguageEnum) {
+		const image = imageMap[programmingLanguage];
+		const containers = await this.dockerode.listContainers({
+			filters: JSON.stringify({
+				name: [this.getContainerName(programmingLanguage)],
+			}),
+		});
+
+		if (containers.length > 0) {
+			const container = this.dockerode.getContainer(containers[0].Id);
+			const info = await container.inspect();
+			if (!info.State.Running) {
+				await container.start();
+			}
+			return container;
+		}
+
+		const container = await this.createExecContainer(
+			this.getContainerName(programmingLanguage),
+			image,
+		);
+		await container.start();
+		return container;
+	}
+
 	async pullImageIfNotExists(image: string) {
 		console.log("Checking for image:", image);
 		const images = await this.dockerode.listImages({
@@ -54,7 +84,7 @@ export class Docker {
 		}
 	}
 
-	async createExecContainer(image: string, runId?: string) {
+	async createExecContainer(containerName: string, image: string) {
 		await this.pullImageIfNotExists(image);
 
 		const cpuLimitCores = 0.5; // half a core
@@ -64,6 +94,7 @@ export class Docker {
 
 		console.log("Creating container for image:", image);
 		const container = await this.dockerode.createContainer({
+			name: containerName,
 			Image: image,
 			AttachStdout: true,
 			AttachStderr: true,
@@ -77,9 +108,7 @@ export class Docker {
 				CpuQuota: cpuQuota,
 				CpuShares: 128,
 				PidsLimit: 64,
-				Binds: runId
-					? [`${this.getExecDir(runId)}:${this.containerWorkingDir}`]
-					: undefined,
+				Binds: [`${this.codeExecutionDir}:${this.containerWorkingDir}`],
 			},
 		});
 		console.log("Created container for image:", image);
@@ -118,16 +147,33 @@ export class Docker {
 		}
 	}
 
+	async prepareExecDir(runId: string) {
+		const execDir = this.getExecDir(runId);
+		if (fs.existsSync(execDir)) {
+			fs.rmSync(execDir, { recursive: true, force: true });
+		}
+		fs.mkdirSync(execDir, { recursive: true });
+	}
+
+	async cleanupExecDir(runId: string) {
+		const execDir = this.getExecDir(runId);
+		if (fs.existsSync(execDir)) {
+			fs.rmSync(execDir, { recursive: true, force: true });
+		}
+	}
+
 	async execCommand(
 		container: Dockerode.Container,
+		runId: string,
 		cmd: string[],
-		timeoutMs = 2000,
+		timeoutMs: number = 2000,
 	): Promise<CodeExecutionResult> {
 		const exec = await container.exec({
 			Cmd: cmd,
 			AttachStdout: true,
 			AttachStderr: true,
 			Tty: true,
+			WorkingDir: this.containerWorkingDir + "/" + runId,
 		});
 
 		console.log("Starting exec...");

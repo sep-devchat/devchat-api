@@ -1,3 +1,4 @@
+import { ProgrammingLanguageEnum } from "@utils";
 import { Docker } from "../docker";
 import { CodeExecutionFunction } from "../types";
 import * as fs from "fs";
@@ -7,10 +8,11 @@ export const javaExecFunction: CodeExecutionFunction = async (code: string) => {
 	const docker = Docker.getInstance();
 
 	const runId = uuidv4();
-	const container = await docker.createExecContainer("openjdk:21-jdk", runId);
-	await container.start();
+	const container = await docker.prepareContainer(ProgrammingLanguageEnum.JAVA);
 
 	// Prepare java file
+	await docker.prepareExecDir(runId);
+
 	const execDir = docker.getExecDir(runId);
 	console.log("Preparing Java file...");
 	fs.writeFileSync(`${execDir}/Main.java`, code);
@@ -20,6 +22,7 @@ export const javaExecFunction: CodeExecutionFunction = async (code: string) => {
 	// Compile
 	const compileResult = await docker.execCommand(
 		container,
+		runId,
 		["javac", "Main.java"],
 		20000,
 	);
@@ -29,12 +32,15 @@ export const javaExecFunction: CodeExecutionFunction = async (code: string) => {
 
 	if (!isTimeout) {
 		// Run
-		const execResult = await docker.execCommand(container, ["java", "Main"]);
+		const execResult = await docker.execCommand(container, runId, [
+			"java",
+			"Main",
+		]);
 		output += execResult.output;
 		isTimeout = execResult.timeout;
 	}
 
-	docker.cleanupContainer(container, runId);
+	await docker.cleanupExecDir(runId);
 
 	return {
 		output,
