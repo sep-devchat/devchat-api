@@ -83,15 +83,19 @@ export class GroupInvitationService {
 	async createOne(dto: CreateGroupInvitationDto) {
 		const userId = this.cls.get("profile").id;
 
-		this.logger.log(
-			`Creating group invitation from ${userId} to ${dto.toUserId} for group ${dto.groupId}`,
+		const userToInvite = await this.userService.findByUniqueKey(
+			dto.toUserIdOrEmail,
 		);
 
-		await this.validateBeforeCreate(userId, dto.toUserId, dto.groupId);
+		this.logger.log(
+			`Creating group invitation from ${userId} to ${userToInvite.id} for group ${dto.groupId}`,
+		);
+
+		await this.validateBeforeCreate(userId, userToInvite.id, dto.groupId);
 
 		const groupInvitation = this.repo.create({
 			fromUserId: userId,
-			toUserId: dto.toUserId,
+			toUserId: userToInvite.id,
 			groupId: dto.groupId,
 			message: dto.message,
 			updatedAt: new Date(),
@@ -105,7 +109,7 @@ export class GroupInvitationService {
 		);
 
 		await this.notificationService.createOne({
-			toUserId: dto.toUserId,
+			toUserId: userToInvite.id,
 			title: "New Group Invitation",
 			content: `You have been invited to join a group`,
 			notificationSource: `/chat/friend?tab=pending`,

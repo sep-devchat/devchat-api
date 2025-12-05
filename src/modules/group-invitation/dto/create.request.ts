@@ -13,9 +13,9 @@ export class CreateGroupInvitationDto {
 		example: "123e4567-e89b-12d3-a456-426614174000",
 		description: "The id of user to invite to the group",
 	})
-	@IsUUID()
+	@IsString()
 	@IsNotEmpty()
-	toUserId: string;
+	toUserIdOrEmail: string;
 
 	@ApiProperty({
 		required: true,
