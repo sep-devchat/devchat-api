@@ -45,6 +45,7 @@ export class Docker {
 	async prepareContainer(programmingLanguage: ProgrammingLanguageEnum) {
 		const image = imageMap[programmingLanguage];
 		const containers = await this.dockerode.listContainers({
+			all: true,
 			filters: JSON.stringify({
 				name: [this.getContainerName(programmingLanguage)],
 			}),

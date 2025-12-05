@@ -4,9 +4,9 @@ import {
 	UnauthorizedException,
 } from "@nestjs/common";
 import { UpdateCodeBlockRequest, CodeBlockQuery } from "./dto";
-import { CodeBlockRepository } from "@db/repositories";
+import { CodeBlockRepository, RunCodeCacheRepostiroy } from "@db/repositories";
 import { ClsService } from "nestjs-cls";
-import { DevChatCls } from "@utils";
+import { DevChatCls, RunCodeTypeEnum } from "@utils";
 import { CodeBlockEntity } from "@db/entities";
 import { CodeBlockNotFound } from "./errors/code-block-not-found.error";
 
@@ -15,6 +15,7 @@ export class CodeBlockService {
 	constructor(
 		private readonly repo: CodeBlockRepository,
 		private readonly cls: ClsService<DevChatCls>,
+		private readonly runCodeCacheRepo: RunCodeCacheRepostiroy,
 	) {}
 
 	private getCurrentUserId(): string {
@@ -38,6 +39,11 @@ export class CodeBlockService {
 
 		await this.repo.update(id, {
 			...dto,
+		});
+
+		await this.runCodeCacheRepo.delete({
+			targetId: existingCodeblock.id,
+			runCodeType: RunCodeTypeEnum.CODE_BLOCK,
 		});
 
 		return await this.repo.findOne({
