@@ -1,8 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import { ClsService } from "nestjs-cls";
-import { DevChatCls } from "@utils";
+import { DevChatCls, RunCodeTypeEnum } from "@utils";
 import { CodeBlockService } from "@modules/code-block";
-import { CodeCollaborationRepository } from "@db/repositories";
+import {
+	CodeCollaborationRepository,
+	RunCodeCacheRepostiroy,
+} from "@db/repositories";
 import {
 	CodeCollaborationQuery,
 	CreateCodeCollaborationRequest,
@@ -16,6 +19,7 @@ export class CodeCollaborationService {
 		private readonly codeCollaborationRepo: CodeCollaborationRepository,
 		private readonly cls: ClsService<DevChatCls>,
 		private readonly codeBlockService: CodeBlockService,
+		private readonly runCodeCacheRepo: RunCodeCacheRepostiroy,
 	) {}
 
 	async createOne(dto: CreateCodeCollaborationRequest) {
@@ -35,6 +39,11 @@ export class CodeCollaborationService {
 
 		await this.codeCollaborationRepo.update(codeCollaboration.id, {
 			content: dto.content,
+		});
+
+		await this.runCodeCacheRepo.delete({
+			targetId: codeCollaboration.id,
+			runCodeType: RunCodeTypeEnum.CODE_COLLABORATION,
 		});
 	}
 
@@ -67,5 +76,10 @@ export class CodeCollaborationService {
 		const codeCollaboration = await this.findOne(id);
 
 		await this.codeCollaborationRepo.delete(codeCollaboration.id);
+
+		await this.runCodeCacheRepo.delete({
+			targetId: codeCollaboration.id,
+			runCodeType: RunCodeTypeEnum.CODE_COLLABORATION,
+		});
 	}
 }

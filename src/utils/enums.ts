@@ -144,3 +144,8 @@ export enum ProgrammingLanguageEnum {
 	C = "c",
 	CPP = "cpp",
 }
+
+export enum RunCodeTypeEnum {
+	CODE_BLOCK = 0,
+	CODE_COLLABORATION = 1,
+}

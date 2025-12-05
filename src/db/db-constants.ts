@@ -29,6 +29,7 @@ export const DbConstants = {
 		ReportCategory: "report_category",
 		Report: "report",
 		ReportReportCategory: "report_report_category",
+		RunCodeCache: "run_code_cache",
 	},
 	ColumnName: {
 		User: {
@@ -272,6 +273,12 @@ export const DbConstants = {
 		ReportReportCategory: {
 			id: "report_report_category_id",
 		},
+		RunCodeCache: {
+			id: "run_code_cache_id",
+			targetId: "target_id",
+			runCodeType: "run_code_type",
+			result: "result",
+		},
 	},
 	IndexName: {
 		User: {
@@ -316,6 +323,9 @@ export const DbConstants = {
 			sessionId: "idx_ai_interaction_normal_sessionId",
 			userId: "idx_ai_interaction_normal_userId",
 			messageId: "idx_ai_interaction_normal_messageId",
+		},
+		RunCodeCache: {
+			typeAndTarget: "idx_run_code_cache_type_and_target",
 		},
 	},
 };

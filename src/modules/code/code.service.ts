@@ -1,16 +1,29 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import { RunCodeRequest } from "./dto";
+import {
+	RunCodeBlockRequest,
+	RunCodeCollabRequest,
+	RunCodeRequest,
+} from "./dto";
 import { CodeExecutionResult, execMap } from "./code-execution";
 import { AiService } from "@modules/ai";
-import { SupportedProgrammingLanguageRepository } from "@db/repositories";
+import {
+	CodeBlockRepository,
+	CodeCollaborationRepository,
+	RunCodeCacheRepostiroy,
+	SupportedProgrammingLanguageRepository,
+} from "@db/repositories";
 import { Builder } from "builder-pattern";
 import { CheckCodeResponse } from "@modules/ai/dto";
+import { RunCodeTypeEnum } from "@utils";
 
 @Injectable()
 export class CodeService {
 	constructor(
 		private readonly aiService: AiService,
 		private readonly programmingLanguageRepo: SupportedProgrammingLanguageRepository,
+		private readonly codeBlockRepo: CodeBlockRepository,
+		private readonly codeCollaborationRepo: CodeCollaborationRepository,
+		private readonly runCodeCacheRepo: RunCodeCacheRepostiroy,
 	) {}
 
 	async runCode(dto: RunCodeRequest): Promise<CodeExecutionResult> {
@@ -18,11 +31,11 @@ export class CodeService {
 			where: { languageCode: dto.language, isActive: true },
 		});
 
-		if (!language) {
-			throw new NotFoundException("Programming language not found");
-		}
-
-		if (!language.isExecutable || !execMap[language.languageCode]) {
+		if (
+			!language ||
+			!language.isExecutable ||
+			!execMap[language.languageCode]
+		) {
 			throw new NotFoundException("Programming language is not executable");
 		}
 
@@ -45,6 +58,129 @@ export class CodeService {
 		// }
 
 		const result = await execMap[language.languageCode](dto.code);
+		return result;
+	}
+
+	async runCodeBlock(dto: RunCodeBlockRequest): Promise<CodeExecutionResult> {
+		const cache = await this.runCodeCacheRepo.findOne({
+			where: {
+				targetId: dto.codeBlockId,
+				runCodeType: RunCodeTypeEnum.CODE_BLOCK,
+			},
+		});
+
+		if (cache) {
+			return Builder<CodeExecutionResult>().output(cache.result).build();
+		}
+
+		const codeBlock = await this.codeBlockRepo.findOne({
+			where: { id: dto.codeBlockId },
+		});
+
+		if (!codeBlock) {
+			throw new NotFoundException("Code block not found");
+		}
+
+		const language = await this.programmingLanguageRepo.findOne({
+			where: { languageCode: codeBlock.language, isActive: true },
+		});
+
+		if (
+			!language ||
+			!language.isExecutable ||
+			!execMap[language.languageCode]
+		) {
+			throw new NotFoundException("Programming language is not executable");
+		}
+
+		// let aiOutput: CheckCodeResponse;
+		// try {
+		// 	aiOutput = await this.aiService.checkCode(
+		// 		language.languageCode,
+		// 		dto.code,
+		// 	);
+		// } catch (err) {
+		// 	console.error("Error during code check:", err);
+		// }
+
+		// if (aiOutput && !aiOutput.passed) {
+		// 	return Builder<CodeExecutionResult>()
+		// 		.output(
+		// 			`Code check failed. Output from AI:\n${aiOutput.output || "No output provided."}`,
+		// 		)
+		// 		.build();
+		// }
+
+		const result = await execMap[language.languageCode](codeBlock.content);
+
+		await this.runCodeCacheRepo.insert({
+			targetId: dto.codeBlockId,
+			runCodeType: RunCodeTypeEnum.CODE_BLOCK,
+			result: result.output,
+		});
+
+		return result;
+	}
+
+	async runCodeCollab(dto: RunCodeCollabRequest): Promise<CodeExecutionResult> {
+		const cache = await this.runCodeCacheRepo.findOne({
+			where: {
+				targetId: dto.codeCollabId,
+				runCodeType: RunCodeTypeEnum.CODE_COLLABORATION,
+			},
+		});
+
+		if (cache) {
+			return Builder<CodeExecutionResult>().output(cache.result).build();
+		}
+
+		const codeCollab = await this.codeCollaborationRepo.findOne({
+			where: { id: dto.codeCollabId },
+			relations: { codeBlock: true },
+		});
+
+		if (!codeCollab) {
+			throw new NotFoundException("Code collaboration not found");
+		}
+
+		const language = await this.programmingLanguageRepo.findOne({
+			where: { languageCode: codeCollab.codeBlock.language, isActive: true },
+		});
+
+		if (
+			!language ||
+			!language.isExecutable ||
+			!execMap[language.languageCode]
+		) {
+			throw new NotFoundException("Programming language is not executable");
+		}
+
+		// let aiOutput: CheckCodeResponse;
+		// try {
+		// 	aiOutput = await this.aiService.checkCode(
+		// 		language.languageCode,
+		// 		dto.code,
+		// 	);
+		// } catch (err) {
+		// 	console.error("Error during code check:", err);
+		// }
+
+		// if (aiOutput && !aiOutput.passed) {
+		// 	return Builder<CodeExecutionResult>()
+		// 		.output(
+		// 			`Code check failed. Output from AI:\n${aiOutput.output || "No output provided."}`,
+		// 		)
+		// 		.build();
+		// }
+
+		const result = await execMap[language.languageCode](codeCollab.content);
+
+		await this.runCodeCacheRepo.insert({
+			targetId: dto.codeCollabId,
+			runCodeType: RunCodeTypeEnum.CODE_COLLABORATION,
+			result: result.output,
+		});
+
 		return result;
 	}
 }
