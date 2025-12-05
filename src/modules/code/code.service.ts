@@ -1,10 +1,10 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, NotFoundException, OnModuleInit } from "@nestjs/common";
 import {
 	RunCodeBlockRequest,
 	RunCodeCollabRequest,
 	RunCodeRequest,
 } from "./dto";
-import { CodeExecutionResult, execMap } from "./code-execution";
+import { CodeExecutionResult, Docker, execMap } from "./code-execution";
 import { AiService } from "@modules/ai";
 import {
 	CodeBlockRepository,
@@ -14,10 +14,10 @@ import {
 } from "@db/repositories";
 import { Builder } from "builder-pattern";
 import { CheckCodeResponse } from "@modules/ai/dto";
-import { RunCodeTypeEnum } from "@utils";
+import { ProgrammingLanguageEnum, RunCodeTypeEnum } from "@utils";
 
 @Injectable()
-export class CodeService {
+export class CodeService implements OnModuleInit {
 	constructor(
 		private readonly aiService: AiService,
 		private readonly programmingLanguageRepo: SupportedProgrammingLanguageRepository,
@@ -25,6 +25,16 @@ export class CodeService {
 		private readonly codeCollaborationRepo: CodeCollaborationRepository,
 		private readonly runCodeCacheRepo: RunCodeCacheRepostiroy,
 	) {}
+
+	async onModuleInit() {
+		console.log("Preparing code execution containers...");
+		const docker = Docker.getInstance();
+		await Promise.all(
+			Object.values(ProgrammingLanguageEnum).map((lang) =>
+				docker.prepareContainer(lang),
+			),
+		);
+	}
 
 	async runCode(dto: RunCodeRequest): Promise<CodeExecutionResult> {
 		const language = await this.programmingLanguageRepo.findOne({
