@@ -1,10 +1,10 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, NotFoundException, OnModuleInit } from "@nestjs/common";
 import {
 	RunCodeBlockRequest,
 	RunCodeCollabRequest,
 	RunCodeRequest,
 } from "./dto";
-import { CodeExecutionResult, execMap } from "./code-execution";
+import { CodeExecutionResult, Docker, execMap } from "./code-execution";
 import { AiService } from "@modules/ai";
 import {
 	CodeBlockRepository,
@@ -14,10 +14,10 @@ import {
 } from "@db/repositories";
 import { Builder } from "builder-pattern";
 import { CheckCodeResponse } from "@modules/ai/dto";
-import { RunCodeTypeEnum } from "@utils";
+import { ProgrammingLanguageEnum, RunCodeTypeEnum } from "@utils";
 
 @Injectable()
-export class CodeService {
+export class CodeService implements OnModuleInit {
 	constructor(
 		private readonly aiService: AiService,
 		private readonly programmingLanguageRepo: SupportedProgrammingLanguageRepository,
@@ -25,6 +25,16 @@ export class CodeService {
 		private readonly codeCollaborationRepo: CodeCollaborationRepository,
 		private readonly runCodeCacheRepo: RunCodeCacheRepostiroy,
 	) {}
+
+	async onModuleInit() {
+		console.log("Preparing code execution containers...");
+		const docker = Docker.getInstance();
+		await Promise.all(
+			Object.values(ProgrammingLanguageEnum).map((lang) =>
+				docker.prepareContainer(lang),
+			),
+		);
+	}
 
 	async runCode(dto: RunCodeRequest): Promise<CodeExecutionResult> {
 		const language = await this.programmingLanguageRepo.findOne({
@@ -39,23 +49,23 @@ export class CodeService {
 			throw new NotFoundException("Programming language is not executable");
 		}
 
-		let aiOutput: CheckCodeResponse;
-		try {
-			aiOutput = await this.aiService.checkCode(
-				language.languageCode,
-				dto.code,
-			);
-		} catch (err) {
-			console.error("Error during code check:", err);
-		}
+		// let aiOutput: CheckCodeResponse;
+		// try {
+		// 	aiOutput = await this.aiService.checkCode(
+		// 		language.languageCode,
+		// 		dto.code,
+		// 	);
+		// } catch (err) {
+		// 	console.error("Error during code check:", err);
+		// }
 
-		if (aiOutput && !aiOutput.passed) {
-			return Builder<CodeExecutionResult>()
-				.output(
-					`Code check failed. Output from AI:\n${aiOutput.output || "No output provided."}`,
-				)
-				.build();
-		}
+		// if (aiOutput && !aiOutput.passed) {
+		// 	return Builder<CodeExecutionResult>()
+		// 		.output(
+		// 			`Code check failed. Output from AI:\n${aiOutput.output || "No output provided."}`,
+		// 		)
+		// 		.build();
+		// }
 
 		const result = await execMap[language.languageCode](dto.code);
 		return result;
@@ -93,23 +103,23 @@ export class CodeService {
 			throw new NotFoundException("Programming language is not executable");
 		}
 
-		let aiOutput: CheckCodeResponse;
-		try {
-			aiOutput = await this.aiService.checkCode(
-				language.languageCode,
-				codeBlock.content,
-			);
-		} catch (err) {
-			console.error("Error during code check:", err);
-		}
+		// let aiOutput: CheckCodeResponse;
+		// try {
+		// 	aiOutput = await this.aiService.checkCode(
+		// 		language.languageCode,
+		// 		codeBlock.content,
+		// 	);
+		// } catch (err) {
+		// 	console.error("Error during code check:", err);
+		// }
 
-		if (aiOutput && !aiOutput.passed) {
-			return Builder<CodeExecutionResult>()
-				.output(
-					`Code check failed. Output from AI:\n${aiOutput.output || "No output provided."}`,
-				)
-				.build();
-		}
+		// if (aiOutput && !aiOutput.passed) {
+		// 	return Builder<CodeExecutionResult>()
+		// 		.output(
+		// 			`Code check failed. Output from AI:\n${aiOutput.output || "No output provided."}`,
+		// 		)
+		// 		.build();
+		// }
 
 		const result = await execMap[language.languageCode](codeBlock.content);
 
@@ -155,23 +165,23 @@ export class CodeService {
 			throw new NotFoundException("Programming language is not executable");
 		}
 
-		let aiOutput: CheckCodeResponse;
-		try {
-			aiOutput = await this.aiService.checkCode(
-				language.languageCode,
-				codeCollab.content,
-			);
-		} catch (err) {
-			console.error("Error during code check:", err);
-		}
+		// let aiOutput: CheckCodeResponse;
+		// try {
+		// 	aiOutput = await this.aiService.checkCode(
+		// 		language.languageCode,
+		// 		codeCollab.content,
+		// 	);
+		// } catch (err) {
+		// 	console.error("Error during code check:", err);
+		// }
 
-		if (aiOutput && !aiOutput.passed) {
-			return Builder<CodeExecutionResult>()
-				.output(
-					`Code check failed. Output from AI:\n${aiOutput.output || "No output provided."}`,
-				)
-				.build();
-		}
+		// if (aiOutput && !aiOutput.passed) {
+		// 	return Builder<CodeExecutionResult>()
+		// 		.output(
+		// 			`Code check failed. Output from AI:\n${aiOutput.output || "No output provided."}`,
+		// 		)
+		// 		.build();
+		// }
 
 		const result = await execMap[language.languageCode](codeCollab.content);
 
