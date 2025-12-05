@@ -1,19 +1,22 @@
+import { ProgrammingLanguageEnum } from "@utils";
 import { Docker } from "../docker";
 import { CodeExecutionFunction } from "../types";
 import * as fs from "fs";
-import { v4 as uuidv4 } from "uuid";
+import * as path from "path";
 
 export const cExecFunction: CodeExecutionFunction = async (code: string) => {
 	const docker = Docker.getInstance();
+	const { container, execDir } = await docker.prepareSandbox(
+		ProgrammingLanguageEnum.C,
+	);
 
-	const runId = uuidv4();
-	const container = await docker.createExecContainer("gcc:latest", runId);
-	await container.start();
+	if (!execDir) {
+		throw new Error("C sandbox execution directory is not available");
+	}
 
 	// Prepare C file
-	const execDir = docker.getExecDir(`${runId}`);
 	console.log("Preparing C file...");
-	fs.writeFileSync(`${execDir}/main.c`, code);
+	fs.writeFileSync(path.join(execDir, "main.c"), code);
 
 	let output = "";
 
@@ -33,8 +36,6 @@ export const cExecFunction: CodeExecutionFunction = async (code: string) => {
 		output += execResult.output;
 		isTimeout = execResult.timeout;
 	}
-
-	docker.cleanupContainer(container, runId);
 
 	return {
 		output,

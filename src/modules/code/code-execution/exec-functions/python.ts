@@ -1,25 +1,26 @@
+import { ProgrammingLanguageEnum } from "@utils";
 import { Docker } from "../docker";
 import { CodeExecutionFunction } from "../types";
 import * as fs from "fs";
-import { v4 as uuidv4 } from "uuid";
+import * as path from "path";
 
 export const pythonExecFunction: CodeExecutionFunction = async (
 	code: string,
 ) => {
 	const docker = Docker.getInstance();
+	const { container, execDir } = await docker.prepareSandbox(
+		ProgrammingLanguageEnum.PYTHON,
+	);
 
-	const runId = uuidv4();
-	const container = await docker.createExecContainer("python:3.14", runId);
-	await container.start();
+	if (!execDir) {
+		throw new Error("Python sandbox execution directory is not available");
+	}
 
 	// Prepare python file
-	const execDir = docker.getExecDir(runId);
 	console.log("Preparing Python file...");
-	fs.writeFileSync(`${execDir}/script.py`, code);
+	fs.writeFileSync(path.join(execDir, "script.py"), code);
 
 	const result = await docker.execCommand(container, ["python", "script.py"]);
-
-	docker.cleanupContainer(container, runId);
 
 	return result;
 };

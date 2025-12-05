@@ -4,6 +4,18 @@ import * as fs from "fs";
 import * as path from "path";
 import { CodeExecutionResult } from "./types";
 
+type SandboxInstance = {
+	key: string;
+	runId: string;
+	image: string;
+	container: Dockerode.Container;
+};
+
+export type SandboxContext = {
+	container: Dockerode.Container;
+	execDir?: string;
+};
+
 export class Docker {
 	private static instance: Docker;
 	static getInstance() {
@@ -14,6 +26,7 @@ export class Docker {
 	readonly dockerode: Dockerode;
 	readonly codeExecutionDir = path.join(process.cwd(), "code-execution-tmp");
 	readonly containerWorkingDir = "/app";
+	private readonly sandboxes = new Map<string, SandboxInstance>();
 	private constructor() {
 		this.dockerode = new Dockerode(
 			Env.USE_DOCKER_DIND
@@ -37,6 +50,112 @@ export class Docker {
 		return `${this.codeExecutionDir}/${runId}`;
 	}
 
+	private buildSandboxIdentifiers(key: string) {
+		const sanitized = this.sanitizeSandboxKey(key);
+		return {
+			runId: sanitized,
+			containerName: `devchat-sbx-${sanitized}`,
+		};
+	}
+
+	private ensureExecDirectory(runId: string) {
+		const execDir = this.getExecDir(runId);
+		if (!fs.existsSync(execDir)) {
+			fs.mkdirSync(execDir, { recursive: true });
+		}
+		return execDir;
+	}
+
+	private resetExecDirectory(runId: string) {
+		const execDir = this.getExecDir(runId);
+		fs.rmSync(execDir, { recursive: true, force: true });
+		fs.mkdirSync(execDir, { recursive: true });
+		return execDir;
+	}
+
+	private sanitizeSandboxKey(key: string) {
+		return key.replace(/[^a-zA-Z0-9-_]/g, "-").toLowerCase();
+	}
+
+	private getSandbox(key: string): SandboxInstance {
+		const sandbox = this.sandboxes.get(key);
+		if (!sandbox) {
+			throw new Error(`Sandbox ${key} has not been initialized`);
+		}
+		return sandbox;
+	}
+
+	private async ensureContainerRunning(container: Dockerode.Container) {
+		const inspectInfo = await container.inspect();
+		if (!inspectInfo.State?.Running) {
+			await container.start();
+		}
+	}
+
+	private async getExistingContainer(name: string) {
+		try {
+			const container = this.dockerode.getContainer(name);
+			await container.inspect();
+			return container;
+		} catch (error) {
+			return null;
+		}
+	}
+
+	private async ensureSandboxContainer(
+		key: string,
+		image: string,
+	): Promise<{ container: Dockerode.Container; runId: string }> {
+		const { runId, containerName } = this.buildSandboxIdentifiers(key);
+		this.ensureExecDirectory(runId);
+
+		let container = await this.getExistingContainer(containerName);
+		if (container) {
+			try {
+				const inspect = await container.inspect();
+				const configImage = inspect.Config?.Image ?? "";
+				const matchesImage = configImage.includes(image);
+				if (!matchesImage) {
+					await this.cleanupContainer(container, runId);
+					container = null;
+				}
+			} catch (error) {
+				console.warn(
+					`Failed to inspect sandbox container ${containerName}:`,
+					error,
+				);
+				container = null;
+			}
+		}
+
+		if (!container) {
+			container = await this.createExecContainer(image, runId, containerName);
+			await container.start();
+		} else {
+			await this.ensureContainerRunning(container);
+		}
+
+		return { container, runId };
+	}
+
+	async initSandbox(key: string, image: string) {
+		if (this.sandboxes.has(key)) {
+			return;
+		}
+		const { container, runId } = await this.ensureSandboxContainer(key, image);
+		this.sandboxes.set(key, { key, image, runId, container });
+		console.log(`Sandbox ${key} initialized with image ${image}`);
+	}
+
+	async prepareSandbox(key: string): Promise<SandboxContext> {
+		const sandbox = this.getSandbox(key);
+		await this.ensureContainerRunning(sandbox.container);
+		const execDir = sandbox.runId
+			? this.resetExecDirectory(sandbox.runId)
+			: undefined;
+		return { container: sandbox.container, execDir };
+	}
+
 	async pullImageIfNotExists(image: string) {
 		console.log("Checking for image:", image);
 		const images = await this.dockerode.listImages({
@@ -54,8 +173,11 @@ export class Docker {
 		}
 	}
 
-	async createExecContainer(image: string, runId?: string) {
+	async createExecContainer(image: string, runId?: string, name?: string) {
 		await this.pullImageIfNotExists(image);
+		if (runId) {
+			this.ensureExecDirectory(runId);
+		}
 
 		const cpuLimitCores = 0.5; // half a core
 		const cpuPeriod = 100_000; // Docker default period (in microseconds)
@@ -64,6 +186,7 @@ export class Docker {
 
 		console.log("Creating container for image:", image);
 		const container = await this.dockerode.createContainer({
+			name,
 			Image: image,
 			AttachStdout: true,
 			AttachStderr: true,
@@ -123,6 +246,7 @@ export class Docker {
 		cmd: string[],
 		timeoutMs = 2000,
 	): Promise<CodeExecutionResult> {
+		await this.ensureContainerRunning(container);
 		const exec = await container.exec({
 			Cmd: cmd,
 			AttachStdout: true,
