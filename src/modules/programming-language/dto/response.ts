@@ -32,6 +32,9 @@ export class ProgrammingLanguageResponse {
 	@ApiProperty()
 	isActive: boolean;
 
+	@ApiProperty()
+	useAiCheck: boolean;
+
 	static fromEntity(
 		entity: SupportedProgrammingLanguageEntity,
 	): ProgrammingLanguageResponse {
@@ -46,6 +49,7 @@ export class ProgrammingLanguageResponse {
 			isExecutable: entity.isExecutable,
 			preset: entity.preset,
 			isActive: entity.isActive,
+			useAiCheck: entity.useAiCheck,
 		};
 	}
 
