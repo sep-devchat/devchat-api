@@ -172,7 +172,7 @@ export class Docker {
 		runId: string,
 		cmd: string[],
 		timeoutMs: number = 2000,
-		outputLimitBytes = 200_000,
+		outputLimitChars = 10_000,
 	): Promise<CodeExecutionResult> {
 		const exec = await container.exec({
 			Cmd: cmd,
@@ -198,21 +198,21 @@ export class Docker {
 				console.error("Error stopping exec on timeout:", err);
 			}
 		}, timeoutMs);
-		let buff = Buffer.alloc(0);
+		let output = "";
 		let truncated = false;
 		for await (const chunk of stream) {
-			if (buff.length >= outputLimitBytes) {
+			if (output.length >= outputLimitChars) {
 				truncated = true;
 				break;
 			}
-			const bufferChunk = Buffer.isBuffer(chunk)
-				? chunk
-				: Buffer.from(chunk as Buffer);
-			const remaining = outputLimitBytes - buff.length;
-			if (bufferChunk.length <= remaining) {
-				buff = Buffer.concat([buff, bufferChunk]);
+			const textChunk = Buffer.isBuffer(chunk)
+				? chunk.toString("utf-8")
+				: Buffer.from(chunk as Buffer).toString("utf-8");
+			const remaining = outputLimitChars - output.length;
+			if (textChunk.length <= remaining) {
+				output += textChunk;
 			} else {
-				buff = Buffer.concat([buff, bufferChunk.subarray(0, remaining)]);
+				output += textChunk.slice(0, remaining);
 				truncated = true;
 				break;
 			}
@@ -223,7 +223,6 @@ export class Docker {
 		console.log("Exec info:");
 		console.log(JSON.stringify(execInfo, null, 2));
 
-		let output = buff.toString("utf-8");
 		if (truncated) {
 			output += "\n[execution output truncated]\n";
 		}
