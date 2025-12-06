@@ -29,11 +29,15 @@ export class CodeService implements OnModuleInit {
 	async onModuleInit() {
 		console.log("Preparing code execution containers...");
 		const docker = Docker.getInstance();
-		await Promise.all(
-			Object.values(ProgrammingLanguageEnum).map((lang) =>
-				docker.prepareContainer(lang),
-			),
-		);
+
+		for (const lang of Object.values(ProgrammingLanguageEnum)) {
+			try {
+				await docker.prepareContainer(lang);
+				console.log(`Container for ${lang} is ready.`);
+			} catch (err) {
+				console.error(`Error preparing container for ${lang}:`, err);
+			}
+		}
 	}
 
 	async runCode(dto: RunCodeRequest): Promise<CodeExecutionResult> {

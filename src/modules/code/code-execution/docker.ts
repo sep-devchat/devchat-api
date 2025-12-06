@@ -51,8 +51,12 @@ export class Docker {
 			}),
 		});
 
-		if (containers.length > 0) {
-			const container = this.dockerode.getContainer(containers[0].Id);
+		const containerInfo = containers.filter((c) =>
+			c.Names.includes(`/${this.getContainerName(programmingLanguage)}`),
+		)[0];
+
+		if (containerInfo) {
+			const container = this.dockerode.getContainer(containerInfo.Id);
 			const info = await container.inspect();
 			if (!info.State.Running) {
 				await container.start();
@@ -168,6 +172,7 @@ export class Docker {
 		runId: string,
 		cmd: string[],
 		timeoutMs: number = 2000,
+		outputLimitBytes = 200_000,
 	): Promise<CodeExecutionResult> {
 		const exec = await container.exec({
 			Cmd: cmd,
@@ -194,8 +199,23 @@ export class Docker {
 			}
 		}, timeoutMs);
 		let buff = Buffer.alloc(0);
+		let truncated = false;
 		for await (const chunk of stream) {
-			buff = Buffer.concat([buff, chunk]);
+			if (buff.length >= outputLimitBytes) {
+				truncated = true;
+				break;
+			}
+			const bufferChunk = Buffer.isBuffer(chunk)
+				? chunk
+				: Buffer.from(chunk as Buffer);
+			const remaining = outputLimitBytes - buff.length;
+			if (bufferChunk.length <= remaining) {
+				buff = Buffer.concat([buff, bufferChunk]);
+			} else {
+				buff = Buffer.concat([buff, bufferChunk.subarray(0, remaining)]);
+				truncated = true;
+				break;
+			}
 		}
 		clearTimeout(timeout);
 
@@ -203,8 +223,13 @@ export class Docker {
 		console.log("Exec info:");
 		console.log(JSON.stringify(execInfo, null, 2));
 
+		let output = buff.toString("utf-8");
+		if (truncated) {
+			output += "\n[execution output truncated]\n";
+		}
+
 		return {
-			output: buff.toString("utf-8"),
+			output,
 			timeout: isTimeout,
 		};
 	}
