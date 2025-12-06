@@ -47,4 +47,11 @@ export class CreateProgrammingLanguageRequest {
 	})
 	@IsOptional()
 	isExecutable?: boolean;
+
+	@ApiProperty({
+		description: "Indicates if the language should use AI for code checking",
+		required: false,
+	})
+	@IsOptional()
+	useAiCheck?: boolean;
 }

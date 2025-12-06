@@ -251,6 +251,7 @@ export const DbConstants = {
 			languageVersion: "language_version",
 			isExecutable: "is_executable",
 			preset: "preset",
+			useAiCheck: "use_ai_check",
 		},
 		UserLanguageCollection: {
 			id: "user_language_collection_id",

@@ -61,6 +61,7 @@ export class ProgrammingLanguageService {
 			isExecutable: dto.isExecutable ?? false,
 			createdBy: this.getCurrentUserId(),
 			updatedBy: this.getCurrentUserId(),
+			useAiCheck: dto.useAiCheck ?? true,
 		});
 		return this.repo.save(entity);
 	}
@@ -99,6 +100,7 @@ export class ProgrammingLanguageService {
 			languageIcon: dto.languageIcon ?? null,
 			preset: dto.preset ?? null,
 			isExecutable: dto.isExecutable ?? false,
+			useAiCheck: dto.useAiCheck ?? true,
 			updatedBy: this.getCurrentUserId(),
 		});
 		return this.repo.save(entity);

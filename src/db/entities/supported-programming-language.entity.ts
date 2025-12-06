@@ -52,6 +52,13 @@ export class SupportedProgrammingLanguageEntity {
 	isExecutable: boolean;
 
 	@Column({
+		name: ColumnName.SupportedProgrammingLanguage.useAiCheck,
+		type: "boolean",
+		default: true,
+	})
+	useAiCheck: boolean;
+
+	@Column({
 		name: ColumnName.SupportedProgrammingLanguage.preset,
 		type: "text",
 		nullable: true,
