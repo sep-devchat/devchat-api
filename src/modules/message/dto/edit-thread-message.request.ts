@@ -1,4 +1,6 @@
-import { IsString } from "class-validator";
+import { CreateCodeBlockRequest } from "@modules/code-block/dto";
+import { Type } from "class-transformer";
+import { IsArray, IsOptional, IsString, ValidateNested } from "class-validator";
 
 export class EditThreadMessageRequest {
 	@IsString()
@@ -6,4 +8,14 @@ export class EditThreadMessageRequest {
 
 	@IsString()
 	content: string;
+
+	@IsString({ each: true })
+	@IsArray()
+	@IsOptional()
+	attachmentIds?: string[];
+
+	@ValidateNested()
+	@Type(() => CreateCodeBlockRequest)
+	@IsOptional()
+	codeBlock?: CreateCodeBlockRequest | null;
 }

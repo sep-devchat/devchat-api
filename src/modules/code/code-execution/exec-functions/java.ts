@@ -23,7 +23,7 @@ export const javaExecFunction: CodeExecutionFunction = async (code: string) => {
 	const compileResult = await docker.execCommand(
 		container,
 		runId,
-		["javac Main.java"],
+		["/bin/bash", "-c", "javac Main.java"],
 		20000,
 	);
 
@@ -33,6 +33,8 @@ export const javaExecFunction: CodeExecutionFunction = async (code: string) => {
 	if (!isTimeout) {
 		// Run
 		const execResult = await docker.execCommand(container, runId, [
+			"/bin/bash",
+			"-c",
 			"java Main",
 		]);
 		output += execResult.output;

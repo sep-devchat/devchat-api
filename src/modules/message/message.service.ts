@@ -5,6 +5,8 @@ import {
 	DirectMessageRepository,
 	UserRepository,
 	ThreadMessageRepository,
+	CodeBlockRepository,
+	RunCodeCacheRepostiroy,
 } from "@db/repositories";
 import {
 	SendMessageRequest,
@@ -14,6 +16,7 @@ import {
 	SendDirectMessageRequest,
 	DirectMessageResponse,
 	FetchDirectMessagesRequest,
+	EditDirectMessageRequest,
 	SendThreadMessageRequest,
 	FetchThreadMessagesRequest,
 	EditThreadMessageRequest,
@@ -24,8 +27,12 @@ import {
 import { EditMessageFailedError, DeleteMessageFailedError } from "./errors";
 import { AuthService } from "@modules/auth";
 import { ClsService } from "nestjs-cls";
-import { DevChatCls } from "@utils";
-import { MessageEntity } from "@db/entities";
+import { DevChatCls, RunCodeTypeEnum } from "@utils";
+import {
+	DirectMessageEntity,
+	MessageEntity,
+	ThreadMessageEntity,
+} from "@db/entities";
 import { AiService } from "@modules/ai";
 import { Socket } from "socket.io";
 import { SocketEvents } from "@modules/socket/socket.constants";
@@ -35,6 +42,7 @@ import { SocketService, ChatPresenceService } from "@modules/socket";
 import { ThreadMessageResponse } from "./dto";
 import { ChannelRepository, UserGroupRepository } from "@db/repositories";
 import { NotificationService } from "@modules/notification";
+import { CreateCodeBlockRequest } from "@modules/code-block/dto";
 
 @Injectable()
 export class MessageService {
@@ -50,6 +58,8 @@ export class MessageService {
 		private readonly attachmentService: AttachmentService,
 		private readonly socketService: SocketService,
 		private readonly threadMessageRepo: ThreadMessageRepository,
+		private readonly codeBlockRepo: CodeBlockRepository,
+		private readonly runCodeCacheRepo: RunCodeCacheRepostiroy,
 		private readonly notificationService: NotificationService,
 		private readonly chatPresence: ChatPresenceService,
 	) {}
@@ -358,26 +368,117 @@ export class MessageService {
 		return resp;
 	}
 
+	async editDirectMessage(
+		client: Socket,
+		dto: EditDirectMessageRequest,
+		server: Socket["server"],
+	) {
+		const fromUser = client.data.user;
+		if (!fromUser)
+			throw new WsException({
+				code: "auth_required_err",
+				message: "Authenticate before editing direct messages",
+			});
+
+		let dm = await this.directMessageRepo.findOne({
+			where: { id: dto.messageId },
+			relations: {
+				fromUser: true,
+				toUser: true,
+				codeBlock: true,
+				parentMessage: { fromUser: true },
+			},
+		});
+		if (!dm) throw new EditMessageFailedError("Direct message not found");
+		if (dm.fromUserId !== fromUser.id)
+			throw new EditMessageFailedError(
+				"You can only edit your own direct messages",
+			);
+		if (typeof dto.codeBlock !== "undefined") {
+			await this.syncDirectMessageCodeBlock(
+				dm,
+				dto.codeBlock,
+				fromUser.id,
+				dm.toUserId,
+			);
+		}
+		if (typeof dto.attachmentIds !== "undefined") {
+			await this.attachmentService.replaceDirectMessageAttachments(
+				dm,
+				dto.attachmentIds ?? [],
+			);
+		}
+		dm.content = dto.content;
+		dm.updatedAt = new Date();
+		await this.directMessageRepo.save(dm);
+		dm =
+			(await this.directMessageRepo.findOne({
+				where: { id: dm.id },
+				relations: {
+					fromUser: true,
+					toUser: true,
+					codeBlock: true,
+					parentMessage: { fromUser: true },
+				},
+			})) ?? dm;
+		const resp = DirectMessageResponse.fromEntity(dm);
+		this.socketService.sendEventToUser(
+			fromUser.id,
+			SocketEvents.EDIT_DIRECT_MESSAGE,
+			resp,
+		);
+		this.socketService.sendEventToUser(
+			dm.toUserId,
+			SocketEvents.EDIT_DIRECT_MESSAGE,
+			resp,
+		);
+		return resp;
+	}
+
 	async editMessage(
 		client: Socket,
 		dto: EditMessageRequest,
 		server: Socket["server"],
 	) {
-		const message = await this.messageRepo.findOne({
+		let message = await this.messageRepo.findOne({
 			where: { id: dto.messageId },
 			relations: {
 				sender: true,
 				channel: true,
 				parentMessage: { sender: true },
 				thread: true,
+				codeBlock: true,
 			},
 		});
 		if (!message) throw new EditMessageFailedError("Message not found");
 		if (message.senderId !== client.data.user.id)
 			throw new EditMessageFailedError("You can only edit your own messages");
+		if (typeof dto.codeBlock !== "undefined") {
+			await this.syncMessageCodeBlock(
+				message,
+				dto.codeBlock,
+				client.data.user.id,
+			);
+		}
+		if (typeof dto.attachmentIds !== "undefined") {
+			await this.attachmentService.replaceMessageAttachments(
+				message,
+				dto.attachmentIds ?? [],
+			);
+		}
 		message.content = dto.content;
 		message.updatedAt = new Date();
 		await this.messageRepo.save(message);
+		message =
+			(await this.messageRepo.findOne({
+				where: { id: message.id },
+				relations: {
+					sender: true,
+					channel: true,
+					parentMessage: { sender: true },
+					thread: true,
+				},
+			})) ?? message;
 		const response = MessageResponse.fromEntity(message);
 		server.to(client.data.room).emit(SocketEvents.EDIT_MESSAGE, {
 			messageId: message.id,
@@ -394,8 +495,53 @@ export class MessageService {
 			throw new DeleteMessageFailedError(
 				"You can only delete your own messages",
 			);
+		await this.attachmentService.removeAttachmentsForMessage(message.id);
+		await this.syncMessageCodeBlock(message, null, message.senderId);
 		await this.messageRepo.delete(message.id);
 		server.to(client.data.room).emit(SocketEvents.DELETE_MESSAGE, id);
+	}
+
+	async deleteDirectMessage(
+		client: Socket,
+		id: string,
+		server: Socket["server"],
+	) {
+		const user = client.data.user;
+		if (!user)
+			throw new WsException({
+				code: "auth_required_err",
+				message: "Authenticate before deleting direct messages",
+			});
+		const directMessage = await this.directMessageRepo.findOne({
+			where: { id },
+		});
+		if (!directMessage)
+			throw new DeleteMessageFailedError("Direct message not found");
+		if (directMessage.fromUserId !== user.id)
+			throw new DeleteMessageFailedError(
+				"You can only delete your own direct messages",
+			);
+		await this.attachmentService.removeAttachmentsForDirectMessage(
+			directMessage.id,
+		);
+		await this.syncDirectMessageCodeBlock(
+			directMessage,
+			null,
+			user.id,
+			directMessage.toUserId,
+		);
+		await this.directMessageRepo.delete(directMessage.id);
+		this.socketService.sendEventToUser(
+			user.id,
+			SocketEvents.DELETE_DIRECT_MESSAGE,
+			id,
+		);
+		this.socketService.sendEventToUser(
+			directMessage.toUserId,
+			SocketEvents.DELETE_DIRECT_MESSAGE,
+			id,
+		);
+		return id;
 	}
 
 	async sendThreadMessage(
@@ -689,18 +835,44 @@ export class MessageService {
 				code: "auth_required_err",
 				message: "Authenticate before editing thread messages",
 			});
-		const tm = await this.threadMessageRepo.findOne({
+		let tm = await this.threadMessageRepo.findOne({
 			where: { id: dto.threadMessageId },
-			relations: { sender: true, codeBlock: true },
+			relations: {
+				sender: true,
+				codeBlock: true,
+				parentMessage: { sender: true },
+			},
 		});
 		if (!tm) throw new EditMessageFailedError("Thread message not found");
 		if (tm.senderId !== client.data.user.id)
 			throw new EditMessageFailedError(
 				"You can only edit your own thread messages",
 			);
+		if (typeof dto.codeBlock !== "undefined") {
+			await this.syncThreadMessageCodeBlock(
+				tm,
+				dto.codeBlock,
+				client.data.user.id,
+			);
+		}
+		if (typeof dto.attachmentIds !== "undefined") {
+			await this.attachmentService.replaceThreadMessageAttachments(
+				tm,
+				dto.attachmentIds ?? [],
+			);
+		}
 		tm.content = dto.content;
 		tm.updatedAt = new Date();
 		await this.threadMessageRepo.save(tm);
+		tm =
+			(await this.threadMessageRepo.findOne({
+				where: { id: tm.id },
+				relations: {
+					sender: true,
+					codeBlock: true,
+					parentMessage: { sender: true },
+				},
+			})) ?? tm;
 		const resp = ThreadMessageResponse.fromEntity(tm);
 		client.nsp.server
 			.to(client.data.room)
@@ -721,11 +893,121 @@ export class MessageService {
 			throw new DeleteMessageFailedError(
 				"You can only delete your own thread messages",
 			);
+		await this.attachmentService.removeAttachmentsForThreadMessage(tm.id);
+		await this.syncThreadMessageCodeBlock(tm, null, client.data.user.id);
 		await this.threadMessageRepo.delete(id);
 		client.nsp.server
 			.to(client.data.room)
 			.emit(SocketEvents.DELETE_THREAD_MESSAGE, id);
 		return id;
+	}
+
+	private async syncMessageCodeBlock(
+		message: MessageEntity,
+		codeBlockInput: CreateCodeBlockRequest | null,
+		userId: string,
+	) {
+		if (codeBlockInput === null) {
+			if (message.codeBlockId) {
+				await this.clearCodeBlockCache(message.codeBlockId);
+				await this.codeBlockRepo.delete(message.codeBlockId);
+			}
+			message.codeBlock = null;
+			message.codeBlockId = null;
+			return;
+		}
+
+		if (!codeBlockInput) return;
+
+		if (message.codeBlock) {
+			message.codeBlock.content = codeBlockInput.content;
+			message.codeBlock.language = codeBlockInput.language;
+			await this.clearCodeBlockCache(message.codeBlock.id);
+			return;
+		}
+
+		const created = this.codeBlockRepo.create({
+			content: codeBlockInput.content,
+			language: codeBlockInput.language,
+			userId,
+			channelId: message.channelId,
+		});
+		message.codeBlock = created;
+	}
+
+	private async syncDirectMessageCodeBlock(
+		directMessage: DirectMessageEntity,
+		codeBlockInput: CreateCodeBlockRequest | null,
+		userId: string,
+		targetUserId: string,
+	) {
+		if (codeBlockInput === null) {
+			if (directMessage.codeBlockId) {
+				await this.clearCodeBlockCache(directMessage.codeBlockId);
+				await this.codeBlockRepo.delete(directMessage.codeBlockId);
+			}
+			directMessage.codeBlock = null;
+			directMessage.codeBlockId = null;
+			return;
+		}
+
+		if (!codeBlockInput) return;
+
+		if (directMessage.codeBlock) {
+			directMessage.codeBlock.content = codeBlockInput.content;
+			directMessage.codeBlock.language = codeBlockInput.language;
+			await this.clearCodeBlockCache(directMessage.codeBlock.id);
+			return;
+		}
+
+		const created = this.codeBlockRepo.create({
+			content: codeBlockInput.content,
+			language: codeBlockInput.language,
+			userId,
+			toUserId: targetUserId,
+		});
+		directMessage.codeBlock = created;
+	}
+
+	private async syncThreadMessageCodeBlock(
+		threadMessage: ThreadMessageEntity,
+		codeBlockInput: CreateCodeBlockRequest | null,
+		userId: string,
+	) {
+		if (codeBlockInput === null) {
+			if (threadMessage.codeBlockId) {
+				await this.clearCodeBlockCache(threadMessage.codeBlockId);
+				await this.codeBlockRepo.delete(threadMessage.codeBlockId);
+			}
+			threadMessage.codeBlock = null;
+			threadMessage.codeBlockId = null;
+			return;
+		}
+
+		if (!codeBlockInput) return;
+
+		if (threadMessage.codeBlock) {
+			threadMessage.codeBlock.content = codeBlockInput.content;
+			threadMessage.codeBlock.language = codeBlockInput.language;
+			await this.clearCodeBlockCache(threadMessage.codeBlock.id);
+			return;
+		}
+
+		const created = this.codeBlockRepo.create({
+			content: codeBlockInput.content,
+			language: codeBlockInput.language,
+			userId,
+			channelId: threadMessage.channelId,
+		});
+		threadMessage.codeBlock = created;
+	}
+
+	private async clearCodeBlockCache(codeBlockId?: string | null) {
+		if (!codeBlockId) return;
+		await this.runCodeCacheRepo.delete({
+			targetId: codeBlockId,
+			runCodeType: RunCodeTypeEnum.CODE_BLOCK,
+		});
 	}
 
 	private async notifyGroupMessageDigest(params: {

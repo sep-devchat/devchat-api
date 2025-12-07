@@ -176,7 +176,7 @@ export const DbConstants = {
 			title: "title",
 			description: "description",
 			language: "language",
-			code: "code",
+			content: "content",
 			executionResult: "execution_result",
 			executionStatus: "execution_status",
 			executedAt: "executed_at",

@@ -46,7 +46,7 @@ export class DirectMessageEntity {
 	content: string;
 
 	@Column({ name: ColumnName.CodeBlock.id, type: "uuid", nullable: true })
-	codeBlockId: string;
+	codeBlockId: string | null;
 
 	@OneToOne(() => CodeBlockEntity, {
 		cascade: true,
@@ -54,7 +54,7 @@ export class DirectMessageEntity {
 		createForeignKeyConstraints: false,
 	})
 	@JoinColumn({ name: ColumnName.CodeBlock.id })
-	codeBlock: CodeBlockEntity;
+	codeBlock: CodeBlockEntity | null;
 
 	@CreateDateColumn({ name: ColumnName.Audit.createdAt })
 	createdAt: Date;

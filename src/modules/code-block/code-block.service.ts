@@ -34,12 +34,23 @@ export class CodeBlockService {
 		}
 	}
 
-	async updateOne(id: string, dto: UpdateCodeBlockRequest) {
-		const existingCodeblock = await this.findOne(id);
+	async updateOne(
+		id: string,
+		dto: UpdateCodeBlockRequest,
+		options?: { skipOwnershipCheck?: boolean },
+	) {
+		const existingCodeblock = await this.findOne(
+			id,
+			!(options?.skipOwnershipCheck ?? false),
+		);
 
-		await this.repo.update(id, {
-			...dto,
+		console.log("Perform updating codeblock on id: " + id);
+
+		const result = await this.repo.update(id, {
+			content: dto.content,
 		});
+
+		console.log("Code updated: " + result.affected + " affected");
 
 		await this.runCodeCacheRepo.delete({
 			targetId: existingCodeblock.id,
@@ -98,7 +109,6 @@ export class CodeBlockService {
 				id,
 				deletedAt: null,
 			},
-			relations: ["user"],
 		});
 
 		if (
@@ -140,8 +150,11 @@ export class CodeBlockService {
 		return existingCodeblock;
 	}
 
-	async deleteOne(id: string) {
-		const existingCodeblock = await this.findOne(id);
+	async deleteOne(id: string, options?: { skipOwnershipCheck?: boolean }) {
+		const existingCodeblock = await this.findOne(
+			id,
+			!(options?.skipOwnershipCheck ?? false),
+		);
 
 		existingCodeblock.deletedAt = new Date();
 

@@ -2,7 +2,7 @@ import { CreateCodeBlockRequest } from "@modules/code-block/dto";
 import { Type } from "class-transformer";
 import { IsArray, IsOptional, IsString, ValidateNested } from "class-validator";
 
-export class EditMessageRequest {
+export class EditDirectMessageRequest {
 	@IsString()
 	messageId: string;
 

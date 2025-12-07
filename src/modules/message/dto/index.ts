@@ -5,6 +5,7 @@ export * from "./search-messages.request";
 export * from "./message.response";
 export * from "./search-direct-messages.request";
 export * from "./send-direct-message.request";
+export * from "./edit-direct-message.request";
 export * from "./direct-message.response";
 export * from "./fetch-direct-messages.request";
 export * from "./send-thread-message.request";
