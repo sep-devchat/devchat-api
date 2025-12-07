@@ -241,8 +241,6 @@ export class AuthService {
 			false,
 		);
 
-		if (!user.isActive) throw new AccountInactiveError();
-
 		if (!user) {
 			const data = await this.userService.create(
 				{
@@ -258,6 +256,8 @@ export class AuthService {
 
 			user = await this.userService.findById(data.identifiers[0].id);
 		}
+
+		if (!user.isActive) throw new AccountInactiveError();
 
 		return user;
 	}
