@@ -72,7 +72,7 @@ export class MessageEntity {
 	sender: UserEntity;
 
 	@Column({ name: ColumnName.CodeBlock.id, type: "uuid", nullable: true })
-	codeBlockId: string;
+	codeBlockId: string | null;
 
 	@OneToOne(() => CodeBlockEntity, (codeBlock) => codeBlock.message, {
 		nullable: true,
@@ -80,5 +80,5 @@ export class MessageEntity {
 		createForeignKeyConstraints: false,
 	})
 	@JoinColumn({ name: ColumnName.CodeBlock.id })
-	codeBlock: CodeBlockEntity;
+	codeBlock: CodeBlockEntity | null;
 }

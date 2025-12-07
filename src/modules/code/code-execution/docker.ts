@@ -42,34 +42,83 @@ export class Docker {
 		return `devchat-${programmingLanguage}`;
 	}
 
+	private async findExistingContainer(containerName: string): Promise<{
+		container: Dockerode.Container;
+		info: Dockerode.ContainerInspectInfo;
+	} | null> {
+		try {
+			const containers = await this.dockerode.listContainers({
+				all: true,
+				filters: JSON.stringify({
+					name: [containerName],
+				}),
+			});
+
+			const exactMatch = containers.find((c) =>
+				c.Names.some((name) => name.replace(/^\//, "") === containerName),
+			);
+
+			if (!exactMatch) {
+				return null;
+			}
+
+			const container = this.dockerode.getContainer(exactMatch.Id);
+			const info = await container.inspect();
+			return { container, info };
+		} catch (error) {
+			console.error("Error finding container", error);
+			return null;
+		}
+	}
+
+	private async startNewContainer(containerName: string, image: string) {
+		const container = await this.createExecContainer(containerName, image);
+		await container.start();
+		return container;
+	}
+
+	private isSameImage(currentImage: string | undefined, expectedImage: string) {
+		if (!currentImage) {
+			return false;
+		}
+		return (
+			currentImage === expectedImage ||
+			currentImage.endsWith(`/${expectedImage}`)
+		);
+	}
+
 	async prepareContainer(programmingLanguage: ProgrammingLanguageEnum) {
 		const image = imageMap[programmingLanguage];
-		const containers = await this.dockerode.listContainers({
-			all: true,
-			filters: JSON.stringify({
-				name: [this.getContainerName(programmingLanguage)],
-			}),
-		});
+		const containerName = this.getContainerName(programmingLanguage);
+		console.log(
+			`[Docker] Preparing container ${containerName} for ${programmingLanguage} using image ${image}`,
+		);
+		const existing = await this.findExistingContainer(containerName);
 
-		const containerInfo = containers.filter((c) =>
-			c.Names.includes(`/${this.getContainerName(programmingLanguage)}`),
-		)[0];
-
-		if (containerInfo) {
-			const container = this.dockerode.getContainer(containerInfo.Id);
-			const info = await container.inspect();
+		if (existing) {
+			const { container, info } = existing;
+			console.log(
+				`[Docker] Found existing container ${containerName} (running=${info.State.Running}) with image ${info.Config?.Image}`,
+			);
+			if (!this.isSameImage(info.Config?.Image, image)) {
+				console.log(
+					`[Docker] Container ${containerName} image mismatch. Expected ${image} but found ${info.Config?.Image}. Recreating...`,
+				);
+				await this.cleanupContainer(container);
+				return this.startNewContainer(containerName, image);
+			}
 			if (!info.State.Running) {
+				console.log(`[Docker] Starting stopped container ${containerName}`);
 				await container.start();
 			}
+			console.log(`[Docker] Reusing container ${containerName}`);
 			return container;
 		}
 
-		const container = await this.createExecContainer(
-			this.getContainerName(programmingLanguage),
-			image,
+		console.log(
+			`[Docker] No existing container found for ${containerName}. Creating new one...`,
 		);
-		await container.start();
-		return container;
+		return this.startNewContainer(containerName, image);
 	}
 
 	async pullImageIfNotExists(image: string) {

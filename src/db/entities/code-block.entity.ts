@@ -56,7 +56,7 @@ export class CodeBlockEntity {
 	@Column({ name: ColumnName.CodeBlock.language, type: "varchar", length: 50 })
 	language: string;
 
-	@Column({ name: ColumnName.CodeBlock.code, type: "text" })
+	@Column({ name: ColumnName.CodeBlock.content, type: "text" })
 	content: string;
 
 	@CreateDateColumn({ type: "datetime", name: ColumnName.Audit.createdAt })

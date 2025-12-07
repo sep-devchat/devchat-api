@@ -8,6 +8,7 @@ import { SocketModule } from "@modules/socket";
 import { AiModule } from "@modules/ai";
 import { AttachmentModule } from "@modules/attachment";
 import { NotificationModule } from "@modules/notification";
+import { CodeBlockModule } from "@modules/code-block";
 
 @Module({
 	imports: [
@@ -16,6 +17,7 @@ import { NotificationModule } from "@modules/notification";
 		SocketModule,
 		AiModule,
 		AttachmentModule,
+		CodeBlockModule,
 		SocketModule,
 		NotificationModule,
 	],

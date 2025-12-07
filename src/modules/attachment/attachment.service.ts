@@ -23,6 +23,16 @@ export class AttachmentService {
 		private readonly cls: ClsService<DevChatCls>,
 	) {}
 
+	private normalizeAttachmentIds(attachmentIds?: string[]) {
+		return Array.from(
+			new Set(
+				(attachmentIds ?? []).filter(
+					(id): id is string => typeof id === "string" && id.trim().length > 0,
+				),
+			),
+		);
+	}
+
 	async findMany(
 		query: AttachmentQuery,
 	): Promise<[AttachmentEntity[], number]> {
@@ -133,6 +143,147 @@ export class AttachmentService {
 				messageId: threadMessage.id,
 				channelId: threadMessage.channelId,
 				threadId: threadMessage.threadId,
+			},
+		);
+	}
+
+	async replaceMessageAttachments(
+		message: MessageEntity,
+		attachmentIds: string[] = [],
+	) {
+		const normalizedIds = this.normalizeAttachmentIds(attachmentIds);
+		const existing = await this.attachmentRepo.find({
+			where: { messageId: message.id },
+			select: ["id"],
+		});
+		const existingIds = existing.map((item) => item.id);
+		const idsToDetach = existingIds.filter((id) => !normalizedIds.includes(id));
+		if (idsToDetach.length) {
+			await this.attachmentRepo.update(
+				{ id: In(idsToDetach) },
+				{
+					messageId: null,
+					channelId: null,
+					threadId: null,
+					toUserId: null,
+				},
+			);
+		}
+		if (normalizedIds.length) {
+			await this.attachmentRepo.update(
+				{ id: In(normalizedIds) },
+				{
+					messageId: message.id,
+					channelId: message.channelId,
+					threadId: null,
+					toUserId: null,
+				},
+			);
+		}
+	}
+
+	async removeAttachmentsForMessage(messageId: string) {
+		await this.attachmentRepo.update(
+			{ messageId },
+			{
+				messageId: null,
+				channelId: null,
+				threadId: null,
+				toUserId: null,
+			},
+		);
+	}
+
+	async replaceDirectMessageAttachments(
+		directMessage: DirectMessageEntity,
+		attachmentIds: string[] = [],
+	) {
+		const normalizedIds = this.normalizeAttachmentIds(attachmentIds);
+		const existing = await this.attachmentRepo.find({
+			where: { messageId: directMessage.id },
+			select: ["id"],
+		});
+		const existingIds = existing.map((item) => item.id);
+		const idsToDetach = existingIds.filter((id) => !normalizedIds.includes(id));
+		if (idsToDetach.length) {
+			await this.attachmentRepo.update(
+				{ id: In(idsToDetach) },
+				{
+					messageId: null,
+					channelId: null,
+					threadId: null,
+					toUserId: null,
+				},
+			);
+		}
+		if (normalizedIds.length) {
+			await this.attachmentRepo.update(
+				{ id: In(normalizedIds) },
+				{
+					messageId: directMessage.id,
+					toUserId: directMessage.toUserId,
+					channelId: null,
+					threadId: null,
+				},
+			);
+		}
+	}
+
+	async removeAttachmentsForDirectMessage(messageId: string) {
+		await this.attachmentRepo.update(
+			{ messageId },
+			{
+				messageId: null,
+				channelId: null,
+				threadId: null,
+				toUserId: null,
+			},
+		);
+	}
+
+	async replaceThreadMessageAttachments(
+		threadMessage: ThreadMessageEntity,
+		attachmentIds: string[] = [],
+	) {
+		const normalizedIds = this.normalizeAttachmentIds(attachmentIds);
+		const existing = await this.attachmentRepo.find({
+			where: { messageId: threadMessage.id },
+			select: ["id"],
+		});
+		const existingIds = existing.map((item) => item.id);
+		const idsToDetach = existingIds.filter((id) => !normalizedIds.includes(id));
+		if (idsToDetach.length) {
+			await this.attachmentRepo.update(
+				{ id: In(idsToDetach) },
+				{
+					messageId: null,
+					channelId: null,
+					threadId: null,
+					toUserId: null,
+				},
+			);
+		}
+		if (normalizedIds.length) {
+			await this.attachmentRepo.update(
+				{ id: In(normalizedIds) },
+				{
+					messageId: threadMessage.id,
+					channelId: threadMessage.channelId,
+					threadId: threadMessage.threadId,
+					toUserId: null,
+				},
+			);
+		}
+	}
+
+	async removeAttachmentsForThreadMessage(messageId: string) {
+		await this.attachmentRepo.update(
+			{ messageId },
+			{
+				messageId: null,
+				channelId: null,
+				threadId: null,
+				toUserId: null,
 			},
 		);
 	}
