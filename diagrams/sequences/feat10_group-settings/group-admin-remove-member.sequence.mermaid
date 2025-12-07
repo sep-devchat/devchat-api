@@ -1,0 +1,51 @@
+---
+config:
+  themeCSS: >-
+    .actor-line{stroke-dasharray:6 6;}.actor-bottom,
+    text.actor-bottom{display:none;}
+  theme: neo
+---
+sequenceDiagram
+    autonumber
+    actor Admin as admin:GroupAdmin
+    participant Web as web:GroupSettingsPage
+    participant MembersAPI as api:UserGroupController
+    participant MemberSvc as svc:UserGroupService
+    participant CLS as cls:ClsService<DevChatCls>
+    participant UserGroupRepo as repoUG:UserGroupRepository
+    participant InviteRepo as repoInv:GroupInvitationRepository
+    participant DB as db:Database
+
+    Admin->>Web: Click "Remove" for member
+    Web->>MembersAPI: DELETE /group/:id/members/:userId
+    activate MembersAPI
+    MembersAPI->>MemberSvc: removeMemberByGroupAndUser({ userId })
+    activate MemberSvc
+    MemberSvc->>CLS: get("group")
+    CLS-->>MemberSvc: { id: groupId }
+    MemberSvc->>UserGroupRepo: findOne({ groupId, userId })
+    activate UserGroupRepo
+    UserGroupRepo->>DB: SELECT user_group WHERE groupId & userId
+    DB-->>UserGroupRepo: membership?
+    deactivate UserGroupRepo
+    alt Member not found
+        MemberSvc-->>MembersAPI: throw MemberNotFoundError
+        MembersAPI-->>Web: 404 Not Found + message
+        Web-->>Admin: Display error toast
+    else Member exists
+        MemberSvc->>InviteRepo: delete({ groupId, toUserId: userId })
+        activate InviteRepo
+        InviteRepo->>DB: DELETE group_invitations
+        DB-->>InviteRepo: ok
+        deactivate InviteRepo
+        MemberSvc->>UserGroupRepo: remove(member)
+        activate UserGroupRepo
+        UserGroupRepo->>DB: DELETE user_group
+        DB-->>UserGroupRepo: ok
+        deactivate UserGroupRepo
+        MemberSvc-->>MembersAPI: void
+        MembersAPI-->>Web: ApiMessageResponse "Member removed"
+        Web-->>Admin: Refresh list + success toast
+    end
+    deactivate MemberSvc
+    deactivate MembersAPI

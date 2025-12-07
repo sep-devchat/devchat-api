@@ -1,0 +1,101 @@
+---
+config:
+  theme: redux
+  themeCSS: .nodeLabel{font-size:12px;}
+  layout: elk
+---
+classDiagram
+direction TB
+    class TaskBoardUI {
+        +createTask()
+        +updateTask()
+        +moveCard()
+        +filterTasks()
+    }
+
+    class TaskController {
+        +createTask()
+        +getTasks()
+        +updateOne()
+        +updateStatus()
+        +findOne()
+        +deleteOne()
+    }
+
+    class TaskService {
+        +createOne()
+        +findByGroup()
+        +updateOne()
+        +updateTaskStatus()
+        +findOne()
+        +deleteOne()
+        -validateBeforeCreate()
+    }
+
+    class GroupGuard {
+        +canActivate()
+    }
+
+    class GroupOwnerGuard {
+        +canActivate()
+    }
+
+    class ClsService~DevChatCls~ {
+        +get(key)
+        +set(key,value)
+    }
+
+    class GroupService {
+        +findOne()
+        +createOne()
+    }
+
+    class UserService {
+        +findById()
+    }
+
+    class UserGroupService {
+        +isMember()
+        +getGroupMembers()
+    }
+
+    class TaskRepository {
+        +create()
+        +insert()
+        +findOne()
+        +findAndCount()
+        +update()
+    }
+
+    class Database {
+        +tasks
+        +groups
+        +users
+        +userGroups
+    }
+
+    <<ui>> TaskBoardUI
+    <<controller>> TaskController
+    <<service>> TaskService
+    <<guard>> GroupGuard
+    <<guard>> GroupOwnerGuard
+    <<service>> GroupService
+    <<service>> UserService
+    <<service>> UserGroupService
+    <<repository>> TaskRepository
+
+    TaskBoardUI --> TaskController : REST calls to
+    TaskController o-- TaskService : delegates task logic to
+    TaskController o-- GroupGuard : scoped per group via
+    TaskController o-- GroupOwnerGuard : protects owner-only routes with
+    GroupGuard --> GroupService : resolves group context from
+    GroupOwnerGuard --> ClsService~DevChatCls~ : checks owner in
+    TaskService o-- ClsService~DevChatCls~ : derives group/profile from
+    TaskService o-- GroupService : validates target group with
+    TaskService o-- UserService : ensures assignees via
+    TaskService o-- UserGroupService : verifies membership via
+    TaskService o-- TaskRepository : persists tasks using
+    TaskRepository --> Database : mutates task rows in
+    GroupService --> Database : reads group rows from
+    UserService --> Database : reads user rows from
+    UserGroupService --> Database : reads membership rows from

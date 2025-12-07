@@ -1,0 +1,99 @@
+---
+config:
+  theme: redux
+  themeCSS: .nodeLabel{font-size:12px;}
+  layout: elk
+---
+classDiagram
+direction TB
+    class ClientIDE {
+	    +editSnippet()
+	    +selectLanguage()
+	    +invokeRunCode()
+	    +renderExecutionOutput()
+    }
+
+    class CodeController {
+	    +runCode(dto: RunCodeRequest) CodeExecutionResponse
+    }
+
+    class CodeService {
+	    +runCode(dto: RunCodeRequest) CodeExecutionResponse
+    }
+
+    class RunCodeRequest {
+	    +language: ProgrammingLanguageEnum
+	    +code: string
+    }
+
+    class CodeExecutionResponse {
+	    +output: string
+    }
+
+    class ExecutionStrategyMap {
+	    +execMap[language]
+    }
+
+    class LanguageExecFunction {
+	    +execute(code: string) CodeExecutionResult
+    }
+
+    class JavascriptExecFunction {
+	    +execute(code)
+    }
+
+    class PythonExecFunction {
+	    +execute(code)
+    }
+
+    class JavaExecFunction {
+	    +execute(code)
+    }
+
+    class CodeExecutionResult {
+	    +output: string
+    }
+
+    class Docker {
+	    +createExecContainer(image, runId?)
+	    +pullImageIfNotExists(image)
+	    +cleanupContainer(container, runId?)
+    }
+
+    class DockerEngine {
+	    +startContainer()
+	    +streamIO()
+	    +destroyContainer()
+    }
+
+	<<controller>> CodeController
+	<<service>> CodeService
+	<<dto>> RunCodeRequest
+	<<dto>> CodeExecutionResponse
+	<<map>> ExecutionStrategyMap
+	<<interface>> LanguageExecFunction
+	<<function>> JavascriptExecFunction
+	<<function>> PythonExecFunction
+	<<function>> JavaExecFunction
+	<<model>> CodeExecutionResult
+	<<helper>> Docker
+	<<external>> DockerEngine
+
+    ClientIDE ..> RunCodeRequest : builds payload
+    ClientIDE ..> CodeController : calls /code/run
+    ClientIDE <.. CodeExecutionResponse : renders output
+    CodeController o-- CodeService : delegates execution to
+    CodeController ..> RunCodeRequest : validates DTO
+    CodeController ..> CodeExecutionResponse : wraps response in
+    CodeService ..> ExecutionStrategyMap : resolves executor from
+    CodeService ..> CodeExecutionResponse : returns mapped result
+    ExecutionStrategyMap --> LanguageExecFunction : provides handler for
+    LanguageExecFunction <|-- JavascriptExecFunction
+    LanguageExecFunction <|-- PythonExecFunction
+    LanguageExecFunction <|-- JavaExecFunction
+    JavascriptExecFunction ..> Docker : spawns container via
+    PythonExecFunction ..> Docker : spawns container via
+    JavaExecFunction ..> Docker : spawns container via
+    Docker ..> DockerEngine : issues container lifecycle commands
+    LanguageExecFunction ..> CodeExecutionResult : produces
+    CodeService ..> CodeExecutionResult : serializes to response

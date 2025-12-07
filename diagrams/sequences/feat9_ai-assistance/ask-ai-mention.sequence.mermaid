@@ -1,0 +1,80 @@
+---
+config:
+  themeCSS: >-
+    .actor-line{stroke-dasharray:6 6;}.actor-bottom,
+    text.actor-bottom{display:none;}
+  theme: neo
+---
+sequenceDiagram
+    autonumber
+    actor User as user:DevChatUser
+    participant Web as web:DevChatWeb
+    participant Socket as socket:SocketGateway
+    participant Msg as messageController:MessageController
+    participant MsgSvc as messageService:MessageService
+    participant MsgRepo as messageRepository:MessageRepository
+    participant DB as db:Database
+    participant AISvc as aiService:AIService
+    participant Provider as provider:LangChain
+
+    %% Stage 1: User mentions AI in chat message
+    User->>Web: Type message with @<provider>/<type>
+    activate User
+    activate Web
+    Web->>Socket: emit MESSAGE { text }
+    deactivate User
+
+    activate Socket
+    Socket->>Msg: forward message payload
+    deactivate Socket
+
+    %% Stage 2: Message module detects AI mention
+    activate Msg
+    Msg->>MsgSvc: sendMessage(payload)
+    deactivate Msg
+
+    activate MsgSvc
+    MsgSvc->>MsgRepo: persist base message
+    activate MsgRepo
+    MsgRepo->>DB: INSERT chat_message
+    activate DB
+    DB-->>MsgRepo: MessageEntity
+    deactivate DB
+    MsgRepo-->>MsgSvc: MessageEntity
+    deactivate MsgRepo
+    MsgSvc->>MsgSvc: parse mentions & detect ai directive
+    alt Has AI mention
+        MsgSvc->>AISvc: requestAiReply { provider, type, text }
+        activate AISvc
+        AISvc->>Provider: invokeModel(provider,type,prompt)
+        activate Provider
+        Provider-->>AISvc: AiResponse { summary, suggestions }
+        deactivate Provider
+        AISvc-->>MsgSvc: formatted AiReply
+        deactivate AISvc
+
+        MsgSvc->>MsgRepo: create auto-response message
+        activate MsgRepo
+        MsgRepo->>DB: INSERT chat_message (aiReply)
+        activate DB
+        DB-->>MsgRepo: AiMessageEntity
+        deactivate DB
+        MsgRepo-->>MsgSvc: AiMessageEntity
+        deactivate MsgRepo
+        MsgSvc->>Socket: broadcast MESSAGE { aiReply }
+        activate Socket
+        Socket-->>Web: AI reply message event
+        deactivate Socket
+    else No AI mention
+        MsgSvc->>Socket: broadcast MESSAGE { original }
+        activate Socket
+        Socket-->>Web: Message event
+        deactivate Socket
+    end
+    MsgSvc-->>Msg: ack
+    deactivate MsgSvc
+
+    activate Web
+    Web->>Web: append AI message bubble
+    Web-->>User: show AI response under original message
+    deactivate Web

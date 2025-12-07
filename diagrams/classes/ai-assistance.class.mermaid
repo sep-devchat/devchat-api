@@ -1,0 +1,175 @@
+---
+config:
+  theme: redux
+  themeCSS: .nodeLabel{font-size:12px;}
+  layout: elk
+---
+classDiagram
+direction TB
+    class ClientApp {
+	    +submitMessage()
+	    +callAiAskEndpoint()
+	    +renderAiAnswer()
+    }
+
+    class MessageGateway {
+	    +handleMessage()
+    }
+
+    class MessageService {
+	    +sendMessage()
+	    +maybeProcessAiMentionAndRespond()
+    }
+
+    class SocketService {
+	    +sendEventToUser()
+	    +sendEventToRoom()
+    }
+
+    class AiController {
+	    +listProviders()
+	    +startSession()
+	    +ask()
+    }
+
+    class AiService {
+	    +listProviders()
+	    +startSession()
+	    +ask()
+	    +getModel()
+    }
+
+    class AskDto {
+	    +messageId
+	    +sessionId
+	    +model
+	    +context[]
+    }
+
+    class AiProviderInfoDto {
+	    +provider
+	    +label
+	    +available
+	    +configuredModel
+    }
+
+    class AiSessionRepository {
+	    +create()
+	    +save()
+	    +findOne()
+    }
+
+    class AiInteractionRepository {
+	    +create()
+	    +insert()
+	    +findOne()
+    }
+
+    class MessageRepository {
+	    +findOne()
+    }
+
+    class AiSessionEntity {
+	    +id
+	    +userId
+	    +channelId
+	    +threadId
+	    +status
+    }
+
+    class AiInteractionEntity {
+	    +id
+	    +sessionId
+	    +messageId
+	    +aiResponse
+	    +model
+	    +responseTime
+    }
+
+    class MessageEntity {
+	    +id
+	    +content
+	    +channelId
+	    +threadId
+	    +senderId
+    }
+
+    class ClsService {
+	    +get(key)
+	    +set(key,value)
+    }
+
+    class DevChatCls {
+	    +profile
+	    +channel
+	    +group
+    }
+
+    class PromptFactory {
+	    +buildPrompt(requestType)
+    }
+
+    class ChatOpenAI {
+	    +invoke()
+    }
+
+    class ChatGoogleGenerativeAI {
+	    +invoke()
+    }
+
+    class Env {
+	    +OPENAI_API_KEY
+	    +GOOGLE_API_KEY
+	    +OPENAI_MODEL
+	    +GOOGLE_MODEL
+    }
+
+    class SocketEvents {
+	    +MESSAGE
+    }
+
+	<<gateway>> MessageGateway
+	<<service>> MessageService
+	<<service>> SocketService
+	<<controller>> AiController
+	<<service>> AiService
+	<<dto>> AskDto
+	<<dto>> AiProviderInfoDto
+	<<repository>> AiSessionRepository
+	<<repository>> AiInteractionRepository
+	<<repository>> MessageRepository
+	<<entity>> AiSessionEntity
+	<<entity>> AiInteractionEntity
+	<<entity>> MessageEntity
+	<<cls>> ClsService
+	<<context>> DevChatCls
+	<<helper>> PromptFactory
+	<<llm>> ChatOpenAI
+	<<llm>> ChatGoogleGenerativeAI
+	<<config>> Env
+	<<constants>> SocketEvents
+
+    ClientApp ..> MessageGateway : emits chat message over socket
+    MessageGateway o-- MessageService : delegates processing to
+    MessageService ..> AiService : detects @provider mention via
+    MessageService ..> SocketService : broadcasts AI reply through
+    ClientApp ..> AiController : invokes REST AI endpoints
+    AiController o-- AiService : forwards list/start/ask operations
+    AiController ..> AskDto : validates request body
+    AiController ..> AiProviderInfoDto : wraps provider listing
+    AiService o-- AiSessionRepository : persists sessions in
+    AiService o-- AiInteractionRepository : records exchanges in
+    AiService o-- MessageRepository : fetches source message
+    AiSessionRepository --> AiSessionEntity : maps to
+    AiInteractionRepository --> AiInteractionEntity : maps to
+    MessageRepository --> MessageEntity : maps to
+    AiService ..> ClsService : resolves current user
+    ClsService ..> DevChatCls : stores scoped context
+    AiService ..> PromptFactory : builds request-specific prompt
+    PromptFactory ..> ChatOpenAI : pipes template to
+    PromptFactory ..> ChatGoogleGenerativeAI : pipes template to
+    AiService ..> ChatOpenAI : uses when OpenAI configured
+    AiService ..> ChatGoogleGenerativeAI : uses when Gemini configured
+    AiService ..> Env : inspects API keys & defaults
+    SocketService ..> SocketEvents : emits standardized payloads
+    ClientApp <.. SocketEvents : listens for AI answer events

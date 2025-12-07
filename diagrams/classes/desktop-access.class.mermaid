@@ -1,0 +1,92 @@
+---
+config:
+  theme: redux
+  themeCSS: .nodeLabel{font-size:12px;}
+  layout: elk
+---
+classDiagram
+    direction LR
+
+    class DesktopApp {
+        +startPkceFlow()
+        +openBrowserLogin()
+        +exchangeAuthCode()
+    }
+
+    class WebClient {
+        +renderLoginPage()
+        +redirectToProvider()
+        +sendAuthCode()
+    }
+
+    class AuthModule {
+        <<module>>
+    }
+
+    class AuthController {
+        <<controller>>
+        +loginPkce()
+        +pkceIssueToken()
+        +login()
+    }
+
+    class AuthService {
+        <<service>>
+        +loginPkce()
+        +pkceIssueToken()
+        +issueTokenPair()
+        +authenticateUser()
+    }
+
+    class UserService {
+        <<service>>
+        +findByUniqueKey()
+        +create()
+        +markUserLoggedIn()
+    }
+
+    class GitHubService {
+        <<provider>>
+        +getAccessToken()
+        +getUserInfo()
+        +getUserEmails()
+    }
+
+    class OAuth2Client {
+        <<provider>>
+        +verifyIdToken()
+    }
+
+    class UserRepository {
+        <<repository>>
+        +findOne()
+        +update()
+        +save()
+    }
+
+    class Database {
+        +users
+        +sessions
+    }
+
+    class JwtSigner {
+        +signAccessToken()
+        +signRefreshToken()
+    }
+    DesktopApp ..> WebClient : opens PKCE login page
+    WebClient --> AuthController : posts auth code / verifier
+    WebClient --> DesktopApp : returns desktop auth code
+    DesktopApp --> AuthController : exchanges verifier for tokens
+
+    AuthModule *-- AuthController : wires
+    AuthModule *-- AuthService : wires
+
+    AuthController o-- AuthService : delegates
+    AuthService o-- UserService : coordinates user state
+    AuthService ..> GitHubService : fetch GitHub profile
+    AuthService ..> OAuth2Client : verify Google token
+    AuthService ..> JwtSigner : issues JWT pair
+    AuthService ..> UserRepository : fallback user lookup
+
+    UserService o-- UserRepository : persists users
+    UserRepository --> Database : stores records

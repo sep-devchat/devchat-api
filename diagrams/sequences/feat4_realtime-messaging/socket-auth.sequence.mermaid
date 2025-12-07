@@ -1,0 +1,37 @@
+%%{init: {"themeCSS": ".actor-line{stroke-dasharray:6 6;}.actor-bottom, text.actor-bottom{display:none;}"}}%%
+sequenceDiagram
+    autonumber
+    actor C as client:DevChatClient
+    participant Gate as gateway:SocketGateway
+    participant SocketSvc as socketSvc:SocketService
+    participant Auth as authService:AuthService
+    participant DB as db:Database
+
+    C->>Gate: Initiate connection
+    Gate->>C: Connection established
+    alt No auth token after timeout
+        Gate->>C: Disconnect
+    end
+    
+    C->>Gate: Send auth token
+    Gate->>SocketSvc: Forward auth token
+    SocketSvc->>Auth: Validate token
+    Auth->>Auth: Decode & verify token
+    alt Invalid token
+        Auth->>SocketSvc: Token invalid
+        SocketSvc->>Gate: Auth failed
+        Gate->>C: Disconnect
+    else Valid token
+        Auth->>DB: Find user
+        DB->>Auth: User data
+        alt User not found
+            Auth->>SocketSvc: User not found
+            SocketSvc->>Gate: Auth failed
+            Gate->>C: Disconnect
+        else User found
+            Auth->>SocketSvc: Token valid
+            SocketSvc->>SocketSvc: Init socket session
+            SocketSvc->>Gate: Auth successful
+            Gate->>C: Auth success
+        end
+    end

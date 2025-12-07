@@ -1,0 +1,158 @@
+---
+config:
+  theme: neo
+  themeCSS: >-
+    .nodeLabel{font-size:12px;}
+---
+classDiagram
+    direction LR
+
+    class ClientApp {
+        +connectSocket()
+        +authenticate()
+        +sendChatEvents()
+        +renderIncomingEvents()
+    }
+
+    class SocketGateway {
+        <<gateway>>
+        +handleAuthenticate()
+        +handleJoinRoom()
+        +handleChatView()
+    }
+
+    class MessageGateway {
+        <<gateway>>
+        +handleMessage()
+        +handleDirectMessage()
+        +handleThreadMessage()
+    }
+
+    class SocketService {
+        <<service>>
+        +authenticateSocket()
+        +joinRoom()
+        +updateChatView()
+        +sendEventToUser()
+        +sendEventToRoom()
+    }
+
+    class MessageService {
+        <<service>>
+        +sendMessage()
+        +sendDirectMessage()
+        +fetchMessages()
+        +editMessage()
+        +notifyGroupMessageDigest()
+    }
+
+    class ChatPresenceService {
+        <<service>>
+        +setGroupView()
+        +setDirectView()
+        +clearAllForSocket()
+    }
+
+    class MessageRepository {
+        <<repository>>
+        +save()
+        +findOne()
+        +find()
+        +delete()
+    }
+
+    class DirectMessageRepository {
+        <<repository>>
+        +save()
+        +findOne()
+        +find()
+    }
+
+    class ThreadMessageRepository {
+        <<repository>>
+        +save()
+        +findOne()
+        +find()
+        +delete()
+    }
+
+    class UserRepository {
+        <<repository>>
+        +findOne()
+        +findBy()
+    }
+
+    class ChannelRepository {
+        <<repository>>
+        +findOne()
+    }
+
+    class UserGroupRepository {
+        <<repository>>
+        +findOne()
+    }
+
+    class AttachmentService {
+        <<service>>
+        +addAttachmentsToMessage()
+        +addAttachmentsToDirectMessage()
+    }
+
+    class NotificationService {
+        <<service>>
+        +createOne()
+        +sendDigest()
+    }
+
+    class AiService {
+        <<service>>
+        +ask()
+        +checkCode()
+    }
+
+    class AuthService {
+        <<service>>
+        +verifyAccessToken()
+    }
+
+    class UserService {
+        <<service>>
+        +findById()
+    }
+
+    class SocketEvents {
+        <<constants>>
+        +MESSAGE
+        +DIRECT_MESSAGE
+        +JOINED_ROOM
+        +SOCKET_READY
+    }
+
+    %% Relationships describing realtime messaging flow
+    ClientApp ..> SocketGateway : opens websocket channel with
+    ClientApp ..> MessageGateway : emits chat events through
+
+    SocketGateway o-- SocketService : delegates session control to
+    MessageGateway o-- MessageService : delegates chat actions to
+
+    SocketService ..> AuthService : verifies JWT tokens via
+    SocketService ..> UserService : resolves socket user through
+    SocketService ..> GroupRepository : validates room access against
+    SocketService ..> ChannelRepository : looks up channel metadata in
+    SocketService ..> ChatPresenceService : tracks active views with
+    SocketService ..> SocketEvents : emits lifecycle signals defined in
+
+    MessageService o-- MessageRepository : persists channel messages in
+    MessageService o-- DirectMessageRepository : persists direct messages in
+    MessageService o-- ThreadMessageRepository : persists thread replies in
+    MessageService o-- UserRepository : resolves sender profiles through
+    MessageService o-- ChannelRepository : fetches channel context from
+    MessageService o-- UserGroupRepository : validates membership using
+    MessageService o-- AttachmentService : attaches uploads via
+    MessageService o-- NotificationService : schedules digests with
+    MessageService o-- AiService : generates AI responses through
+    MessageService o-- SocketService : broadcasts events using
+    MessageService o-- ChatPresenceService : inspects viewer context via
+
+    SocketEvents <.. ClientApp : listens for realtime payloads from
+```}

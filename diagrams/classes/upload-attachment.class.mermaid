@@ -1,0 +1,112 @@
+---
+config:
+  theme: neo
+  themeCSS: >-
+    .nodeLabel{font-size:12px;}
+---
+classDiagram
+    direction LR
+
+    class ClientApp {
+        +requestUploadSignature()
+        +uploadToCloudinary()
+        +notifyMessageWithAttachment()
+    }
+
+    class UploadController {
+        <<controller>>
+        +uploadAttachment()
+        +deleteAttachment()
+        +getUploadSignature()
+        +getDeliverySignature()
+        +saveCloudinaryUpload()
+    }
+
+    class UploadService {
+        <<service>>
+        +uploadAttachment()
+        +deleteAttachment()
+        +saveCloudinaryUpload()
+    }
+
+    class CloudinaryService {
+        <<provider>>
+        +uploadFile()
+        +deleteFile()
+        +generateUploadSignature()
+        +generateSignedDeliveryUrl()
+    }
+
+    class CloudinaryAPI {
+        <<external>>
+        +storeAsset()
+        +streamUpload()
+        +purgeAsset()
+    }
+
+    class AttachmentRepository {
+        <<repository>>
+        +insert()
+        +save()
+        +update()
+        +delete()
+        +findOne()
+    }
+
+    class AttachmentEntity {
+        <<entity>>
+        +id
+        +messageId
+        +channelId
+        +toUserId
+        +filePath
+        +publicId
+        +uploadedBy
+        +createdAt
+    }
+
+    class AttachmentService {
+        <<service>>
+        +addAttachmentsToMessage()
+        +addAttachmentsToDirectMessage()
+        +addAttachmentsToThreadMessage()
+    }
+
+    class MessageService {
+        <<service>>
+        +sendMessage()
+        +sendDirectMessage()
+        +sendThreadMessage()
+    }
+
+    class RequestContext {
+        <<cls>>
+        +get(key)
+        +set(key, value)
+    }
+
+    class DevChatCls {
+        <<context>>
+        +profile
+        +channel
+        +group
+    }
+
+    %% Upload signature + storage flow
+    ClientApp ..> UploadController : requests signatures & persistence
+    UploadController o-- UploadService : delegates upload logic
+    UploadController ..> CloudinaryService : generates signed params via
+
+    UploadService o-- CloudinaryService : streams binaries to
+    UploadService o-- AttachmentRepository : persists metadata in
+    UploadService ..> RequestContext : resolves uploader identity
+    RequestContext ..> DevChatCls : stores authenticated context
+
+    CloudinaryService ..> CloudinaryAPI : invokes hosted storage
+
+    AttachmentRepository --> AttachmentEntity : maps rows to entity
+
+    %% Attachment usage inside messaging
+    AttachmentService o-- AttachmentRepository : fetches and links records
+    MessageService ..> AttachmentService : binds uploads to chat events
+    ClientApp ..> MessageService : references uploaded attachment ids within

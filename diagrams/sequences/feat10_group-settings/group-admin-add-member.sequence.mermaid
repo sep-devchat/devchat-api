@@ -1,0 +1,72 @@
+---
+config:
+  themeCSS: >-
+    .actor-line{stroke-dasharray:6 6;}.actor-bottom,
+    text.actor-bottom{display:none;}
+  theme: neo
+---
+sequenceDiagram
+    autonumber
+    actor Admin as admin:GroupAdmin
+    participant Web as web:GroupSettingsPage
+    participant InviteAPI as api:GroupInvitationController
+    participant InviteSvc as svc:GroupInvitationService
+    participant CLS as cls:ClsService<DevChatCls>
+    participant UserSvc as svcUser:UserService
+    participant GroupSvc as svcGroup:GroupService
+    participant UserGroupRepo as repoUG:UserGroupRepository
+    participant InviteRepo as repoInv:GroupInvitationRepository
+    participant NotificationSvc as notif:NotificationService
+    participant DB as db:Database
+
+    Admin->>Web: Search member & click "Invite"
+    Web->>InviteAPI: POST /group/:id/invitations { toUserId, message }
+    activate InviteAPI
+    InviteAPI->>InviteSvc: createOne(dto)
+    activate InviteSvc
+    InviteSvc->>CLS: get("profile")
+    CLS-->>InviteSvc: { id: adminId }
+    InviteSvc->>UserSvc: findById(dto.toUserId)
+    activate UserSvc
+    UserSvc-->>InviteSvc: targetUser
+    deactivate UserSvc
+    InviteSvc->>GroupSvc: findOne(groupId)
+    activate GroupSvc
+    GroupSvc-->>InviteSvc: groupEntity
+    deactivate GroupSvc
+    InviteSvc->>UserGroupRepo: findOne({ userId: dto.toUserId, groupId })
+    activate UserGroupRepo
+    UserGroupRepo->>DB: SELECT user_group WHERE userId & groupId
+    DB-->>UserGroupRepo: membership?
+    deactivate UserGroupRepo
+    alt Already member
+      InviteSvc-->>InviteAPI: throw AlreadyGroupMemberError
+      InviteAPI-->>Web: 409 Conflict
+      Web-->>Admin: Show "already member" toast
+    else Not yet member
+      InviteSvc->>InviteRepo: findOne({ toUserId, groupId })
+      activate InviteRepo
+      InviteRepo->>DB: SELECT group_invitation WHERE toUserId & groupId
+      DB-->>InviteRepo: existingInvite?
+      deactivate InviteRepo
+      alt Invite exists
+        InviteSvc-->>InviteAPI: throw GroupInvitationAlreadyExistsError
+        InviteAPI-->>Web: 409 Conflict
+        Web-->>Admin: Notify "invitation pending"
+      else No invite yet
+        InviteSvc->>InviteRepo: insert(newInvitation)
+        activate InviteRepo
+        InviteRepo->>DB: INSERT group_invitation
+        DB-->>InviteRepo: saved invitation
+        deactivate InviteRepo
+        InviteSvc->>NotificationSvc: createOne(toUser, "New Group Invitation")
+        activate NotificationSvc
+        NotificationSvc-->>InviteSvc: notificationAck
+        deactivate NotificationSvc
+        InviteSvc-->>InviteAPI: GroupInvitationEntity
+        InviteAPI-->>Web: ApiResponseDto(GroupInvitation)
+        Web-->>Admin: Show "Invitation sent" toast
+      end
+    end
+    deactivate InviteSvc
+    deactivate InviteAPI

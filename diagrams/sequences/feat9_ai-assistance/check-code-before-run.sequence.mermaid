@@ -1,0 +1,65 @@
+---
+config:
+  themeCSS: >-
+    .actor-line{stroke-dasharray:6 6;}.actor-bottom,
+    text.actor-bottom{display:none;}
+  theme: neo
+---
+sequenceDiagram
+    autonumber
+    actor User as user:DevChatUser
+    participant Web as web:DevChatWeb
+    participant CodeAPI as codeController:CodeController
+    participant CodeSvc as codeService:CodeService
+    participant LangRepo as languageRepository:SupportedProgrammingLanguageRepository
+    participant DB as db:Database
+    participant AISvc as aiService:AIService
+    participant Provider as provider:LLMProvider
+    participant Sandbox as sandbox:ExecRunner
+
+    %% Stage 1: user submits run request
+    User->>Web: Write snippet & click "Run"
+    activate User
+    Web->>CodeAPI: POST /code/run { language, code }
+    deactivate User
+
+    activate CodeAPI
+    CodeAPI->>CodeSvc: runCode(dto)
+    deactivate CodeAPI
+
+    CodeSvc->>LangRepo: findOne(languageCode)
+    activate LangRepo
+    LangRepo->>DB: SELECT supported_language WHERE active
+    activate DB
+    DB-->>LangRepo: SupportedLanguage
+    deactivate DB
+    LangRepo-->>CodeSvc: languageEntity
+    deactivate LangRepo
+
+    alt Unsupported or not executable
+        CodeSvc-->>Web: 404 NotFound / NotExecutable
+        Web-->>User: Show unsupported language error
+    else Valid executable language
+        %% Stage 2: AI performs safety review
+        CodeSvc->>AISvc: checkCode(language, code)
+        activate AISvc
+        AISvc->>Provider: runPolicyPrompt(code)
+        activate Provider
+        Provider-->>AISvc: CheckCodeResponse { passed, output }
+        deactivate Provider
+        AISvc-->>CodeSvc: verdict
+        deactivate AISvc
+
+        alt AI flags issue
+            CodeSvc-->>Web: 400 CodeCheckFailed + AI output
+            Web-->>User: Display AI feedback, halt execution
+        else AI approves snippet
+            %% Stage 3: Execute inside sandbox
+            CodeSvc->>Sandbox: execMap[language](code)
+            activate Sandbox
+            Sandbox-->>CodeSvc: CodeExecutionResult { stdout, stderr }
+            deactivate Sandbox
+            CodeSvc-->>Web: 200 ExecutionResult
+            Web-->>User: Render simulator output
+        end
+    end

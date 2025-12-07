@@ -1,0 +1,42 @@
+---
+config:
+  themeCSS: >-
+    .actor-line{stroke-dasharray:6 6;}.actor-bottom,
+    text.actor-bottom{display:none;}
+  theme: neo
+---
+sequenceDiagram
+    autonumber
+    actor Admin as admin:SystemAdmin
+    participant Console as web:AdminConsoleUI
+    participant AdminAPI as api:AdminRoutes
+    participant AuthGuard as guard:AuthGuard
+    participant RoleGuard as adminGuard:AdminRoleGuard
+    participant PermGuard as perm:RequirePermissionsGuard
+    participant Audit as audit:AuditLogInterceptor
+    participant LangSvc as langSvc:ProgrammingLanguageService
+    participant LangRepo as langRepo:ProgrammingLanguageRepository
+    participant AuditRepo as auditRepo:AuditLogRepository
+    participant DB as db:Database
+
+    Admin->>Console: Select "Programming Languages" action
+    Console->>AdminAPI: HTTPS /programming-language { payload }
+    AdminAPI->>AuthGuard: verifyAccessToken()
+    AuthGuard-->>AdminAPI: authContext
+    AdminAPI->>RoleGuard: ensureSystemAdmin()
+    RoleGuard-->>AdminAPI: ok
+    AdminAPI->>PermGuard: check(AdminPermissionEnum.MANAGE_PROGRAMMING_LANGUAGE)
+    PermGuard-->>AdminAPI: allowed
+    AdminAPI->>Audit: attachAuditContext("ProgrammingLanguage", action)
+    Audit-->>AdminAPI: continue request
+
+    AdminAPI->>LangSvc: create/update/delete/query
+    LangSvc->>LangRepo: upsertProgrammingLanguage()
+    LangRepo->>DB: mutate programming_language table
+    DB-->>LangRepo: entity
+    LangSvc-->>AdminAPI: ApiResponseDto
+
+    Audit->>AuditRepo: recordAction(adminId,"ProgrammingLanguage",action)
+    AuditRepo->>DB: INSERT audit_log
+    AdminAPI-->>Console: ApiResponseDto(result,message)
+    Console-->>Admin: Notify and refresh language grid

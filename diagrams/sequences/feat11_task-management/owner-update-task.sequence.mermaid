@@ -1,0 +1,59 @@
+---
+config:
+  themeCSS: >-
+    .actor-line{stroke-dasharray:6 6;}.actor-bottom,
+    text.actor-bottom{display:none;}
+  theme: neo
+---
+sequenceDiagram
+    autonumber
+    actor Owner as owner:GroupOwner
+    participant Web as web:TaskBoardUI
+    participant TaskAPI as api:TaskController
+    participant GuardGroup as guard:GroupGuard
+    participant GuardOwner as guardOwner:GroupOwnerGuard
+    participant TaskSvc as svc:TaskService
+    participant TaskRepo as repo:TaskRepository
+    participant UserSvc as userSvc:UserService
+    participant UserGroupSvc as memberSvc:UserGroupService
+    participant DB as db:Database
+
+    %% Stage 2: Owner updates task details
+    Owner->>Web: Edit fields & submit
+    Web->>TaskAPI: PUT /group/:id/task/:taskId
+    TaskAPI->>GuardGroup: ensureMember()
+    GuardGroup-->>TaskAPI: ok
+    TaskAPI->>GuardOwner: ensureOwner()
+    GuardOwner-->>TaskAPI: ok
+    TaskAPI->>TaskSvc: updateOne(taskId,dto)
+    activate TaskSvc
+    TaskSvc->>TaskRepo: findOne(taskId)
+    TaskRepo->>DB: SELECT task
+    DB-->>TaskRepo: TaskEntity
+    TaskRepo-->>TaskSvc: TaskEntity
+    alt Assignee changed
+        TaskSvc->>UserSvc: findById(newAssignee)
+        UserSvc-->>TaskSvc: user
+        TaskSvc->>UserGroupSvc: isMember(groupId,newAssignee)
+        UserGroupSvc-->>TaskSvc: true/false
+        alt Not member
+            TaskSvc-->>TaskAPI: throw AssigneeIsNotGroupMember
+            TaskAPI-->>Web: 400 error
+            Web-->>Owner: Prompt choose valid member
+        else Member OK
+            TaskSvc->>TaskRepo: update(taskId,dto)
+            TaskRepo->>DB: UPDATE task
+            DB-->>TaskRepo: ok
+            TaskSvc-->>TaskAPI: updatedTask
+            TaskAPI-->>Web: ApiResponseDto(TaskResponse)
+            Web-->>Owner: Show updated task
+        end
+    else Assignee unchanged
+        TaskSvc->>TaskRepo: update(taskId,dto)
+        TaskRepo->>DB: UPDATE task
+        DB-->>TaskRepo: ok
+        TaskSvc-->>TaskAPI: updatedTask
+        TaskAPI-->>Web: ApiResponseDto(TaskResponse)
+        Web-->>Owner: Show updated task
+    end
+    deactivate TaskSvc

@@ -1,0 +1,115 @@
+---
+config:
+  theme: redux
+  themeCSS: .nodeLabel{font-size:12px;}
+  layout: elk
+---
+classDiagram
+  direction TB
+    class CodeCollabUI {
+        +openHistory()
+        +applySnapshot()
+        +saveCollaboration()
+    }
+
+    class CodeBlockController {
+        +findMany()
+        +findOne()
+    }
+
+    class DirectCodeBlockController {
+        +findMany()
+        +findOne()
+    }
+
+    class CodeCollaborationController {
+        +createOne()
+        +updateOne()
+        +findMany()
+        +deleteOne()
+    }
+
+    class GroupGuard {
+        +canActivate()
+    }
+
+    class ChannelGuard {
+        +canActivate()
+    }
+
+    class CodeBlockService {
+        +findMany()
+        +findManyForDirect()
+        +findOne()
+        +findOneForDirect()
+        +updateOne()
+        +deleteOne()
+    }
+
+    class CodeCollaborationService {
+        +createOne()
+        +updateOne()
+        +findMany()
+        +findOne()
+        +deleteOne()
+    }
+
+    class DevChatCls {
+        +profile
+        +channel
+        +get()
+    }
+
+    class CodeBlockRepository {
+        +findAndCount()
+        +findOne()
+        +update()
+        +save()
+    }
+
+    class CodeCollaborationRepository {
+        +insert()
+        +find()
+        +findOne()
+        +update()
+        +delete()
+    }
+
+    class Database {
+        +codeBlocks
+        +codeCollaborations
+    }
+
+    <<ui>> CodeCollabUI
+    <<controller>> CodeBlockController
+    <<controller>> DirectCodeBlockController
+    <<controller>> CodeCollaborationController
+    <<guard>> GroupGuard
+    <<guard>> ChannelGuard
+    <<service>> CodeBlockService
+    <<service>> CodeCollaborationService
+    <<context>> DevChatCls
+    <<repository>> CodeBlockRepository
+    <<repository>> CodeCollaborationRepository
+
+    CodeCollabUI --> CodeBlockController : load group code blocks via
+    CodeCollabUI --> DirectCodeBlockController : browse DM code blocks via
+    CodeCollabUI --> CodeCollaborationController : persist snapshots via
+
+    CodeBlockController ..> GroupGuard : validates group membership
+    CodeBlockController ..> ChannelGuard : validates channel access
+    CodeBlockController ..> CodeBlockService : delegates query logic
+
+    DirectCodeBlockController ..> CodeBlockService : shares retrieval logic
+
+    CodeCollaborationController ..> CodeCollaborationService : delegates CRUD ops
+
+    CodeCollaborationService ..> CodeBlockService : verifies codeBlock ownership
+    CodeCollaborationService ..> CodeCollaborationRepository : stores snapshots
+    CodeCollaborationService ..> DevChatCls : reads profile context
+
+    CodeBlockService ..> CodeBlockRepository : loads code blocks
+    CodeBlockService ..> DevChatCls : reads user & channel context
+
+    CodeBlockRepository --> Database : stores code_block rows in
+    CodeCollaborationRepository --> Database : stores code_collaboration rows in

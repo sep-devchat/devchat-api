@@ -1,0 +1,105 @@
+---
+config:
+  theme: redux
+  themeCSS: .nodeLabel{font-size:12px;}
+  layout: elk
+---
+classDiagram
+direction TB
+    class ClientApp {
+	    +createGroup()
+	    +inviteMember()
+	    +acceptInvitation()
+    }
+
+    class GroupController {
+	    +createOne()
+	    +findMany()
+	    +findOne()
+    }
+
+    class GroupService {
+	    +createOne()
+	    +findOne()
+	    +deleteOne()
+    }
+
+    class GroupInvitationController {
+	    +createInvitation()
+	    +acceptInvitation()
+	    +declineInvitation()
+    }
+
+    class GroupInvitationService {
+	    +createOne()
+	    +acceptInvitation()
+	    +validateBeforeCreate()
+    }
+
+    class UserService {
+	    +findById()
+	    +findByUniqueKey()
+    }
+
+    class NotificationService {
+	    +createOne()
+    }
+
+    class GroupRepository {
+	    +create()
+	    +insert()
+	    +findOne()
+    }
+
+    class ChannelRepository {
+	    +insert()
+    }
+
+    class UserGroupRepository {
+	    +insert()
+	    +save()
+	    +findOne()
+	    +delete()
+    }
+
+    class GroupInvitationRepository {
+	    +create()
+	    +insert()
+	    +findOne()
+	    +delete()
+    }
+
+    class Database {
+	    +groups
+	    +channels
+	    +userGroups
+	    +groupInvitations
+    }
+
+	<<controller>> GroupController
+	<<service>> GroupService
+	<<controller>> GroupInvitationController
+	<<service>> GroupInvitationService
+	<<service>> UserService
+	<<service>> NotificationService
+	<<repository>> GroupRepository
+	<<repository>> ChannelRepository
+	<<repository>> UserGroupRepository
+	<<repository>> GroupInvitationRepository
+
+    ClientApp --> GroupController : sends create-group request to
+    GroupController o-- GroupService : delegates group lifecycle to
+    GroupService --> GroupRepository : persists group rows inside
+    GroupService --> ChannelRepository : seeds default channel via
+    GroupService --> UserGroupRepository : records owner membership in
+    GroupRepository --> Database : stores group records within
+    ChannelRepository --> Database : stores channel rows within
+    UserGroupRepository --> Database : stores membership rows within
+    ClientApp --> GroupInvitationController : requests invite/accept from
+    GroupInvitationController o-- GroupInvitationService : delegates invitation workflow to
+    GroupInvitationService o-- GroupService : verifies group existence via
+    GroupInvitationService o-- UserService : verifies users through
+    GroupInvitationService o-- UserGroupRepository : creates memberships within
+    GroupInvitationService o-- GroupInvitationRepository : persists invitation state in
+    GroupInvitationService o-- NotificationService : notifies participants through
+    GroupInvitationRepository --> Database : stores invitations inside

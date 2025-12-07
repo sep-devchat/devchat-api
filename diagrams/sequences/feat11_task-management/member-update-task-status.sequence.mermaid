@@ -1,0 +1,36 @@
+---
+config:
+  themeCSS: >-
+    .actor-line{stroke-dasharray:6 6;}.actor-bottom,
+    text.actor-bottom{display:none;}
+  theme: neo
+---
+sequenceDiagram
+    autonumber
+    actor Member as member:GroupMember
+    participant Web as web:TaskBoardUI
+    participant TaskAPI as api:TaskController
+    participant GuardGroup as guard:GroupGuard
+    participant TaskSvc as svc:TaskService
+    participant TaskRepo as repo:TaskRepository
+    participant DB as db:Database
+
+    %% Stage 4: Member updates task status only
+    Member->>Web: Move card to "Done"
+    Web->>TaskAPI: PUT /group/:id/task/:taskId/status { status }
+    TaskAPI->>GuardGroup: ensureMember()
+    GuardGroup-->>TaskAPI: ok
+    TaskAPI->>TaskSvc: updateTaskStatus(taskId,dto)
+    activate TaskSvc
+    TaskSvc->>TaskRepo: findOne(taskId)
+    TaskRepo->>DB: SELECT task
+    DB-->>TaskRepo: TaskEntity
+    TaskRepo-->>TaskSvc: TaskEntity
+    TaskSvc->>TaskRepo: update(taskId,{ status })
+    TaskRepo->>DB: UPDATE status
+    DB-->>TaskRepo: ok
+    TaskRepo-->>TaskSvc: updatedTask
+    TaskSvc-->>TaskAPI: updatedTask
+    TaskAPI-->>Web: ApiResponseDto(TaskResponse)
+    Web-->>Member: Reflect new status across board
+    deactivate TaskSvc

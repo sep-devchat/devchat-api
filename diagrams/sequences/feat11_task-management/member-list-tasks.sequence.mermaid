@@ -1,0 +1,35 @@
+---
+config:
+  themeCSS: >-
+    .actor-line{stroke-dasharray:6 6;}.actor-bottom,
+    text.actor-bottom{display:none;}
+  theme: neo
+---
+sequenceDiagram
+    autonumber
+    actor Member as member:GroupMember
+    participant Web as web:TaskBoardUI
+    participant TaskAPI as api:TaskController
+    participant GuardGroup as guard:GroupGuard
+    participant TaskSvc as svc:TaskService
+    participant CLS as cls:ClsService<DevChatCls>
+    participant TaskRepo as repo:TaskRepository
+    participant DB as db:Database
+
+    %% Stage 3: Member lists tasks with filters
+    Member->>Web: Apply filters & refresh board
+    Web->>TaskAPI: GET /group/:id/task?query
+    TaskAPI->>GuardGroup: ensureMember()
+    GuardGroup-->>TaskAPI: ok
+    TaskAPI->>TaskSvc: findByGroup(query)
+    activate TaskSvc
+    TaskSvc->>CLS: get("group")
+    CLS-->>TaskSvc: { groupId }
+    TaskSvc->>TaskRepo: findAndCount(where=queryFilters)
+    TaskRepo->>DB: SELECT tasks + COUNT
+    DB-->>TaskRepo: task rows & total
+    TaskRepo-->>TaskSvc: [tasks,total]
+    TaskSvc-->>TaskAPI: { data,pagination }
+    TaskAPI-->>Web: ApiResponseDto(TaskResponse[])
+    Web-->>Member: Render filtered task list
+    deactivate TaskSvc

@@ -1,0 +1,64 @@
+---
+config:
+  themeCSS: >-
+    .actor-line{stroke-dasharray:6 6;}.actor-bottom,
+    text.actor-bottom{display:none;}
+  theme: neo
+---
+sequenceDiagram
+    autonumber
+    actor User as user:Client
+    participant Web as web:DevChatWeb
+    participant Controller as controller:GroupInvitationController
+    participant Service as service:GroupInvitationService
+    participant InvitationRepo as invitationRepo:GroupInvitationRepository
+    participant UserGroupRepo as userGroupRepo:UserGroupRepository
+    participant NotificationService as notificationService
+    participant NotificationRepo as notificationRepo:NotificationRepository
+    participant SocketService as socketService:SocketService
+    participant DB as db:Database
+
+    User->>Web: Click "Join group" on pending invite
+    Web->>Controller: PATCH /api/group-invitation/{id}/accept
+    Controller->>Service: acceptInvitation(invitationId)
+
+    Service->>InvitationRepo: findOneByIdAndUser(invitationId, currentUser)
+    InvitationRepo->>DB: select invitation + relations
+    DB-->>InvitationRepo: invitation row
+    InvitationRepo-->>Service: invitation entity
+
+    alt Invitation missing or not recipient
+        Service-->>Controller: GroupInvitationNotFoundError
+        Controller-->>Web: 404 ApiResponse { message }
+        Web-->>User: Show error toast
+    else Valid invitation
+        Service->>UserGroupRepo: save({ userId, groupId, addedById })
+        UserGroupRepo->>DB: insert user_group row
+        alt Membership insert fails
+            DB-->>UserGroupRepo: constraint violation
+            UserGroupRepo-->>Service: DatabaseError
+            Service-->>Controller: propagate 500
+            Controller-->>Web: 500 ApiResponse { message: "Unable to join" }
+            Web-->>User: Show failure toast
+        else Membership stored
+            DB-->>UserGroupRepo: membership stored
+            UserGroupRepo-->>Service: membership entity
+
+            Service->>InvitationRepo: delete(invitationId)
+            InvitationRepo->>DB: delete invitation row
+            DB-->>InvitationRepo: deleted
+
+            Service->>NotificationService: createOne({ toUserId: inviter, title, content })
+            NotificationService->>NotificationRepo: save(notification)
+            NotificationRepo->>DB: insert notification row
+            DB-->>NotificationRepo: persisted
+            NotificationRepo-->>NotificationService: notification entity
+            NotificationService->>SocketService: sendNotification(notification)
+            SocketService-->>NotificationService: delivered
+
+            Service-->>Controller: { message: "Group invitation accepted" }
+            Controller-->>Web: 200 ApiMessageResponse
+            Web->>Web: Remove invitation + dispatch refreshGroups
+            Web-->>User: Show success toast
+        end
+    end

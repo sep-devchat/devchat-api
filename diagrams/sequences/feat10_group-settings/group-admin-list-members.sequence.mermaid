@@ -1,0 +1,37 @@
+---
+config:
+  themeCSS: >-
+    .actor-line{stroke-dasharray:6 6;}.actor-bottom,
+    text.actor-bottom{display:none;}
+  theme: neo
+---
+sequenceDiagram
+    autonumber
+    actor Admin as admin:GroupAdmin
+    participant Web as web:GroupSettingsPage
+    participant MembersAPI as api:UserGroupController
+    participant MemberSvc as svc:UserGroupService
+    participant CLS as cls:ClsService<DevChatCls>
+    participant UserRepo as repo:UserRepository
+    participant DB as db:Database
+
+    Admin->>Web: Open "Manage Members" tab
+    Web->>MembersAPI: GET /group/:id/members
+    activate MembersAPI
+    MembersAPI->>MemberSvc: getGroupMembers()
+    activate MemberSvc
+    MemberSvc->>CLS: get("group")
+    CLS-->>MemberSvc: { id: groupId }
+    MemberSvc->>UserRepo: find({ userGroups.groupId = groupId })
+    activate UserRepo
+    UserRepo->>DB: SELECT users JOIN user_groups
+    activate DB
+    DB-->>UserRepo: member rows
+    deactivate DB
+    UserRepo-->>MemberSvc: memberEntities
+    deactivate UserRepo
+    MemberSvc-->>MembersAPI: User[]
+    deactivate MemberSvc
+    MembersAPI-->>Web: ApiResponseDto(UserResponse[])
+    deactivate MembersAPI
+    Web-->>Admin: Render member list

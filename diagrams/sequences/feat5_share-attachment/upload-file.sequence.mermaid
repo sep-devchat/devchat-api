@@ -1,0 +1,117 @@
+---
+config:
+  themeCSS: >-
+    .actor-line{stroke-dasharray:6 6;}.actor-bottom,
+    text.actor-bottom{display:none;}
+  theme: neo
+---
+sequenceDiagram
+  autonumber
+  actor User as user:Client
+  participant Web as web:DevChatWeb
+  participant Controller as controller:UploadController
+  participant Service as service:UploadService
+  participant SignUpload as signUpload:CloudinaryUploadSigner
+  participant Cloud as cloudinary:CloudinaryAPI
+  participant SignDelivery as signDelivery:CloudinaryDeliverySigner
+  participant Repo as repo:AttachmentRepository
+  participant DB as db:Database
+
+  %% Stage 1: Local staging, no network
+  User->>Web: Pick file & tweak transforms
+  activate User
+  activate Web
+  Web->>Web: createObjectURL(file)
+  Web->>Web: apply local resize/effects
+  Web-->>User: Preview ready (state: staged)
+  deactivate User
+
+  %% Stage 2: Sign + direct upload
+  User->>Web: Confirm upload
+  activate User
+  Web->>Controller: POST /upload/cloudinary/sign-upload { meta }
+  deactivate User
+
+  activate Controller
+  Controller->>Service: issueUploadSignature(meta)
+  deactivate Controller
+
+  activate Service
+  Service->>SignUpload: signUploadPayload(meta)
+  activate SignUpload
+  SignUpload-->>Service: signedUploadParams
+  deactivate SignUpload
+  Service-->>Controller: signedUploadParams
+  deactivate Service
+
+  activate Controller
+  Controller-->>Web: 200 { signature, timestamp }
+  deactivate Controller
+
+  Web->>Cloud: XHR upload (file + signed params)
+  alt Upload failed
+    activate Cloud
+    Cloud-->>Web: error
+    deactivate Cloud
+    Web-->>User: Show retry option
+  else Upload succeeded
+    activate Cloud
+    Cloud-->>Web: { publicId, assetInfo }
+    deactivate Cloud
+
+    %% Stage 3: auto delivery signature & persistence
+    Web->>Controller: POST /upload/cloudinary/sign-delivery { publicId, transforms }
+    activate Controller
+    Controller->>Service: getDeliveryUrl(publicId, transforms)
+    deactivate Controller
+
+    activate Service
+    Service->>SignDelivery: signDelivery(publicId, transforms)
+    activate SignDelivery
+    SignDelivery-->>Service: signedDeliveryUrl
+    deactivate SignDelivery
+
+    Service->>Repo: upsertAttachment(publicId, transforms)
+    activate Repo
+    Repo->>DB: INSERT attachment row
+    activate DB
+    DB-->>Repo: attachmentId
+    deactivate DB
+    Repo-->>Service: AttachmentEntity
+    deactivate Repo
+
+    Service-->>Controller: { attachment, signedDeliveryUrl }
+    deactivate Service
+
+    activate Controller
+    Controller-->>Web: 201 { attachment, signedUrl }
+    deactivate Controller
+
+    activate Web
+    Web->>Web: state := uploaded (cache signedUrl)
+
+    %% Stage 4: transform iteration without re-upload
+    loop Adjust transforms / refresh delivery signature
+      User->>Web: tweak transform sliders
+      Web->>Controller: POST /upload/cloudinary/sign-delivery { publicId, transforms }
+      activate Controller
+      Controller->>Service: refreshDelivery(publicId, transforms)
+      deactivate Controller
+
+      activate Service
+      Service->>SignDelivery: signDelivery(publicId, transforms)
+      activate SignDelivery
+      SignDelivery-->>Service: newSignedUrl
+      deactivate SignDelivery
+      Service-->>Controller: { signedUrl }
+      deactivate Service
+
+      activate Controller
+      Controller-->>Web: 200 { signedUrl }
+      deactivate Controller
+      Web->>Web: update preview/download link
+    end
+
+    Web-->>User: Attachment ready with signed delivery URL
+    deactivate Web
+  end

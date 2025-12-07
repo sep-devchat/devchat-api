@@ -1,8 +1,9 @@
+%%{init: {"themeCSS": ".actor-line{stroke-dasharray:6 6;}.actor-bottom, text.actor-bottom{display:none;}"}}%%
 sequenceDiagram
     autonumber
-    participant C as Client
-    participant SG as SocketGuard
-    participant SGateway as SocketGateway
+    actor C as client:DevChatClient
+    participant SG as guard:SocketGuard
+    participant SGateway as gateway:SocketGateway
 
     C->>SG: Event
     SG->>SG: Check user session

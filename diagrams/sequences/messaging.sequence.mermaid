@@ -1,7 +1,0 @@
-sequenceDiagram
-    autonumber
-    
-    Client->>DevChat API: Send message
-    DevChat API->>DevChat Database: Store message
-    DevChat Database->>DevChat API: Query response
-    DevChat API->>Client: Socket event for new message

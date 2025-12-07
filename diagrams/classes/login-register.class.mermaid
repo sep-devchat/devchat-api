@@ -1,0 +1,104 @@
+---
+config:
+  theme: neo
+  themeCSS: >-
+    .nodeLabel{font-size:12px;}
+---
+classDiagram
+    direction LR
+
+    class ClientApp {
+        +submitLogin()
+        +submitRegister()
+        +handleVerification()
+    }
+
+    class AuthController {
+        <<controller>>
+        +login()
+        +loginPkce()
+        +register()
+        +refresh()
+    }
+
+    class AuthService {
+        <<service>>
+        +authenticateUser()
+        +loginPkce()
+        +issueTokenPair()
+        +sendVerificationEmail()
+        +registerUser()
+    }
+
+    class UserService {
+        <<service>>
+        +findByUniqueKey()
+        +create()
+        +markUserLoggedIn()
+        +markEmailAsVerified()
+    }
+
+    class UserRepository {
+        <<repository>>
+        +findOne()
+        +save()
+        +update()
+    }
+
+    class PasswordResetTokenRepository {
+        <<repository>>
+        +insert()
+        +findOne()
+        +update()
+    }
+
+    class UserLanguageCollectionRepository {
+        <<repository>>
+        +insert()
+    }
+
+    class OAuth2Client {
+        <<provider>>
+        +verifyIdToken()
+    }
+
+    class GitHubService {
+        <<provider>>
+        +getAccessToken()
+        +getUserInfo()
+        +getUserEmails()
+    }
+
+    class JwtSigner {
+        +signAccessToken()
+        +signRefreshToken()
+    }
+
+    class EmailProvider {
+        +sendVerificationEmail()
+        +sendPasswordResetCode()
+    }
+
+    class Database {
+        +users
+        +passwordResetTokens
+        +languageCollections
+    }
+
+    %% Relationship narratives for login/register flow
+    ClientApp --> AuthController : sends login/register body to
+    AuthController o-- AuthService : delegates auth workflows to
+
+    AuthService o-- UserService : coordinates user domain logic via
+    AuthService ..> OAuth2Client : verifies Google credentials through
+    AuthService ..> GitHubService : exchanges GitHub code with
+    AuthService ..> JwtSigner : issues JWT pair with
+    AuthService ..> PasswordResetTokenRepository : manages reset tokens via
+    AuthService ..> EmailProvider : sends notifications through
+
+    UserService o-- UserRepository : persists user records in
+    UserService ..> UserLanguageCollectionRepository : seeds language prefs via
+
+    UserRepository --> Database : stores user rows inside
+    PasswordResetTokenRepository --> Database : stores reset tokens inside
+    UserLanguageCollectionRepository --> Database : stores language collections inside

@@ -1,0 +1,47 @@
+---
+config:
+  themeCSS: >-
+    .actor-line{stroke-dasharray:6 6;}.actor-bottom,
+    text.actor-bottom{display:none;}
+  theme: neo
+---
+sequenceDiagram
+    autonumber
+    actor User as user:DevChatUser
+    participant Web as web:DevChatWeb
+    participant API as codeCollabController:CodeCollaborationController
+    participant Svc as codeCollabService:CodeCollaborationService
+    participant CodeBlock as codeBlockService:CodeBlockService
+    participant CLS as cls:ClsService<DevChatCls>
+    participant Repo as codeCollabRepo:CodeCollaborationRepository
+    participant DB as db:Database
+
+    %% Stage 1: contributor posts a new collaboration entry
+    User->>Web: Update shared code & click "Share to thread"
+    Web->>API: POST /code-collaboration { codeBlockId, content }
+    API->>Svc: createOne(dto)
+    Svc->>CodeBlock: findOne(codeBlockId, false)
+    CodeBlock->>DB: SELECT code_block WHERE id = dto.codeBlockId
+    DB-->>CodeBlock: CodeBlockEntity
+    CodeBlock-->>Svc: CodeBlockEntity
+    Svc->>CLS: get("profile.id")
+    CLS-->>Svc: contributorId
+    Svc->>Repo: insert { codeBlockId, content, createdById }
+    Repo->>DB: INSERT code_collaboration
+    DB-->>Repo: Persisted row
+    Repo-->>Svc: InsertResult
+    Svc-->>API: success
+    API-->>Web: 201 Created + message
+    Web->>Web: Append collaboration entry to timeline
+
+    %% Stage 2: viewer loads collaboration history for a code block
+    User->>Web: Open collaboration sidebar
+    Web->>API: GET /code-collaboration?codeBlockId=
+    API->>Svc: findMany(query)
+    Svc->>Repo: find({ codeBlockId, relations.createdBy, order DESC })
+    Repo->>DB: SELECT code_collaboration JOIN user
+    DB-->>Repo: CollaborationEntities[]
+    Repo-->>Svc: CollaborationEntities[]
+    Svc-->>API: list of collaborations
+    API-->>Web: ApiResponseDto(data)
+    Web->>User: Render collaborative edit history

@@ -1,0 +1,239 @@
+---
+config:
+  theme: redux
+  themeCSS: .nodeLabel{font-size:12px;}
+  layout: elk
+---
+classDiagram
+direction TB
+    class AdminConsoleUI {
+        +navigateSection()
+        +submitAdminAction()
+        +renderAnalytics()
+    }
+
+    class PermissionController {
+        +createOne()
+        +findMany()
+        +findOne()
+        +updateOne()
+        +deleteOne()
+    }
+
+    class ReportCategoryController {
+        +createOne()
+        +findManyAdmin()
+        +updateOne()
+        +deleteOne()
+    }
+
+    class ReportController {
+        +findMany()
+        +getAnalyticsSummary()
+        +getAnalyticsTrend()
+        +getMessageTypeDistribution()
+        +getReporterLeaderboard()
+    }
+
+    class ProgrammingLanguageController {
+        +createOne()
+        +findMany()
+        +updateOne()
+        +deleteOne()
+    }
+
+    class UserController {
+        +getUsers()
+        +updateUser()
+        +deleteUser()
+        +setUserActive()
+        +getUserOverview()
+        +getUserTrend()
+        +getUserLoginStats()
+    }
+
+    class AuthGuard {
+        +canActivate()
+    }
+
+    class AdminRoleGuard {
+        +canActivate()
+    }
+
+    class RequirePermissionsGuard {
+        +canActivate()
+    }
+
+    class AuditLogInterceptor {
+        +intercept()
+        +recordAction()
+    }
+
+    class PermissionService {
+        +createOne()
+        +findMany()
+        +findOne()
+        +updateOne()
+        +deleteOne()
+    }
+
+    class ReportCategoryService {
+        +createOne()
+        +findManyAdmin()
+        +updateOne()
+        +deleteOne()
+    }
+
+    class ReportService {
+        +findMany()
+        +getSummary()
+        +getTrend()
+        +getMessageTypeDistribution()
+        +getCategoryBreakdown()
+        +getReporterLeaderboard()
+    }
+
+    class ProgrammingLanguageService {
+        +createOne()
+        +findMany()
+        +findOne()
+        +updateOne()
+        +deleteOne()
+    }
+
+    class UserService {
+        +getAll()
+        +search()
+        +update()
+        +delete()
+        +setActive()
+        +getUserOverviewStats()
+        +getUserTrendStats()
+        +getUserLoginStats()
+    }
+
+    class PermissionRepository {
+        +create()
+        +insert()
+        +findOne()
+        +findAndCount()
+        +update()
+    }
+
+    class ReportCategoryRepository {
+        +insert()
+        +findOne()
+        +findAndCount()
+        +update()
+    }
+
+    class ReportRepository {
+        +findAndCount()
+        +aggregate()
+    }
+
+    class ReportReportCategoryRepository {
+        +create()
+        +save()
+    }
+
+    class ProgrammingLanguageRepository {
+        +insert()
+        +findOne()
+        +findAndCount()
+        +update()
+    }
+
+    class UserRepository {
+        +find()
+        +findOne()
+        +update()
+        +remove()
+    }
+
+    class AuditLogRepository {
+        +insert()
+        +find()
+    }
+
+    class Database {
+        +permissions
+        +reportCategories
+        +reports
+        +programmingLanguages
+        +users
+        +auditLogs
+    }
+
+    <<ui>> AdminConsoleUI
+    <<controller>> PermissionController
+    <<controller>> ReportCategoryController
+    <<controller>> ReportController
+    <<controller>> ProgrammingLanguageController
+    <<controller>> UserController
+    <<guard>> AuthGuard
+    <<guard>> AdminRoleGuard
+    <<guard>> RequirePermissionsGuard
+    <<interceptor>> AuditLogInterceptor
+    <<service>> PermissionService
+    <<service>> ReportCategoryService
+    <<service>> ReportService
+    <<service>> ProgrammingLanguageService
+    <<service>> UserService
+    <<repository>> PermissionRepository
+    <<repository>> ReportCategoryRepository
+    <<repository>> ReportRepository
+    <<repository>> ReportReportCategoryRepository
+    <<repository>> ProgrammingLanguageRepository
+    <<repository>> UserRepository
+    <<repository>> AuditLogRepository
+
+    AdminConsoleUI --> PermissionController : manage permissions via
+    AdminConsoleUI --> ReportCategoryController : curate report categories via
+    AdminConsoleUI --> ReportController : inspect reports & analytics via
+    AdminConsoleUI --> ProgrammingLanguageController : maintain languages via
+    AdminConsoleUI --> UserController : administer users via
+
+    PermissionController o-- AuthGuard : guarded by
+    PermissionController o-- AdminRoleGuard : owner-only routes via
+    PermissionController o-- RequirePermissionsGuard : enforces AdminPermissionEnum via
+    PermissionController o-- AuditLogInterceptor : audits requests with
+    PermissionController o-- PermissionService : delegates logic to
+
+    ReportCategoryController o-- AuthGuard
+    ReportCategoryController o-- AdminRoleGuard
+    ReportCategoryController o-- AuditLogInterceptor
+    ReportCategoryController o-- ReportCategoryService
+
+    ReportController o-- AuthGuard
+    ReportController o-- AdminRoleGuard
+    ReportController o-- AuditLogInterceptor
+    ReportController o-- RequirePermissionsGuard
+    ReportController o-- ReportService
+
+    ProgrammingLanguageController o-- AuthGuard
+    ProgrammingLanguageController o-- AdminRoleGuard
+    ProgrammingLanguageController o-- AuditLogInterceptor
+    ProgrammingLanguageController o-- ProgrammingLanguageService
+
+    UserController o-- AuthGuard
+    UserController o-- AdminRoleGuard
+    UserController o-- AuditLogInterceptor
+    UserController o-- RequirePermissionsGuard
+    UserController o-- UserService
+
+    PermissionService o-- PermissionRepository
+    ReportCategoryService o-- ReportCategoryRepository
+    ReportService o-- ReportRepository
+    ReportService o-- ReportReportCategoryRepository
+    ProgrammingLanguageService o-- ProgrammingLanguageRepository
+    UserService o-- UserRepository
+    AuditLogInterceptor o-- AuditLogRepository
+
+    PermissionRepository --> Database : stores permission rows in
+    ReportCategoryRepository --> Database : stores report_category rows in
+    ReportRepository --> Database : reads report & analytics tables in
+    ReportReportCategoryRepository --> Database : links reports to categories in
+    ProgrammingLanguageRepository --> Database : stores programming_language rows in
+    UserRepository --> Database : stores user rows in
+    AuditLogRepository --> Database : stores audit_log rows in

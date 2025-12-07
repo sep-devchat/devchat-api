@@ -1,0 +1,38 @@
+---
+config:
+  themeCSS: >-
+    .actor-line{stroke-dasharray:6 6;}.actor-bottom,
+    text.actor-bottom{display:none;}
+  theme: neo
+---
+sequenceDiagram
+    autonumber
+    actor Owner as owner:GroupOwner
+    participant Web as web:TaskBoardUI
+    participant TaskAPI as api:TaskController
+    participant GuardGroup as guard:GroupGuard
+    participant GuardOwner as guardOwner:GroupOwnerGuard
+    participant TaskSvc as svc:TaskService
+    participant TaskRepo as repo:TaskRepository
+    participant DB as db:Database
+
+    %% Stage 5: Owner soft deletes a task
+    Owner->>Web: Click "Delete"
+    Web->>TaskAPI: DELETE /group/:id/task/:taskId
+    TaskAPI->>GuardGroup: ensureMember()
+    GuardGroup-->>TaskAPI: ok
+    TaskAPI->>GuardOwner: ensureOwner()
+    GuardOwner-->>TaskAPI: ok
+    TaskAPI->>TaskSvc: deleteOne(taskId)
+    activate TaskSvc
+    TaskSvc->>TaskRepo: findOne(taskId)
+    TaskRepo->>DB: SELECT task
+    DB-->>TaskRepo: TaskEntity
+    TaskRepo-->>TaskSvc: TaskEntity
+    TaskSvc->>TaskRepo: update(taskId,{ isActive:false })
+    TaskRepo->>DB: UPDATE isActive
+    DB-->>TaskRepo: ok
+    TaskSvc-->>TaskAPI: { message: "Task deleted successfully" }
+    TaskAPI-->>Web: ApiResponseDto(null)
+    Web-->>Owner: Remove card & show toast
+    deactivate TaskSvc

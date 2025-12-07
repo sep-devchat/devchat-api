@@ -1,0 +1,33 @@
+%%{init: {"sequence": {"mirrorActors": false}, "themeCSS": ".actor-line{stroke-dasharray:6 6;}.actor-bottom, text.actor-bottom{display:none;}"}}%%
+sequenceDiagram
+    autonumber
+    actor Sender as sender:ClientApp
+    participant Socket as socket:SocketGateway
+    participant MessageService as messageService:MessageService
+    participant MessageRepo as messageRepo:MessageRepository
+    participant DB as db:Database
+    participant Recipient as recipient:ClientApp
+
+    Sender->>Socket: emit SEND_MESSAGE { text, attachments }
+    activate Sender
+    activate Socket
+    Socket->>MessageService: handleSendMessage(payload, senderCtx)
+    deactivate Sender
+
+    activate MessageService
+    MessageService->>MessageRepo: createMessage(dto)
+    activate MessageRepo
+    MessageRepo->>DB: INSERT message row
+    activate DB
+    DB-->>MessageRepo: inserted message
+    deactivate DB
+    MessageRepo-->>MessageService: MessageEntity
+    deactivate MessageRepo
+
+    MessageService-->>Socket: Persisted message
+    deactivate MessageService
+    Socket-->>Sender: ack { messageId }
+    Socket->>Recipient: broadcast NEW_MESSAGE
+    deactivate Socket
+
+    Recipient-->>Sender: UI reflects incoming message

@@ -1,0 +1,103 @@
+---
+config:
+  themeCSS: >-
+    .actor-line{stroke-dasharray:6 6;}.actor-bottom,
+    text.actor-bottom{display:none;}
+  theme: neo
+---
+sequenceDiagram
+    autonumber
+    actor User as user:Client
+    participant Web as web:DevChatWeb
+    participant Controller as controller:GroupController
+    participant Service as service:GroupService
+    participant GroupRepo as groupRepo:GroupRepository
+    participant ChannelRepo as channelRepo:ChannelRepository
+    participant UserGroupRepo as userGroupRepo:UserGroupRepository
+    participant DB as db:Database
+
+    User->>Web: Enter group info & submit
+    activate Web
+    Web->>Controller: POST /api/group { name, description, avatar }
+    deactivate Web
+
+    activate Controller
+    Controller->>Service: createOne(dto)
+    deactivate Controller
+
+    activate Service
+    alt Invalid payload
+        Service-->>Controller: ValidationError
+        activate Controller
+        Controller-->>Web: 400 ApiResponse { errors }
+        deactivate Controller
+        activate Web
+        Web-->>User: Show validation messages
+        deactivate Web
+    else Valid payload
+        Service->>GroupRepo: insert(new Group)
+        activate GroupRepo
+        GroupRepo->>DB: insert group row
+        alt Persistence error
+            activate DB
+            DB-->>GroupRepo: insert failed
+            deactivate DB
+            GroupRepo-->>Service: DatabaseError
+            deactivate GroupRepo
+            Service-->>Controller: propagate error
+            deactivate Service
+            activate Controller
+            Controller-->>Web: 500 ApiResponse { message: "Unable to create group" }
+            deactivate Controller
+            activate Web
+            Web-->>User: Show failure toast
+            deactivate Web
+        else Insert success
+            activate Service
+            activate GroupRepo
+            activate DB
+            DB-->>GroupRepo: new group id
+            deactivate DB
+            GroupRepo-->>Service: group id
+            deactivate GroupRepo
+
+            Service->>ChannelRepo: insert default "welcome" channel
+            activate ChannelRepo
+            ChannelRepo->>DB: insert channel row
+            activate DB
+            DB-->>ChannelRepo: channel id
+            deactivate DB
+            ChannelRepo-->>Service: success
+            deactivate ChannelRepo
+
+            Service->>UserGroupRepo: insert creator membership
+            activate UserGroupRepo
+            UserGroupRepo->>DB: insert user_group row
+            activate DB
+            DB-->>UserGroupRepo: membership stored
+            deactivate DB
+            UserGroupRepo-->>Service: success
+            deactivate UserGroupRepo
+
+            Service->>GroupRepo: findOne(groupId)
+            activate GroupRepo
+            GroupRepo->>DB: select group
+            activate DB
+            DB-->>GroupRepo: group record
+            deactivate DB
+            GroupRepo-->>Service: group entity
+            deactivate GroupRepo
+
+            Service-->>Controller: group entity
+            deactivate Service
+
+            activate Controller
+            Controller-->>Web: 201 ApiResponse { data: Group }
+            deactivate Controller
+
+            activate Web
+            Web->>Web: Refresh group list
+            Web-->>User: Show success toast
+            deactivate Web
+        end
+    end

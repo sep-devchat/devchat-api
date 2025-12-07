@@ -1,0 +1,77 @@
+---
+config:
+  themeCSS: >-
+    .actor-line{stroke-dasharray:6 6;}.actor-bottom,
+    text.actor-bottom{display:none;}
+  theme: neo
+---
+sequenceDiagram
+    autonumber
+    actor Admin as admin:SystemAdmin
+    participant Console as web:AdminConsoleUI
+    participant AdminAPI as api:AdminRoutes
+    participant AuthGuard as guard:AuthGuard
+    participant RoleGuard as adminGuard:AdminRoleGuard
+    participant PermGuard as perm:RequirePermissionsGuard
+    participant Audit as audit:AuditLogInterceptor
+    participant PermissionSvc as permSvc:PermissionService
+    participant PermissionRepo as permRepo:PermissionRepository
+    participant ReportCategorySvc as rcSvc:ReportCategoryService
+    participant ReportCategoryRepo as rcRepo:ReportCategoryRepository
+    participant ReportSvc as reportSvc:ReportService
+    participant ReportRepo as reportRepo:ReportRepository
+    participant LangSvc as langSvc:ProgrammingLanguageService
+    participant LangRepo as langRepo:ProgrammingLanguageRepository
+    participant UserSvc as userSvc:UserService
+    participant UserRepo as userRepo:UserRepository
+    participant AuditRepo as auditRepo:AuditLogRepository
+    participant DB as db:Database
+
+    Admin->>Console: Pick object type & action (create/update/delete/list)
+    Console->>AdminAPI: HTTPS /admin/{objectType} { payload }
+    AdminAPI->>AuthGuard: verifyAccessToken()
+    AuthGuard-->>AdminAPI: authContext
+    AdminAPI->>RoleGuard: ensureSystemAdmin()
+    RoleGuard-->>AdminAPI: ok
+    AdminAPI->>PermGuard: check(AdminPermissionEnum)
+    PermGuard-->>AdminAPI: allowed
+    AdminAPI->>Audit: attachAuditContext(objectType, action)
+    Audit-->>AdminAPI: continue request
+
+    alt Manage system permissions
+        AdminAPI->>PermissionSvc: handlePermissionAction(dto)
+        PermissionSvc->>PermissionRepo: persistPermission()
+        PermissionRepo->>DB: INSERT/UPDATE permission row
+        DB-->>PermissionRepo: persisted entity
+        PermissionRepo-->>PermissionSvc: PermissionEntity
+        PermissionSvc-->>AdminAPI: ApiResponseDto
+    else Maintain report categories
+        AdminAPI->>ReportCategorySvc: create/update/list/delete
+        ReportCategorySvc->>ReportCategoryRepo: upsertCategory()
+        ReportCategoryRepo->>DB: mutate report_category table
+        DB-->>ReportCategoryRepo: result
+        ReportCategorySvc-->>AdminAPI: ApiResponseDto
+    else Monitor reports & analytics
+        AdminAPI->>ReportSvc: fetchReportsOrAnalytics(query)
+        ReportSvc->>ReportRepo: aggregateReports()
+        ReportRepo->>DB: SELECT reports + stats
+        DB-->>ReportRepo: dataset
+        ReportSvc-->>AdminAPI: charts + pagination
+    else Maintain programming languages
+        AdminAPI->>LangSvc: create/update/delete/query
+        LangSvc->>LangRepo: upsertProgrammingLanguage()
+        LangRepo->>DB: mutate programming_language table
+        DB-->>LangRepo: entity
+        LangSvc-->>AdminAPI: ApiResponseDto
+    else Manage user accounts
+        AdminAPI->>UserSvc: updateProfile/setActive/listUsers
+        UserSvc->>UserRepo: updateUserRecords()
+        UserRepo->>DB: UPDATE/SELECT user table
+        DB-->>UserRepo: user entities
+        UserSvc-->>AdminAPI: ApiResponseDto
+    end
+
+    Audit->>AuditRepo: recordAction(adminId, objectType, action)
+    AuditRepo->>DB: INSERT audit_log
+    AdminAPI-->>Console: ApiResponseDto(result,message)
+    Console-->>Admin: Render toast + refresh management grid

@@ -1,0 +1,42 @@
+---
+config:
+  themeCSS: >-
+    .actor-line{stroke-dasharray:6 6;}.actor-bottom,
+    text.actor-bottom{display:none;}
+  theme: neo
+---
+sequenceDiagram
+    autonumber
+    actor Admin as admin:SystemAdmin
+    participant Console as web:AdminConsoleUI
+    participant AdminAPI as api:AdminRoutes
+    participant AuthGuard as guard:AuthGuard
+    participant RoleGuard as adminGuard:AdminRoleGuard
+    participant PermGuard as perm:RequirePermissionsGuard
+    participant Audit as audit:AuditLogInterceptor
+    participant ReportCategorySvc as rcSvc:ReportCategoryService
+    participant ReportCategoryRepo as rcRepo:ReportCategoryRepository
+    participant AuditRepo as auditRepo:AuditLogRepository
+    participant DB as db:Database
+
+    Admin->>Console: Choose "Report Categories" action
+    Console->>AdminAPI: HTTPS /report-category { payload }
+    AdminAPI->>AuthGuard: verifyAccessToken()
+    AuthGuard-->>AdminAPI: authContext
+    AdminAPI->>RoleGuard: ensureSystemAdmin()
+    RoleGuard-->>AdminAPI: ok
+    AdminAPI->>PermGuard: check(AdminPermissionEnum.MANAGE_REPORT_CATEGORY)
+    PermGuard-->>AdminAPI: allowed
+    AdminAPI->>Audit: attachAuditContext("ReportCategory", action)
+    Audit-->>AdminAPI: continue request
+
+    AdminAPI->>ReportCategorySvc: create/update/list/delete
+    ReportCategorySvc->>ReportCategoryRepo: upsertCategory()
+    ReportCategoryRepo->>DB: mutate report_category table
+    DB-->>ReportCategoryRepo: result
+    ReportCategorySvc-->>AdminAPI: ApiResponseDto
+
+    Audit->>AuditRepo: recordAction(adminId,"ReportCategory",action)
+    AuditRepo->>DB: INSERT audit_log
+    AdminAPI-->>Console: ApiResponseDto(result,message)
+    Console-->>Admin: Show toast + refresh category table

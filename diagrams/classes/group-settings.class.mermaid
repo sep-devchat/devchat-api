@@ -1,0 +1,128 @@
+---
+config:
+  theme: redux
+  themeCSS: .nodeLabel{font-size:12px;}
+  layout: elk
+---
+classDiagram
+direction TB
+    class GroupSettingsPage {
+        +listMembers()
+        +inviteMember()
+        +removeMember()
+    }
+
+    class GroupInvitationController {
+        +sendGroupInvitation()
+        +getInvitationsByGroup()
+        +acceptInvitation()
+        +declineInvitation()
+    }
+
+    class UserGroupController {
+        +getGroupMembers()
+        +addMember()
+        +removeMember()
+        +leaveGroup()
+    }
+
+    class GroupGuard {
+        +canActivate()
+    }
+
+    class GroupInvitationService {
+        +createOne()
+        +validateBeforeCreate()
+        +acceptInvitation()
+        +removeUserFromGroup()
+    }
+
+    class UserGroupService {
+        +getGroupMembers()
+        +addUserToGroup()
+        +removeMemberByGroupAndUser()
+        +findMany()
+    }
+
+    class GroupService {
+        +findOne()
+        +createOne()
+    }
+
+    class UserService {
+        +findById()
+        +search()
+    }
+
+    class NotificationService {
+        +createOne()
+    }
+
+    class GroupInvitationRepository {
+        +create()
+        +insert()
+        +findOne()
+        +delete()
+    }
+
+    class UserGroupRepository {
+        +create()
+        +save()
+        +findOne()
+        +delete()
+    }
+
+    class UserRepository {
+        +find()
+        +findOne()
+    }
+
+    class GroupRepository {
+        +insert()
+        +findOne()
+        +update()
+    }
+
+    class Database {
+        +groupInvitations
+        +userGroups
+        +users
+        +groups
+    }
+
+    <<ui>> GroupSettingsPage
+    <<controller>> GroupInvitationController
+    <<controller>> UserGroupController
+    <<guard>> GroupGuard
+    <<service>> GroupInvitationService
+    <<service>> UserGroupService
+    <<service>> GroupService
+    <<service>> UserService
+    <<service>> NotificationService
+    <<repository>> GroupInvitationRepository
+    <<repository>> UserGroupRepository
+    <<repository>> UserRepository
+    <<repository>> GroupRepository
+
+    GroupSettingsPage --> GroupInvitationController : sends invite requests to
+    GroupSettingsPage --> UserGroupController : manages membership via
+    UserGroupController o-- GroupGuard : guarded by
+    UserGroupController o-- UserGroupService : delegates actions to
+    GroupInvitationController o-- GroupInvitationService : delegates invite flow to
+    GroupGuard --> GroupService : verifies group via
+    GroupInvitationService o-- GroupService : confirms group
+    GroupInvitationService o-- UserService : validates users
+    GroupInvitationService o-- UserGroupRepository : ensures membership state in
+    GroupInvitationService o-- GroupInvitationRepository : persists invites in
+    GroupInvitationService o-- NotificationService : notifies invitees via
+    UserGroupService o-- GroupService : reuses group rules
+    UserGroupService o-- UserService : resolves user profiles
+    UserGroupService o-- UserGroupRepository : persists memberships in
+    UserGroupService o-- GroupInvitationRepository : cleans pending invites from
+    UserGroupService o-- UserRepository : fetches members from
+    GroupService --> GroupRepository : uses
+    UserService --> UserRepository : uses
+    GroupInvitationRepository --> Database : stores invite rows in
+    UserGroupRepository --> Database : stores membership rows in
+    UserRepository --> Database : stores user rows in
+    GroupRepository --> Database : stores group rows in

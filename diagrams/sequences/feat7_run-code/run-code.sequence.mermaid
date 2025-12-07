@@ -1,0 +1,40 @@
+---
+config:
+  themeCSS: >-
+    .actor-line{stroke-dasharray:6 6;}.actor-bottom,
+    text.actor-bottom{display:none;}
+  theme: neo
+---
+sequenceDiagram
+    autonumber
+    actor Client as client:DevChatClient
+    participant API as api:DevChat API
+    participant Docker as dockerHost:Docker Host
+
+    Client->>API: Request code execution
+    activate Client
+    activate API
+    API-->>Client: Execution request accepted
+    deactivate Client
+
+    API->>Docker: Check runtime image availability
+    activate Docker
+    Docker-->>API: Image status
+    alt Image not found
+        API->>Docker: Pull image
+        Docker-->>API: Image pulled
+    end
+
+    API->>Docker: Start isolated container
+    Docker-->>API: Container ready
+    alt Code requires build
+        API->>Docker: Build source artifacts
+        Docker-->>API: Build completed
+    end
+
+    API->>Docker: Execute code payload
+    Docker-->>API: Execution logs & result
+    deactivate Docker
+
+    API-->>Client: Final execution result
+    deactivate API

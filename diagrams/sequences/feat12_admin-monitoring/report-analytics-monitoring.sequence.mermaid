@@ -1,0 +1,42 @@
+---
+config:
+  themeCSS: >-
+    .actor-line{stroke-dasharray:6 6;}.actor-bottom,
+    text.actor-bottom{display:none;}
+  theme: neo
+---
+sequenceDiagram
+    autonumber
+    actor Admin as admin:SystemAdmin
+    participant Console as web:AdminConsoleUI
+    participant AdminAPI as api:AdminRoutes
+    participant AuthGuard as guard:AuthGuard
+    participant RoleGuard as adminGuard:AdminRoleGuard
+    participant PermGuard as perm:RequirePermissionsGuard
+    participant Audit as audit:AuditLogInterceptor
+    participant ReportSvc as reportSvc:ReportService
+    participant ReportRepo as reportRepo:ReportRepository
+    participant AuditRepo as auditRepo:AuditLogRepository
+    participant DB as db:Database
+
+    Admin->>Console: Select "Reports & Analytics"
+    Console->>AdminAPI: HTTPS /report{,/analytics} query
+    AdminAPI->>AuthGuard: verifyAccessToken()
+    AuthGuard-->>AdminAPI: authContext
+    AdminAPI->>RoleGuard: ensureSystemAdmin()
+    RoleGuard-->>AdminAPI: ok
+    AdminAPI->>PermGuard: check(AdminPermissionEnum.VIEW_REPORT_ANALYTICS)
+    PermGuard-->>AdminAPI: allowed
+    AdminAPI->>Audit: attachAuditContext("Report", action)
+    Audit-->>AdminAPI: continue request
+
+    AdminAPI->>ReportSvc: fetchReportsOrAnalytics(query)
+    ReportSvc->>ReportRepo: aggregateReports()
+    ReportRepo->>DB: SELECT reports + stats
+    DB-->>ReportRepo: dataset
+    ReportSvc-->>AdminAPI: charts + pagination
+
+    Audit->>AuditRepo: recordAction(adminId,"Report",action)
+    AuditRepo->>DB: INSERT audit_log
+    AdminAPI-->>Console: ApiResponseDto(result,message)
+    Console-->>Admin: Render charts & tables
