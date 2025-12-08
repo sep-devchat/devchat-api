@@ -33,6 +33,7 @@ import { ProgrammingLanguageModule } from "@modules/programming-language";
 import { UserLanguageCollectionModule } from "@modules/user-language-collection";
 import { ReportCategoryModule } from "@modules/report-category";
 import { ReportModule } from "@modules/report";
+import { AppController } from "./app.controller";
 
 @Module({
 	imports: [
@@ -95,5 +96,6 @@ import { ReportModule } from "@modules/report";
 		},
 		UserScheduler,
 	],
+	controllers: [AppController],
 })
 export class AppModule {}
