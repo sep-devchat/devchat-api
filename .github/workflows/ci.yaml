@@ -29,9 +29,19 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.REPO_ID }}:latest , ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.REPO_ID }}:${{ steps.commit.outputs.short }}
 
-  deploy:
+  deploy-vps:
     needs: build-and-push-docker
-    runs-on: self-hosted
+    runs-on: [self-hosted, devchat-sv]
+    steps:
+      - name: Deploy to Server
+        run: |
+          cd ~/devchat &&
+          docker compose pull api &&
+          docker compose up -d api
+
+  deploy-aws:
+    needs: build-and-push-docker
+    runs-on: [self-hosted, devchat-api-aws]
     steps:
       - name: Deploy to Server
         run: |
