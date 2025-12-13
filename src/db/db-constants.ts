@@ -1,6 +1,9 @@
 export const DbConstants = {
 	TableName: {
 		User: "user",
+		Subscription: "subscription",
+		GroupSubscription: "group_subscription",
+		Transaction: "transaction",
 		Message: "message",
 		Group: "group",
 		UserMessageDelete: "user_message_delete",
@@ -280,6 +283,39 @@ export const DbConstants = {
 			runCodeType: "run_code_type",
 			result: "result",
 		},
+		Subscription: {
+			id: "subscription_id",
+			subscriptionCode: "subscription_code",
+			subcriptionName: "subscription_name",
+			price: "price",
+			limitMembers: "limit_members",
+			isAIActive: "is_ai_active",
+			runCodePerDay: "run_code_per_day",
+			programmingLanguageInGroups: "programming_language_in_groups",
+			levelSubscription: "level_subscription",
+		},
+		GroupSubscription: {
+			id: "group_subscription_id",
+			groupId: "group_id",
+			subscriptionId: "subscription_id",
+			groupSubscriptionStatus: "group_subscription_status",
+			monthQuantity: "month_quantity",
+			payemntBy: "payment_by",
+			isPaid: "is_paid",
+			startedAt: "started_at",
+			endedAt: "ended_at",
+		},
+		Transaction: {
+			id: "transaction_id",
+			vndAmount: "vnd_amount",
+			transactionMessage: "transaction_message",
+			paymentMethod: "payment_method",
+			transactionStatus: "transaction_status",
+			transactionType: "transaction_type",
+			transactionCode: "transaction_code",
+			userId: "user_id",
+			groupSubscriptionId: "group_subscription_id",
+		},
 	},
 	IndexName: {
 		User: {
@@ -327,6 +363,14 @@ export const DbConstants = {
 		},
 		RunCodeCache: {
 			typeAndTarget: "idx_run_code_cache_type_and_target",
+		},
+		GroupSubscription: {
+			groupId: "idx_group_subscription_group_id",
+			subscriptionId: "idx_group_subscription_subscription_id",
+		},
+		Transaction: {
+			userId: "idx_transaction_user_id",
+			groupSubscriptionId: "idx_transaction_group_subscription_id",
 		},
 	},
 };

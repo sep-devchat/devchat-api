@@ -5207,6 +5207,11 @@ nestjs-cls@^6.0.1:
   resolved "https://registry.yarnpkg.com/nestjs-cls/-/nestjs-cls-6.0.1.tgz#13b83cadb7db9885b4fb08cad487ba0605c41303"
   integrity sha512-FnU8MI5/RKdbNvGmlUMD7nuFs7zUiueNzTjO+sxj7BJbsf7cUmosarppPLXRJ7C1WaZ/gLE9ZAcM6//0q1CQIA==
 
+nestjs-vnpay@^1.0.4:
+  version "1.0.4"
+  resolved "https://registry.yarnpkg.com/nestjs-vnpay/-/nestjs-vnpay-1.0.4.tgz#2a85e58474ffd9a18fa81f62d51eae5d0fdae619"
+  integrity sha512-XbBikYlJcOquRH5524Eed435oQTVeSNKY4aHUmYGHAKIh70spvpGjaihlNdNvDUWj97cZEpPSpcHFghRW144sA==
+
 node-abort-controller@^3.0.1:
   version "3.1.1"
   resolved "https://registry.yarnpkg.com/node-abort-controller/-/node-abort-controller-3.1.1.tgz#a94377e964a9a37ac3976d848cb5c765833b8548"
@@ -6793,6 +6798,13 @@ vary@^1, vary@~1.1.2:
   version "1.1.2"
   resolved "https://registry.yarnpkg.com/vary/-/vary-1.1.2.tgz#2299f02c6ded30d4a5961b0b9f74524a18f634fc"
   integrity sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==
+
+vnpay@^2.4.4:
+  version "2.4.4"
+  resolved "https://registry.yarnpkg.com/vnpay/-/vnpay-2.4.4.tgz#93f67d22c31dc64b566fcab6dcaf652c5f49b4a1"
+  integrity sha512-NvftKF1K+JRAyZ7I11Nz/nxmSOaya6Txy/fcW2xFGpBzUsKjfyr2YEg210YitgVHvgtZ94j2/8DFRm8PwjUHjA==
+  dependencies:
+    dayjs "^1.11.13"
 
 walker@^1.0.8:
   version "1.0.8"

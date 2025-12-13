@@ -33,7 +33,11 @@ import { ProgrammingLanguageModule } from "@modules/programming-language";
 import { UserLanguageCollectionModule } from "@modules/user-language-collection";
 import { ReportCategoryModule } from "@modules/report-category";
 import { ReportModule } from "@modules/report";
+import { PaymentModule } from "@modules/payment";
 import { AppController } from "./app.controller";
+import { SubscriptionModule } from "@modules/subscription";
+import { GroupSubscriptionModule } from "@modules/group-subscription";
+import { TransactionModule } from "@modules/transaction";
 
 @Module({
 	imports: [
@@ -76,6 +80,10 @@ import { AppController } from "./app.controller";
 		UserLanguageCollectionModule,
 		ReportCategoryModule,
 		ReportModule,
+		PaymentModule,
+		SubscriptionModule,
+		GroupSubscriptionModule,
+		TransactionModule,
 	],
 	providers: [
 		{
