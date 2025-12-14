@@ -9,6 +9,7 @@ import {
 	UpdateDateColumn,
 } from "typeorm";
 import { UserGroupEntity } from "./user-group.entity";
+import { ShareFundEntity } from "./share-fund.entity";
 
 const { TableName, ColumnName, IndexName } = DbConstants;
 
@@ -43,4 +44,9 @@ export class GroupEntity {
 		createForeignKeyConstraints: false,
 	})
 	userGroups: UserGroupEntity[];
+
+	@OneToMany(() => ShareFundEntity, (shareFund) => shareFund.group, {
+		createForeignKeyConstraints: false,
+	})
+	shareFunds: ShareFundEntity[];
 }

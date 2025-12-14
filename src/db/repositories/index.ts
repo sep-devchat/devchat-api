@@ -28,3 +28,7 @@ export * from "./report-category.repository";
 export * from "./report.repository";
 export * from "./report-report-category.repository";
 export * from "./run-code-cache.repository";
+export * from "./subscription.repository";
+export * from "./group-subscription.repository";
+export * from "./share-fund.repository";
+export * from "./transaction.repository";
