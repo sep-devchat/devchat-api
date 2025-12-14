@@ -8,6 +8,7 @@ import {
 } from "typeorm";
 import { UserEntity } from "./user.entity";
 import { GroupSubscriptionEntity } from "./group-subscription.entity";
+import { ShareFundEntity } from "./share-fund.entity";
 
 const { TableName, ColumnName, IndexName } = DbConstants;
 
@@ -61,4 +62,14 @@ export class TransactionEntity {
 		createForeignKeyConstraints: false,
 	})
 	groupSubscription: GroupSubscriptionEntity;
+
+	@Column({
+		name: ColumnName.Transaction.shareFundId,
+		nullable: true,
+	})
+	@Index(IndexName.Transaction.shareFundId)
+	shareFundId: string | null;
+
+	@ManyToOne(() => ShareFundEntity, { createForeignKeyConstraints: false })
+	shareFund: ShareFundEntity;
 }

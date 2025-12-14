@@ -11,10 +11,10 @@ export class SubscriptionResponse {
 	subscriptionName: string;
 
 	@ApiProperty({
-		example: "99000",
-		description: "Price in VND as a string to preserve precision",
+		example: 99000,
+		description: "Price in VND",
 	})
-	price: string;
+	price: number;
 
 	@ApiProperty({ example: 10 })
 	limitMembers: number;
@@ -28,6 +28,9 @@ export class SubscriptionResponse {
 	@ApiProperty({ example: 5 })
 	programmingLanguageInGroups: number;
 
-	@ApiProperty({ example: "level_1" })
-	levelSubscription: string;
+	@ApiProperty({ example: true })
+	allowUseAI: boolean;
+
+	@ApiProperty({ example: 1 })
+	levelSubscription: number;
 }

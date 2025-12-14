@@ -1,6 +1,27 @@
 import { DbConstants } from "@db/db-constants";
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import {
+	Column,
+	Entity,
+	OneToMany,
+	PrimaryGeneratedColumn,
+	ValueTransformer,
+} from "typeorm";
+import { ShareFundEntity } from "./share-fund.entity";
 const { TableName, ColumnName } = DbConstants;
+
+const numberFromUnknown = (value: unknown): number => {
+	if (value == null) return 0;
+	if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+	const str = String(value);
+	const digits = str.match(/\d+(?:\.\d+)?/)?.[0];
+	const n = Number(digits ?? str);
+	return Number.isFinite(n) ? n : 0;
+};
+
+const numberTransformer: ValueTransformer = {
+	to: (value: unknown) => value,
+	from: (value: unknown) => numberFromUnknown(value),
+};
 
 @Entity(TableName.Subscription)
 export class SubscriptionEntity {
@@ -24,8 +45,9 @@ export class SubscriptionEntity {
 		type: "decimal",
 		precision: 12,
 		scale: 2,
+		transformer: numberTransformer,
 	})
-	price: string;
+	price: number;
 
 	@Column({
 		name: ColumnName.Subscription.limitMembers,
@@ -56,8 +78,22 @@ export class SubscriptionEntity {
 	programmingLanguageInGroups: number;
 
 	@Column({
-		name: ColumnName.Subscription.levelSubscription,
-		length: 50,
+		name: ColumnName.Subscription.allowUseAI,
+		type: "boolean",
+		default: false,
 	})
-	levelSubscription: string;
+	allowUseAI: boolean;
+
+	@Column({
+		name: ColumnName.Subscription.levelSubscription,
+		type: "varchar",
+		length: 50,
+		transformer: numberTransformer,
+	})
+	levelSubscription: number;
+
+	@OneToMany(() => ShareFundEntity, (shareFund) => shareFund.subscription, {
+		createForeignKeyConstraints: false,
+	})
+	shareFunds: ShareFundEntity[];
 }

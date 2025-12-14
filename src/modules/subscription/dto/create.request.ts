@@ -28,12 +28,12 @@ export class CreateSubscriptionRequest {
 	subscriptionName: string;
 
 	@ApiProperty({
-		example: "99000",
-		description: "Price in VND as a string to preserve precision",
+		example: 99000,
+		description: "Price in VND",
 	})
-	@IsString()
+	@IsNumber()
 	@IsNotEmpty()
-	price: string;
+	price: number;
 
 	@ApiProperty({
 		example: 10,
@@ -64,10 +64,19 @@ export class CreateSubscriptionRequest {
 	programmingLanguageInGroups: number;
 
 	@ApiProperty({
-		example: "level_1",
-		description: "Subscription level label used for grouping plans",
+		example: true,
+		required: false,
+		default: false,
+		description: "Allow using AI features for this subscription plan",
 	})
-	@IsString()
-	@MaxLength(50)
-	levelSubscription: string;
+	@IsBoolean()
+	@IsOptional()
+	allowUseAI?: boolean;
+
+	@ApiProperty({
+		example: 1,
+		description: "Subscription level number used for grouping plans",
+	})
+	@IsNumber()
+	levelSubscription: number;
 }

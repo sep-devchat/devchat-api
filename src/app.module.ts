@@ -38,6 +38,7 @@ import { AppController } from "./app.controller";
 import { SubscriptionModule } from "@modules/subscription";
 import { GroupSubscriptionModule } from "@modules/group-subscription";
 import { TransactionModule } from "@modules/transaction";
+import { ShareFundModule } from "@modules/share-fund";
 
 @Module({
 	imports: [
@@ -84,6 +85,7 @@ import { TransactionModule } from "@modules/transaction";
 		SubscriptionModule,
 		GroupSubscriptionModule,
 		TransactionModule,
+		ShareFundModule,
 	],
 	providers: [
 		{

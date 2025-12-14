@@ -4,7 +4,6 @@ import { PaymentController } from "./payment.controller";
 import { VnpayModule } from "nestjs-vnpay";
 import { Env } from "@utils";
 import { VnpCurrCode, VnpLocale } from "vnpay";
-
 @Module({
 	imports: [
 		VnpayModule.register({
@@ -13,6 +12,7 @@ import { VnpCurrCode, VnpLocale } from "vnpay";
 			vnpayHost: Env.VNP_API_URL,
 			vnp_Locale: VnpLocale.VN,
 			vnp_CurrCode: VnpCurrCode.VND,
+			testMode: true,
 		}),
 	],
 	providers: [PaymentService],

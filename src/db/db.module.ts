@@ -34,6 +34,7 @@ import {
 	RunCodeCacheRepostiroy,
 	SubscriptionRepository,
 	GroupSubscriptionRepository,
+	ShareFundRepository,
 	TransactionRepository,
 } from "./repositories";
 
@@ -69,6 +70,7 @@ const repositories = [
 	RunCodeCacheRepostiroy,
 	SubscriptionRepository,
 	GroupSubscriptionRepository,
+	ShareFundRepository,
 	TransactionRepository,
 ];
 

@@ -15,7 +15,7 @@ export class CreateGroupSubscriptionRequest {
 	groupId: string;
 
 	@ApiProperty({ example: "1b3e8c7d-5f2a-4a0c-8d3e-abcdef123456" })
-	@IsUUID()
+	@IsString()
 	subscriptionId: string;
 
 	@ApiProperty({ example: "active", required: false, maxLength: 50 })
