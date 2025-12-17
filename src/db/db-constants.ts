@@ -14,6 +14,7 @@ export const DbConstants = {
 		UserFriend: "user_friend",
 		AuditLog: "audit_log",
 		Task: "task",
+		TaskHistory: "task_history",
 		Todo: "todo",
 		CodeBlock: "code_block",
 		DirectMessage: "direct_message",
@@ -161,6 +162,15 @@ export const DbConstants = {
 			startDate: "start_date",
 			dueDate: "due_date",
 			assigneeId: "assignee_id",
+		},
+		TaskHistory: {
+			id: "task_history_id",
+			taskId: "task_id",
+			userId: "user_id",
+			action: "action",
+			fieldName: "field_name",
+			oldValue: "old_value",
+			newValue: "new_value",
 		},
 		Todo: {
 			id: "todo_id",

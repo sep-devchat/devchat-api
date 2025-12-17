@@ -1,11 +1,25 @@
 import { Injectable } from "@nestjs/common";
 import { CreateTaskRequest, UpdateTaskRequest, TaskQuery } from "./dto";
-import { TaskRepository } from "@db/repositories";
+import { TaskRepository, TaskHistoryRepository } from "@db/repositories";
 import { ClsService } from "nestjs-cls";
-import { DevChatCls, PaginationDto, TaskStatusEnum } from "@utils";
+import {
+	DevChatCls,
+	PaginationDto,
+	TaskStatusEnum,
+	TaskPriorityEnum,
+} from "@utils";
 import { UserService } from "@modules/user";
-import { FindOptionsWhere, ILike, IsNull, In } from "typeorm";
-import { TaskEntity } from "@db/entities";
+import {
+	FindOptionsWhere,
+	ILike,
+	IsNull,
+	In,
+	Between,
+	MoreThanOrEqual,
+	LessThanOrEqual,
+	DataSource,
+} from "typeorm";
+import { TaskEntity, TaskHistoryEntity } from "@db/entities";
 import { AssigneeIsNotGroupMember, TaskLocked, TaskNotFound } from "./errors";
 import { GroupService } from "@modules/group";
 import { UserGroupService } from "@modules/user-group";
@@ -14,10 +28,12 @@ import { UserGroupService } from "@modules/user-group";
 export class TaskService {
 	constructor(
 		private readonly repo: TaskRepository,
+		private readonly taskHistoryRepo: TaskHistoryRepository,
 		private readonly userGroupService: UserGroupService,
 		private readonly groupService: GroupService,
 		private readonly userService: UserService,
 		private readonly cls: ClsService<DevChatCls>,
+		private readonly dataSource: DataSource,
 	) {}
 
 	async validateBeforeCreate(groupId: string, assigneeId: string) {
@@ -53,6 +69,17 @@ export class TaskService {
 
 		await this.repo.insert(task);
 
+		// Save task creation history
+		await this.saveTaskHistory(task.id, userId, "create", null, {
+			name: dto.name,
+			description: dto.description,
+			status: dto.status,
+			priority: dto.priority,
+			startDate: dto.startDate,
+			dueDate: dto.dueDate,
+			assigneeId: dto.assigneeId,
+		});
+
 		// Return with relations
 		return await this.repo.findOne({
 			where: { id: task.id },
@@ -63,8 +90,19 @@ export class TaskService {
 	async findByGroup(query: TaskQuery) {
 		const groupId = this.cls.get("group").id;
 
-		const { page, limit, assigneeId, status, priority, search, unassigned } =
-			query;
+		const {
+			page,
+			limit,
+			assigneeId,
+			status,
+			priority,
+			search,
+			unassigned,
+			startDateFrom,
+			startDateTo,
+			dueDateFrom,
+			dueDateTo,
+		} = query;
 
 		// Build where conditions
 		const where: FindOptionsWhere<TaskEntity> = {
@@ -93,7 +131,23 @@ export class TaskService {
 			where.assigneeId = IsNull();
 		}
 
-		// Date range filters removed per latest requirements
+		// Date range filters for start date
+		if (startDateFrom && startDateTo) {
+			where.startDate = Between(new Date(startDateFrom), new Date(startDateTo));
+		} else if (startDateFrom) {
+			where.startDate = MoreThanOrEqual(new Date(startDateFrom));
+		} else if (startDateTo) {
+			where.startDate = LessThanOrEqual(new Date(startDateTo));
+		}
+
+		// Date range filters for due date
+		if (dueDateFrom && dueDateTo) {
+			where.dueDate = Between(new Date(dueDateFrom), new Date(dueDateTo));
+		} else if (dueDateFrom) {
+			where.dueDate = MoreThanOrEqual(new Date(dueDateFrom));
+		} else if (dueDateTo) {
+			where.dueDate = LessThanOrEqual(new Date(dueDateTo));
+		}
 
 		const findOptions = {
 			where,
@@ -131,6 +185,7 @@ export class TaskService {
 		};
 	}
 	async updateOne(id: string, dto: UpdateTaskRequest) {
+		const userId = this.cls.get("profile").id;
 		const existingTask = await this.findOne(id);
 		this.ensureTaskIsEditable(existingTask);
 
@@ -146,10 +201,25 @@ export class TaskService {
 				throw new AssigneeIsNotGroupMember();
 			}
 		}
+
+		// Track changes for history
+		const oldValues = {
+			name: existingTask.name,
+			description: existingTask.description,
+			status: existingTask.status,
+			priority: existingTask.priority,
+			startDate: existingTask.startDate,
+			dueDate: existingTask.dueDate,
+			assigneeId: existingTask.assigneeId,
+		};
+
 		await this.repo.update(id, {
 			...dto,
 			updatedAt: new Date(),
 		});
+
+		// Save update history
+		await this.saveTaskHistory(id, userId, "update", oldValues, dto);
 
 		// Return updated task with relations
 		return await this.repo.findOne({
@@ -177,13 +247,25 @@ export class TaskService {
 	}
 
 	async updateTaskStatus(id: string, dto: { status: number }) {
+		const userId = this.cls.get("profile").id;
 		const existingTask = await this.findOne(id);
 		this.ensureTaskIsEditable(existingTask);
+
+		const oldStatus = existingTask.status;
 
 		await this.repo.update(id, {
 			status: dto.status,
 			updatedAt: new Date(),
 		});
+
+		// Save status change history
+		await this.saveTaskHistory(
+			id,
+			userId,
+			"update",
+			{ status: oldStatus },
+			{ status: dto.status },
+		);
 
 		// Return updated task with relations
 		return await this.repo.findOne({
@@ -200,6 +282,20 @@ export class TaskService {
 		if (existingTask.createdBy === userId) {
 			// throw new NotAllowDelete()
 		}
+
+		// Save delete history before deletion
+		await this.saveTaskHistory(
+			id,
+			userId,
+			"delete",
+			{
+				name: existingTask.name,
+				description: existingTask.description,
+				status: existingTask.status,
+				priority: existingTask.priority,
+			},
+			null,
+		);
 
 		await this.repo.update(id, {
 			isActive: false,
@@ -223,5 +319,181 @@ export class TaskService {
 		if (this.isTaskLocked(task)) {
 			throw new TaskLocked();
 		}
+	}
+
+	async getStatistics() {
+		const groupId = this.cls.get("group").id;
+
+		// Get all active tasks for the group
+		const tasks = await this.repo.find({
+			where: {
+				groupId,
+				isActive: true,
+			},
+		});
+
+		const totalTasks = tasks.length;
+
+		// Calculate statistics by status
+		const todoCount = tasks.filter(
+			(t) => t.status === TaskStatusEnum.TODO,
+		).length;
+		const inProgressCount = tasks.filter(
+			(t) => t.status === TaskStatusEnum.IN_PROGRESS,
+		).length;
+		const doneCount = tasks.filter(
+			(t) => t.status === TaskStatusEnum.DONE,
+		).length;
+
+		// Calculate statistics by priority
+		const lowPriorityCount = tasks.filter((t) => t.priority === 0).length;
+		const mediumPriorityCount = tasks.filter((t) => t.priority === 1).length;
+		const highPriorityCount = tasks.filter((t) => t.priority === 2).length;
+
+		// Calculate other statistics
+		const pendingTasks = todoCount + inProgressCount;
+		const completedTasks = doneCount;
+		const unassignedTasks = tasks.filter((t) => !t.assigneeId).length;
+
+		// Calculate overdue tasks (past due date and not done)
+		const now = new Date();
+		const overdueTasks = tasks.filter(
+			(t) =>
+				t.dueDate &&
+				new Date(t.dueDate) < now &&
+				t.status !== TaskStatusEnum.DONE,
+		).length;
+
+		return {
+			totalTasks,
+			pendingTasks,
+			completedTasks,
+			unassignedTasks,
+			overdueTasks,
+			byStatus: {
+				todo: todoCount,
+				inProgress: inProgressCount,
+				done: doneCount,
+			},
+			byPriority: {
+				low: lowPriorityCount,
+				medium: mediumPriorityCount,
+				high: highPriorityCount,
+			},
+		};
+	}
+
+	async getTaskHistory(taskId: string) {
+		const groupId = this.cls.get("group").id;
+
+		// Verify task exists and belongs to the group
+		const task = await this.findOne(taskId);
+		if (task.groupId !== groupId) {
+			throw new TaskNotFound();
+		}
+
+		// Get task history from TaskHistory table
+		const history = await this.taskHistoryRepo.findByTaskId(taskId);
+		return history;
+	}
+
+	private async saveTaskHistory(
+		taskId: string,
+		userId: string,
+		action: string,
+		oldValues: any,
+		newValues: any,
+	) {
+		const changes = this.getChangedFields(oldValues, newValues);
+
+		// Save each field change as a separate history entry
+		for (const change of changes) {
+			const history = this.taskHistoryRepo.create({
+				taskId,
+				userId,
+				action,
+				fieldName: change.field,
+				oldValue: change.oldValue,
+				newValue: change.newValue,
+			});
+
+			await this.taskHistoryRepo.insert(history);
+		}
+	}
+
+	private getChangedFields(
+		oldValues: any,
+		newValues: any,
+	): Array<{
+		field: string;
+		oldValue: string | null;
+		newValue: string | null;
+	}> {
+		if (!oldValues && newValues) {
+			// Creation - all fields are new
+			return Object.entries(newValues).map(([field, value]) => ({
+				field,
+				oldValue: null,
+				newValue: this.formatValue(field, value),
+			}));
+		}
+
+		if (oldValues && !newValues) {
+			// Deletion - all fields are removed
+			return Object.entries(oldValues).map(([field, value]) => ({
+				field,
+				oldValue: this.formatValue(field, value),
+				newValue: null,
+			}));
+		}
+
+		// Update - compare fields
+		const changes: Array<{
+			field: string;
+			oldValue: string | null;
+			newValue: string | null;
+		}> = [];
+		const allFields = new Set([
+			...Object.keys(oldValues || {}),
+			...Object.keys(newValues || {}),
+		]);
+
+		for (const field of allFields) {
+			const oldValue = oldValues?.[field];
+			const newValue = newValues?.[field];
+
+			if (oldValue !== newValue) {
+				changes.push({
+					field,
+					oldValue: this.formatValue(field, oldValue),
+					newValue: this.formatValue(field, newValue),
+				});
+			}
+		}
+
+		return changes;
+	}
+
+	private formatValue(field: string, value: any): string | null {
+		if (value === null || value === undefined) return null;
+
+		// Format status
+		if (field === "status") {
+			const statusMap = { 0: "To Do", 1: "In Progress", 2: "Done" };
+			return statusMap[value] || String(value);
+		}
+
+		// Format priority
+		if (field === "priority") {
+			const priorityMap = { 0: "Low", 1: "Medium", 2: "High" };
+			return priorityMap[value] || String(value);
+		}
+
+		// Format dates
+		if (field === "startDate" || field === "dueDate") {
+			return value instanceof Date ? value.toISOString() : String(value);
+		}
+
+		return String(value);
 	}
 }

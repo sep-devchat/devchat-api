@@ -14,6 +14,7 @@ export * from "./user-group.repository";
 export * from "./permission.repository";
 export * from "./audit-log.repository";
 export * from "./task.repository";
+export * from "./task-history.repository";
 export * from "./todo.repository";
 export * from "./code-block.repository";
 export * from "./direct-message.repository";
