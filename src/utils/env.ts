@@ -41,6 +41,10 @@ export const Env = {
 	OPENAI_MODEL: process.env.OPENAI_MODEL || "",
 	GOOGLE_API_KEY: process.env.GOOGLE_API_KEY || "",
 	GOOGLE_MODEL: process.env.GOOGLE_MODEL || "",
+	VNP_TMN_CODE: process.env.VNP_TMN_CODE || "",
+	VNP_HASH_SECRET: process.env.VNP_HASH_SECRET || "",
+	VNP_API_URL: process.env.VNP_API_URL || "",
+	VNP_RETURN_URL: process.env.VNP_RETURN_URL || "",
 } as const;
 
 console.log(Env);
