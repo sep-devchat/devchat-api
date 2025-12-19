@@ -39,12 +39,12 @@ jobs:
           docker compose pull api &&
           docker compose up -d api
 
-  deploy-aws:
-    needs: build-and-push-docker
-    runs-on: [self-hosted, devchat-api-aws]
-    steps:
-      - name: Deploy to Server
-        run: |
-          cd ~/devchat &&
-          docker compose pull api &&
-          docker compose up -d api
+  # deploy-aws:
+  #   needs: build-and-push-docker
+  #   runs-on: [self-hosted, devchat-api-aws]
+  #   steps:
+  #     - name: Deploy to Server
+  #       run: |
+  #         cd ~/devchat &&
+  #         docker compose pull api &&
+  #         docker compose up -d api
