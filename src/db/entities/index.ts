@@ -11,6 +11,7 @@ export * from "./permission.entity";
 export * from "./user-friend.entity";
 export * from "./audit-log.entity";
 export * from "./task.entity";
+export * from "./task-history.entity";
 export * from "./todo.entity";
 export * from "./code-block.entity";
 export * from "./direct-message.entity";
