@@ -91,4 +91,36 @@ export class TaskQuery {
 	@IsOptional()
 	@Type(() => Boolean)
 	unassigned?: boolean;
+
+	@ApiPropertyOptional({
+		example: "2024-01-01T00:00:00.000Z",
+		description: "Filter tasks with start date from this date",
+	})
+	@IsOptional()
+	@IsString()
+	startDateFrom?: string;
+
+	@ApiPropertyOptional({
+		example: "2024-12-31T23:59:59.999Z",
+		description: "Filter tasks with start date until this date",
+	})
+	@IsOptional()
+	@IsString()
+	startDateTo?: string;
+
+	@ApiPropertyOptional({
+		example: "2024-01-01T00:00:00.000Z",
+		description: "Filter tasks with due date from this date",
+	})
+	@IsOptional()
+	@IsString()
+	dueDateFrom?: string;
+
+	@ApiPropertyOptional({
+		example: "2024-12-31T23:59:59.999Z",
+		description: "Filter tasks with due date until this date",
+	})
+	@IsOptional()
+	@IsString()
+	dueDateTo?: string;
 }
