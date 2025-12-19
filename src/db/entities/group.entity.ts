@@ -4,12 +4,15 @@ import {
 	CreateDateColumn,
 	Entity,
 	Index,
+	JoinColumn,
 	OneToMany,
 	PrimaryGeneratedColumn,
 	UpdateDateColumn,
 } from "typeorm";
 import { UserGroupEntity } from "./user-group.entity";
 import { ShareFundEntity } from "./share-fund.entity";
+import { GroupSubscriptionEntity } from "./group-subscription.entity";
+import { TransactionEntity } from "./transaction.entity";
 
 const { TableName, ColumnName, IndexName } = DbConstants;
 
@@ -49,4 +52,18 @@ export class GroupEntity {
 		createForeignKeyConstraints: false,
 	})
 	shareFunds: ShareFundEntity[];
+
+	@OneToMany(
+		() => GroupSubscriptionEntity,
+		(groupSubscription) => groupSubscription.group,
+		{
+			createForeignKeyConstraints: false,
+		},
+	)
+	groupSubscriptions: GroupSubscriptionEntity[];
+
+	@OneToMany(() => TransactionEntity, (transaction) => transaction.group, {
+		createForeignKeyConstraints: false,
+	})
+	transactions: TransactionEntity[];
 }

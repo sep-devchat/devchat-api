@@ -7,6 +7,7 @@ import {
 	ValueTransformer,
 } from "typeorm";
 import { ShareFundEntity } from "./share-fund.entity";
+import { GroupSubscriptionEntity } from "./group-subscription.entity";
 const { TableName, ColumnName } = DbConstants;
 
 const numberFromUnknown = (value: unknown): number => {
@@ -78,13 +79,6 @@ export class SubscriptionEntity {
 	programmingLanguageInGroups: number;
 
 	@Column({
-		name: ColumnName.Subscription.allowUseAI,
-		type: "boolean",
-		default: false,
-	})
-	allowUseAI: boolean;
-
-	@Column({
 		name: ColumnName.Subscription.levelSubscription,
 		type: "varchar",
 		length: 50,
@@ -96,4 +90,11 @@ export class SubscriptionEntity {
 		createForeignKeyConstraints: false,
 	})
 	shareFunds: ShareFundEntity[];
+
+	@OneToMany(
+		() => GroupSubscriptionEntity,
+		(groupSubscription) => groupSubscription.subscription,
+		{ createForeignKeyConstraints: false },
+	)
+	groupSubscriptions: GroupSubscriptionEntity[];
 }

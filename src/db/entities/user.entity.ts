@@ -10,6 +10,7 @@ import {
 } from "typeorm";
 import { UserGroupEntity } from "./user-group.entity";
 import { UserLanguageCollectionEntity } from "./user-language-collection.entity";
+import { TransactionEntity } from "./transaction.entity";
 
 const { TableName, ColumnName, IndexName } = DbConstants;
 
@@ -91,4 +92,9 @@ export class UserEntity {
 		{ cascade: true, createForeignKeyConstraints: false },
 	)
 	userLanguages: UserLanguageCollectionEntity[];
+
+	@OneToMany(() => TransactionEntity, (transaction) => transaction.user, {
+		createForeignKeyConstraints: false,
+	})
+	transactions: TransactionEntity[];
 }

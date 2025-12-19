@@ -3,3 +3,4 @@ export * from "./query";
 export * from "./update.request";
 export * from "./response";
 export * from "./group-request.query";
+export * from "./group-subscription.response";
