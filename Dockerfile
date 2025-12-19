@@ -13,4 +13,4 @@ WORKDIR /app
 COPY package.json bun.lockb ./
 RUN bun install
 COPY --from=builder /app/dist ./
-CMD ["node", "main"]
+CMD ["bun", "run", "main.js"]
