@@ -1,5 +1,6 @@
 import { UserEntity } from "@db/entities";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { UserLanguageCollectionResponse } from "@modules/user-language-collection/dto";
 
 export class UserResponse {
 	@ApiProperty({
@@ -80,6 +81,14 @@ export class UserResponse {
 	})
 	timezone: string | null;
 
+	@ApiProperty({
+		description:
+			"Ordered list of programming languages configured for the user",
+		type: () => UserLanguageCollectionResponse,
+		isArray: true,
+	})
+	userLanguages: UserLanguageCollectionResponse[];
+
 	static fromEntity(entity: UserEntity): UserResponse {
 		return {
 			id: entity.id,
@@ -95,7 +104,20 @@ export class UserResponse {
 			updatedAt: entity.updatedAt,
 			lastLogin: entity.lastLogin,
 			timezone: entity.timezone,
+			userLanguages: UserResponse.mapLanguages(entity),
 		};
+	}
+
+	private static mapLanguages(
+		entity: Pick<UserEntity, "userLanguages">,
+	): UserLanguageCollectionResponse[] {
+		if (!entity.userLanguages?.length) {
+			return [];
+		}
+
+		return [...entity.userLanguages]
+			.sort((a, b) => a.orderIndex - b.orderIndex)
+			.map((language) => UserLanguageCollectionResponse.fromEntity(language));
 	}
 
 	static fromEntities(entities: UserEntity[]): UserResponse[] {
