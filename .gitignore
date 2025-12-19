@@ -35,7 +35,6 @@ lerna-debug.log*
 !.vscode/extensions.json
 
 package-lock.json
-bun.lockb
 pnpm-lock.yaml
 
 .env

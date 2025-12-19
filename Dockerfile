@@ -1,14 +1,16 @@
-# Build with Yarn
+# Build with Bun
 FROM node:22 AS builder
+RUN npm i -g bun
 WORKDIR /app
-COPY package.json yarn.lock ./
-RUN yarn
+COPY package.json bun.lockb ./
+RUN bun install
 COPY . .
-RUN yarn build
+RUN bun run build
 
 FROM node:22 AS runner
+RUN npm i -g bun
 WORKDIR /app
-COPY package.json yarn.lock ./
-RUN yarn
+COPY package.json bun.lockb ./
+RUN bun install
 COPY --from=builder /app/dist ./
 CMD ["node", "main"]
