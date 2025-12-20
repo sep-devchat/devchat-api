@@ -56,6 +56,7 @@ export const DbConstants = {
 			adminRoleId: "admin_role_id",
 			isAdmin: "is_admin",
 			isBot: "is_bot",
+			subscriptionRole: "subscription_role",
 		},
 		Message: {
 			id: "message_id",
@@ -321,6 +322,7 @@ export const DbConstants = {
 			id: "share_fund_id",
 			groupId: "group_id",
 			subscriptionId: "subscription_id",
+			monthQuantity: "month_quantity",
 			fundName: "fund_name",
 			contributeTime: "contribute_time",
 			currentVndAmount: "current_vnd_amount",
@@ -338,6 +340,8 @@ export const DbConstants = {
 			userId: "user_id",
 			groupSubscriptionId: "group_subscription_id",
 			shareFundId: "share_fund_id",
+			groupId: "group_id",
+			subscriptionId: "subscription_id",
 		},
 	},
 	IndexName: {
@@ -397,7 +401,7 @@ export const DbConstants = {
 		},
 		Transaction: {
 			userId: "idx_transaction_user_id",
-			groupSubscriptionId: "idx_transaction_group_subscription_id",
+			groupId: "idx_transaction_group_id",
 			shareFundId: "idx_transaction_share_fund_id",
 		},
 	},

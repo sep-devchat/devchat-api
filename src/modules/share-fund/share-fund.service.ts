@@ -84,6 +84,10 @@ export class ShareFundService {
 		const shareFund = this.repo.create({
 			groupId,
 			subscriptionId: dto.subscriptionId,
+			monthQuantity:
+				Number.isFinite(dto.monthQuantity) && (dto.monthQuantity ?? 0) >= 1
+					? (dto.monthQuantity as number)
+					: 1,
 			fundName: dto.fundName ?? `${subscription.subscriptionName} fund`,
 			contributeTime: dto.contributeTime ?? null,
 		});
@@ -119,6 +123,7 @@ export class ShareFundService {
 					where: {
 						shareFundId: shareFund.id,
 						transactionType: "DONATION",
+						transactionStatus: "SUCCESS",
 					},
 				});
 				if (donatedTimes >= maxTimes) {
@@ -139,7 +144,7 @@ export class ShareFundService {
 			transactionType: "DONATION",
 			transactionCode: `${Date.now()}`,
 			userId: currentUserId,
-			groupSubscriptionId: null,
+			groupId,
 			shareFundId: shareFund.id,
 		});
 

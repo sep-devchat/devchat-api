@@ -9,7 +9,7 @@ import { ApiResponseDto } from "@utils";
 export class PaymentController {
 	constructor(private readonly paymentService: PaymentService) {}
 
-	@Post("deposit")
+	@Post("deposit/vnpay")
 	@ApiOperation({
 		summary: "Create VNPay deposit URL",
 		description: "Builds a VNPay payment URL for the user to deposit funds",

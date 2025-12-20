@@ -55,6 +55,9 @@ export class GroupInvitationService {
 		// Check if group exists
 		await this.groupService.findOne(groupId);
 
+		// Enforce subscription member limit before allowing new invitations.
+		await this.groupService.assertMemberLimitAllowsNewMembers(groupId, 1);
+
 		// Check if user is already a member of the group
 		const membership = await this.userGroupRepo.findOne({
 			where: {
@@ -349,6 +352,12 @@ export class GroupInvitationService {
 		}
 
 		try {
+			// Enforce subscription member limit before joining.
+			await this.groupService.assertMemberLimitAllowsNewMembers(
+				existingInvitation.groupId,
+				1,
+			);
+
 			// Add user to group
 			await this.addUserToGroup(
 				existingInvitation.toUserId,

@@ -14,7 +14,9 @@ import {
 	UpdateGroupRequest,
 	GroupQuery,
 	GroupResponse,
+	GroupSubscriptionsInGroupResponse,
 } from "./dto";
+import { GroupSubscriptionResponse } from "@modules/group-subscription/dto";
 import {
 	ApiMessageResponseDto,
 	ApiResponseDto,
@@ -77,6 +79,19 @@ export class GroupController {
 			GroupResponse.fromEntities(response),
 			null,
 			"Groups retrieved successfully",
+		);
+	}
+
+	@Get(":groupId/subscriptions")
+	@ApiOperation({ summary: "Get current plan and all plans in group" })
+	@ApiParam({ name: "groupId", description: "Group ID" })
+	@SwaggerApiResponse(GroupSubscriptionsInGroupResponse)
+	async findSubscriptionsInGroup(@Param("groupId") groupId: string) {
+		const data = await this.groupService.findSubscriptionsInGroup(groupId);
+		return new ApiResponseDto(
+			data,
+			null,
+			"Group subscriptions retrieved successfully",
 		);
 	}
 

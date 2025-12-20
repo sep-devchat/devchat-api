@@ -1,7 +1,7 @@
 import { Controller, Param, Query, Get } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { TransactionService } from "./transaction.service";
-import { TransactionQuery } from "./dto";
+import { TransactionQuery, TransactionResponse } from "./dto";
 import { ApiResponseDto } from "@utils";
 
 @ApiTags("transaction")
@@ -15,8 +15,11 @@ export class TransactionController {
 		description: "Return transactions with optional filters",
 	})
 	async findMany(@Query() query: TransactionQuery) {
-		const data = await this.transactionService.findMany(query);
-		return new ApiResponseDto(data);
+		const result = await this.transactionService.findMany(query);
+		return new ApiResponseDto(
+			TransactionResponse.fromEntities(result.data),
+			result.pagination,
+		);
 	}
 
 	@Get(":id")
@@ -26,6 +29,6 @@ export class TransactionController {
 	})
 	async findOne(@Param("id") id: string) {
 		const data = await this.transactionService.findOne(id);
-		return new ApiResponseDto(data);
+		return new ApiResponseDto(TransactionResponse.fromEntity(data));
 	}
 }

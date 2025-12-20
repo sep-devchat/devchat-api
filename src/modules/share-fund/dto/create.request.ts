@@ -21,6 +21,16 @@ export class CreateShareFundRequest {
 	fundName?: string | null;
 
 	@ApiPropertyOptional({
+		description: "Number of months this share fund is intended to purchase",
+		example: 1,
+		default: 1,
+	})
+	@IsOptional()
+	@IsInt()
+	@Min(1)
+	monthQuantity?: number;
+
+	@ApiPropertyOptional({
 		description:
 			"Max donation times allowed for this fund. Omit for unlimited.",
 	})

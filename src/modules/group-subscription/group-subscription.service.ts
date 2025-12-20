@@ -5,6 +5,7 @@ import {
 	UpdateGroupSubscriptionRequest,
 	GroupSubscriptionQuery,
 } from "./dto";
+import { GroupSubscriptionResponse } from "./dto/response";
 
 @Injectable()
 export class GroupSubscriptionService {
@@ -39,11 +40,22 @@ export class GroupSubscriptionService {
 	}
 
 	async findMany(_query: GroupSubscriptionQuery) {
-		return this.repo.find();
+		const entities = await this.repo.find({
+			relations: { subscription: true },
+			order: { startedAt: "DESC" },
+		});
+		return GroupSubscriptionResponse.fromEntities(entities);
 	}
 
 	async findOne(id: string) {
-		return this.repo.findOneByOrFail({ id });
+		const entity = await this.repo.findOne({
+			where: { id },
+			relations: { subscription: true },
+		});
+		if (!entity) {
+			return this.repo.findOneByOrFail({ id });
+		}
+		return GroupSubscriptionResponse.fromEntity(entity);
 	}
 
 	async deleteOne(id: string) {
