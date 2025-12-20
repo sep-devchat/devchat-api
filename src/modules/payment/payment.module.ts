@@ -3,16 +3,21 @@ import { PaymentService } from "./payment.service";
 import { PaymentController } from "./payment.controller";
 import { VnpayModule } from "nestjs-vnpay";
 import { Env } from "@utils";
-import { VnpCurrCode, VnpLocale } from "vnpay";
+import { consoleLogger, VnpCurrCode, VnpLocale } from "vnpay";
+import { ConfigModule, ConfigService } from "@nestjs/config";
 @Module({
 	imports: [
-		VnpayModule.register({
-			tmnCode: Env.VNP_TMN_CODE,
-			secureSecret: Env.VNP_HASH_SECRET,
-			vnpayHost: Env.VNP_API_URL,
-			vnp_Locale: VnpLocale.VN,
-			vnp_CurrCode: VnpCurrCode.VND,
-			testMode: true,
+		ConfigModule,
+		VnpayModule.registerAsync({
+			imports: [ConfigModule],
+			useFactory: async (configService: ConfigService) => ({
+				secureSecret: configService.get<string>("VNP_HASH_SECRET"),
+				tmnCode: configService.get<string>("VNP_TMNCODE"),
+				vnpayHost: "https://sandbox.vnpayment.vn",
+				testMode: true,
+				loggerFn: consoleLogger,
+			}),
+			inject: [ConfigService],
 		}),
 	],
 	providers: [PaymentService],

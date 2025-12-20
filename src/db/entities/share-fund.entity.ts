@@ -35,6 +35,13 @@ export class ShareFundEntity {
 	subscription: SubscriptionEntity;
 
 	@Column({
+		name: ColumnName.ShareFund.monthQuantity,
+		type: "int",
+		default: 1,
+	})
+	monthQuantity: number;
+
+	@Column({
 		name: ColumnName.ShareFund.fundName,
 		type: "varchar",
 		length: 150,

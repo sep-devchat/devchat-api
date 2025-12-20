@@ -49,7 +49,7 @@ import { ShareFundModule } from "@modules/share-fund";
 				mount: true,
 			},
 		}),
-		ConfigModule.forRoot({ isGlobal: true }),
+		ConfigModule.forRoot({ isGlobal: true, envFilePath: ".env" }),
 		GitHubModule.register({
 			clientId: Env.GITHUB_CLIENT_ID,
 			clientSecret: Env.GITHUB_CLIENT_SECRET,

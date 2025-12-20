@@ -19,7 +19,6 @@ export class SubscriptionService {
 			isAIActive: dto.isAIActive,
 			runCodePerDay: dto.runCodePerDay,
 			programmingLanguageInGroups: dto.programmingLanguageInGroups,
-			allowUseAI: dto.allowUseAI ?? false,
 			levelSubscription: dto.levelSubscription,
 		});
 		return this.repo.save(entity);

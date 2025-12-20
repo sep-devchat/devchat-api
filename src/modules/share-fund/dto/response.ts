@@ -22,6 +22,12 @@ export class ShareFundInGroupResponse {
 	})
 	subscriptionId: string;
 
+	@ApiProperty({
+		example: 1,
+		description: "Number of months this share fund is intended to purchase",
+	})
+	monthQuantity: number;
+
 	@ApiPropertyOptional({
 		example: "Basic Plan fund",
 		description: "Fund name",
@@ -74,6 +80,7 @@ export class ShareFundInGroupResponse {
 			id: entity.id,
 			groupId: entity.groupId,
 			subscriptionId: entity.subscriptionId,
+			monthQuantity: entity.monthQuantity ?? 1,
 			fundName: entity.fundName,
 			contributeTime: entity.contributeTime,
 			currentVndAmount: entity.currentVndAmount,
@@ -88,7 +95,6 @@ export class ShareFundInGroupResponse {
 						price: entity.subscription.price,
 						limitMembers: entity.subscription.limitMembers,
 						isAIActive: entity.subscription.isAIActive,
-						allowUseAI: entity.subscription.allowUseAI,
 						runCodePerDay: entity.subscription.runCodePerDay,
 						programmingLanguageInGroups:
 							entity.subscription.programmingLanguageInGroups,

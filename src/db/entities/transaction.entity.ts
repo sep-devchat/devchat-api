@@ -3,12 +3,14 @@ import {
 	Column,
 	Entity,
 	Index,
+	JoinColumn,
 	ManyToOne,
 	PrimaryGeneratedColumn,
 } from "typeorm";
 import { UserEntity } from "./user.entity";
-import { GroupSubscriptionEntity } from "./group-subscription.entity";
+import { GroupEntity } from "./group.entity";
 import { ShareFundEntity } from "./share-fund.entity";
+import { SubscriptionEntity } from "./subscription.entity";
 
 const { TableName, ColumnName, IndexName } = DbConstants;
 
@@ -48,20 +50,21 @@ export class TransactionEntity {
 	@Index(IndexName.Transaction.userId)
 	userId: string;
 
-	@ManyToOne(() => UserEntity, { createForeignKeyConstraints: false })
-	user: UserEntity;
-
-	@Column({
-		name: ColumnName.Transaction.groupSubscriptionId,
-		nullable: true,
-	})
-	@Index(IndexName.Transaction.groupSubscriptionId)
-	groupSubscriptionId: string | null;
-
-	@ManyToOne(() => GroupSubscriptionEntity, {
+	@ManyToOne(() => UserEntity, (user) => user.transactions, {
 		createForeignKeyConstraints: false,
 	})
-	groupSubscription: GroupSubscriptionEntity;
+	@JoinColumn({ name: ColumnName.Transaction.userId })
+	user: UserEntity;
+
+	@Column({ name: ColumnName.Transaction.groupId, nullable: true })
+	@Index(IndexName.Transaction.groupId)
+	groupId: string | null;
+
+	@ManyToOne(() => GroupEntity, (group) => group.transactions, {
+		createForeignKeyConstraints: false,
+	})
+	@JoinColumn({ name: ColumnName.Transaction.groupId })
+	group: GroupEntity;
 
 	@Column({
 		name: ColumnName.Transaction.shareFundId,
@@ -71,5 +74,20 @@ export class TransactionEntity {
 	shareFundId: string | null;
 
 	@ManyToOne(() => ShareFundEntity, { createForeignKeyConstraints: false })
+	@JoinColumn({ name: ColumnName.Transaction.shareFundId })
 	shareFund: ShareFundEntity;
+
+	@Column({ name: ColumnName.Transaction.subscriptionId, nullable: true })
+	subscriptionId: string | null;
+
+	@ManyToOne(() => SubscriptionEntity, { createForeignKeyConstraints: false })
+	@JoinColumn({ name: ColumnName.Transaction.subscriptionId })
+	subscription: SubscriptionEntity;
+
+	@Column({
+		name: ColumnName.Audit.createdAt,
+		type: "timestamp",
+		default: () => "CURRENT_TIMESTAMP",
+	})
+	createdAt: Date;
 }

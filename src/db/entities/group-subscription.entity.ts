@@ -3,6 +3,7 @@ import {
 	Column,
 	Entity,
 	Index,
+	JoinColumn,
 	ManyToOne,
 	PrimaryGeneratedColumn,
 } from "typeorm";
@@ -21,13 +22,19 @@ export class GroupSubscriptionEntity {
 	groupId: string;
 
 	@ManyToOne(() => GroupEntity, { createForeignKeyConstraints: false })
+	@JoinColumn({ name: ColumnName.GroupSubscription.groupId })
 	group: GroupEntity;
 
 	@Column({ name: ColumnName.GroupSubscription.subscriptionId })
 	@Index(IndexName.GroupSubscription.subscriptionId)
 	subscriptionId: string;
 
-	@ManyToOne(() => SubscriptionEntity, { createForeignKeyConstraints: false })
+	@ManyToOne(
+		() => SubscriptionEntity,
+		(subscription) => subscription.groupSubscriptions,
+		{ createForeignKeyConstraints: false },
+	)
+	@JoinColumn({ name: ColumnName.Subscription.id })
 	subscription: SubscriptionEntity;
 
 	@Column({
