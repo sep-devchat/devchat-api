@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { CreateGroupRequest, UpdateGroupRequest } from "./dto";
-import { GroupNotExistedError } from "./errors";
+import { GroupMemberLimitReachedError, GroupNotExistedError } from "./errors";
 import { DevChatCls, InvitationStatus } from "@utils";
 import { ClsService } from "nestjs-cls";
 import {
@@ -163,6 +163,38 @@ export class GroupService {
 
 		// Prefer subscriptions active right now; otherwise, pick the highest level among all active records.
 		return pickHighestLevel(active) ?? pickHighestLevel(items);
+	}
+
+	private async getCurrentGroupSubscriptionEntityUnchecked(groupId: string) {
+		// Existence check without access constraints (needed for invitation acceptance).
+		const group = await this.groupRepo.findOneBy({ id: groupId });
+		if (!group) throw new GroupNotExistedError();
+
+		const groupSubscriptions = await this.groupSubscriptionRepo.find({
+			where: { groupId },
+			relations: { subscription: true },
+			order: { subscription: { levelSubscription: "DESC" } },
+		});
+
+		return this.pickCurrentGroupSubscription(groupSubscriptions);
+	}
+
+	async assertMemberLimitAllowsNewMembers(groupId: string, toAdd = 1) {
+		const current =
+			await this.getCurrentGroupSubscriptionEntityUnchecked(groupId);
+		const limitMembers = Number(current?.subscription?.limitMembers ?? 0);
+		if (!Number.isFinite(limitMembers) || limitMembers <= 0) return;
+
+		const currentMembers = await this.userGroupRepo.count({
+			where: { groupId },
+		});
+		if (currentMembers + toAdd > limitMembers) {
+			throw new GroupMemberLimitReachedError(
+				limitMembers,
+				currentMembers,
+				toAdd,
+			);
+		}
 	}
 
 	async findSubscriptionsInGroup(groupId: string) {

@@ -2,6 +2,8 @@ import { Injectable } from "@nestjs/common";
 import {
 	AiInteractionRepository,
 	AiSessionRepository,
+	ChannelRepository,
+	GroupSubscriptionRepository,
 	MessageRepository,
 } from "@db/repositories";
 import { AiInteractionEntity, AiSessionEntity } from "@db/entities";
@@ -17,10 +19,12 @@ import {
 	OpenAIKeyMissingError,
 	MessageNotFoundError,
 	MissingPromptOrMessageError,
+	AiNotEnabledForGroupError,
 } from "./errors";
 import { buildPrompt, CHECK_CODE_SYSTEM_PROMPT } from "./ai.prompt";
 import z from "zod/v3";
 import { Builder } from "builder-pattern";
+import { GroupService } from "@modules/group";
 
 type ModelProvider = AIProviderEnum;
 
@@ -30,8 +34,82 @@ export class AiService {
 		private readonly sessions: AiSessionRepository,
 		private readonly interactions: AiInteractionRepository,
 		private readonly messages: MessageRepository,
+		private readonly channels: ChannelRepository,
+		private readonly groupSubscriptions: GroupSubscriptionRepository,
+		private readonly groupService: GroupService,
 		private readonly cls: ClsService<DevChatCls>,
 	) {}
+
+	private pickCurrentGroupSubscription<
+		T extends {
+			groupSubscriptionStatus: string;
+			startedAt: Date | null;
+			endedAt: Date | null;
+			subscription?: {
+				levelSubscription?: number | null;
+				isAIActive?: boolean;
+			} | null;
+		},
+	>(items: T[]): T | null {
+		if (!items?.length) return null;
+		const now = new Date();
+		const levelOf = (s: T) => Number(s.subscription?.levelSubscription ?? 0);
+		const startedAtTimeOf = (s: T) => (s.startedAt ? s.startedAt.getTime() : 0);
+
+		const isActiveStatus = (s: T) => s.groupSubscriptionStatus === "active";
+		const isStarted = (s: T) => !s.startedAt || s.startedAt <= now;
+		const notEnded = (s: T) => !s.endedAt || s.endedAt >= now;
+
+		const activeNow = items.filter(
+			(s) => isActiveStatus(s) && isStarted(s) && notEnded(s),
+		);
+		const activeAny = items.filter((s) => isActiveStatus(s));
+
+		const pickHighestLevel = (candidates: T[]) => {
+			if (!candidates.length) return null;
+			return candidates.reduce<T>((best, cur) => {
+				const bestLevel = levelOf(best);
+				const curLevel = levelOf(cur);
+				if (curLevel !== bestLevel) return curLevel > bestLevel ? cur : best;
+				return startedAtTimeOf(cur) > startedAtTimeOf(best) ? cur : best;
+			}, candidates[0]);
+		};
+
+		return (
+			pickHighestLevel(activeNow) ??
+			pickHighestLevel(activeAny) ??
+			pickHighestLevel(items)
+		);
+	}
+
+	private async assertGroupCanUseAi(groupId: string) {
+		// Preferred: use GroupService getter (includes access validation when CLS is available)
+		const clsUserId = this.cls.get("profile")?.id;
+		if (clsUserId) {
+			const { currentSubscription } =
+				await this.groupService.findSubscriptionsInGroup(groupId);
+			if (!currentSubscription?.subscription?.isAIActive) {
+				throw new AiNotEnabledForGroupError(
+					currentSubscription ? "ai_disabled" : "missing_subscription",
+				);
+			}
+			return;
+		}
+
+		// Fallback (no CLS context, e.g. socket-driven): do a direct check.
+		const records = await this.groupSubscriptions.find({
+			where: { groupId },
+			relations: { subscription: true },
+			order: { startedAt: "DESC" },
+		});
+		const current = this.pickCurrentGroupSubscription(records);
+		if (!current?.subscription) {
+			throw new AiNotEnabledForGroupError("missing_subscription");
+		}
+		if (!current.subscription.isAIActive) {
+			throw new AiNotEnabledForGroupError("ai_disabled");
+		}
+	}
 
 	listProviders() {
 		const providers = [] as {
@@ -131,6 +209,14 @@ export class AiService {
 			relations: { thread: true },
 		});
 		if (!msg) throw new MessageNotFoundError();
+
+		// Validate group subscription allows AI.
+		const channel = await this.channels.findOne({
+			where: { id: msg.channelId },
+		});
+		const groupId = channel?.groupId;
+		if (!groupId) throw new AiNotEnabledForGroupError("missing_group_context");
+		await this.assertGroupCanUseAi(String(groupId));
 
 		// Determine user context: prefer current CLS user, fallback to message sender
 		const userId = this.cls.get("profile")?.id ?? msg.senderId ?? null;

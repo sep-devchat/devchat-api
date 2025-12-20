@@ -16,6 +16,7 @@ import {
 	ShareFundRepository,
 	SubscriptionRepository,
 	TransactionRepository,
+	UserRepository,
 } from "@db/repositories";
 import { ClsService } from "nestjs-cls";
 import { DevChatCls } from "@utils";
@@ -39,12 +40,104 @@ export class PaymentService {
 		private readonly subscriptionRepo: SubscriptionRepository,
 		private readonly groupSubscriptionRepo: GroupSubscriptionRepository,
 		private readonly transactionRepo: TransactionRepository,
+		private readonly userRepo: UserRepository,
 	) {}
+
+	private async addUserSubscriptionRole(
+		userId: string,
+		role: "CONTRIBUTION" | "SPONSOR",
+	) {
+		const user = await this.userRepo.findOneBy({ id: userId });
+		if (!user) throw new BadRequestException("User not found");
+		const currentRoles = Array.isArray(user.subscriptionRole)
+			? user.subscriptionRole
+			: [];
+		if (currentRoles.includes(role)) return;
+		await this.userRepo.update(userId, {
+			subscriptionRole: [...currentRoles, role],
+		});
+	}
 
 	private addMonths(from: Date, months: number) {
 		const d = new Date(from);
 		d.setMonth(d.getMonth() + months);
 		return d;
+	}
+
+	private async applyGroupSubscription(params: {
+		groupId: string;
+		subscriptionId: string;
+		monthQuantity: number;
+		paymentBy: string;
+	}) {
+		const { groupId, subscriptionId, monthQuantity, paymentBy } = params;
+		const purchasedSubscription = await this.subscriptionRepo.findOneBy({
+			id: String(subscriptionId),
+		});
+		if (!purchasedSubscription)
+			throw new BadRequestException("Subscription not found");
+
+		const startedAt = new Date();
+		const endedAt = this.addMonths(startedAt, monthQuantity);
+
+		const groupSubscription = await this.groupSubscriptionRepo.save(
+			this.groupSubscriptionRepo.create({
+				groupId: String(groupId),
+				subscriptionId: String(subscriptionId),
+				groupSubscriptionStatus: "active",
+				monthQuantity,
+				paymentBy,
+				isPaid: true,
+				startedAt,
+				endedAt,
+			}),
+		);
+
+		// If the purchased plan is the highest level in the group, schedule other active tiers
+		// to start after this higher tier ends (free plan keeps its end date unchanged).
+		const purchasedLevel = Number(purchasedSubscription.levelSubscription ?? 0);
+		const anchor = groupSubscription.endedAt;
+		if (anchor) {
+			const now = new Date();
+			const activeTiers = await this.groupSubscriptionRepo.find({
+				where: {
+					groupId: String(groupId),
+					groupSubscriptionStatus: "active",
+				},
+				relations: { subscription: true },
+			});
+
+			const otherActive = activeTiers.filter(
+				(s) =>
+					s.id !== groupSubscription.id && (!s.endedAt || s.endedAt >= now),
+			);
+
+			const maxOtherLevel = otherActive.reduce((max, s) => {
+				const level = Number(s.subscription?.levelSubscription ?? 0);
+				return level > max ? level : max;
+			}, -Infinity);
+
+			if (purchasedLevel > maxOtherLevel) {
+				await Promise.all(
+					otherActive.map(async (s) => {
+						const isFreePlan = Number(s.subscription?.price ?? 0) <= 0;
+						const monthQty =
+							Number.isFinite(s.monthQuantity) && (s.monthQuantity ?? 0) >= 1
+								? s.monthQuantity
+								: 1;
+
+						const newStartedAt = anchor;
+						const patch: Partial<typeof s> = { startedAt: newStartedAt };
+						if (!isFreePlan) {
+							patch.endedAt = this.addMonths(newStartedAt, monthQty);
+						}
+						await this.groupSubscriptionRepo.update(s.id, patch);
+					}),
+				);
+			}
+		}
+
+		return groupSubscription;
 	}
 
 	private async assertUserInGroup(groupId: string, userId: string) {
@@ -207,97 +300,69 @@ export class PaymentService {
 				await this.assertUserInGroup(String(groupId), String(payerUserId));
 			}
 
+			// Assign subscription role for the payer.
+			if (payerUserId) {
+				await this.addUserSubscriptionRole(
+					String(payerUserId),
+					isDonationFlow ? "CONTRIBUTION" : "SPONSOR",
+				);
+			}
+
 			if (isDonationFlow) {
 				const shareFundId = String(existingTx?.shareFundId);
 				const shareFund = await this.shareFundRepo.findOneBy({
 					id: shareFundId,
 					groupId: String(groupId),
 				});
-				if (!shareFund) throw new BadRequestException("Share fund not found");
+				// Share fund may have already been completed and deleted by another payment callback.
+				if (!shareFund) {
+					// Nothing to apply to the fund, but the payment itself is still valid.
+				} else {
+					// Apply donation amount to the share fund.
+					const currentAmount = BigInt(shareFund.currentVndAmount ?? "0");
+					const donateAmount = BigInt(String(vndAmount ?? "0"));
+					const nextAmount = currentAmount + donateAmount;
+					await this.shareFundRepo.update(shareFund.id, {
+						currentVndAmount: String(nextAmount),
+					});
 
-				// Apply donation amount to the share fund.
-				const currentAmount = BigInt(shareFund.currentVndAmount ?? "0");
-				const donateAmount = BigInt(String(vndAmount ?? "0"));
-				const nextAmount = currentAmount + donateAmount;
-				await this.shareFundRepo.update(shareFund.id, {
-					currentVndAmount: String(nextAmount),
-				});
+					// Share fund target is the subscription total: price * monthQuantity.
+					const targetSubscription = await this.subscriptionRepo.findOneBy({
+						id: String(shareFund.subscriptionId),
+					});
+					if (targetSubscription) {
+						const monthQty =
+							Number.isFinite(shareFund.monthQuantity) &&
+							(shareFund.monthQuantity ?? 0) >= 1
+								? shareFund.monthQuantity
+								: 1;
+						const price = Number(targetSubscription.price ?? 0);
+						const targetAmount = BigInt(String(Math.round(price * monthQty)));
+
+						if (targetAmount > 0n && nextAmount >= targetAmount) {
+							await this.applyGroupSubscription({
+								groupId: String(groupId),
+								subscriptionId: String(shareFund.subscriptionId),
+								monthQuantity: monthQty,
+								paymentBy: currentUsername,
+							});
+							// After successfully applying the subscription, delete the share fund.
+							await this.shareFundRepo.delete(shareFund.id);
+						}
+					}
+				}
 			} else {
 				const subscriptionId =
 					parsed.subscriptionId ?? existingTx?.subscriptionId;
 				if (!groupId || !subscriptionId || !payerUserId) {
 					throw new BadRequestException("Missing payment context");
 				}
-
-				const purchasedSubscription = await this.subscriptionRepo.findOneBy({
-					id: String(subscriptionId),
+				await this.applyGroupSubscription({
+					groupId: String(groupId),
+					subscriptionId: String(subscriptionId),
+					monthQuantity: paidMonths,
+					paymentBy: currentUsername,
 				});
-				if (!purchasedSubscription)
-					throw new BadRequestException("Subscription not found");
-
-				const startedAt = new Date();
-				const endedAt = new Date(startedAt);
-				endedAt.setMonth(endedAt.getMonth() + paidMonths);
-
-				const groupSubscription = await this.groupSubscriptionRepo.save(
-					this.groupSubscriptionRepo.create({
-						groupId,
-						subscriptionId: String(subscriptionId),
-						groupSubscriptionStatus: "active",
-						monthQuantity: paidMonths,
-						paymentBy: currentUsername,
-						isPaid: true,
-						startedAt,
-						endedAt,
-					}),
-				);
-
-				// If the purchased plan is the highest level in the group, schedule other active tiers
-				// to start after this higher tier ends (free plan keeps its end date unchanged).
-				const purchasedLevel = Number(
-					purchasedSubscription.levelSubscription ?? 0,
-				);
-				const anchor = groupSubscription.endedAt;
-				if (anchor) {
-					const now = new Date();
-					const activeTiers = await this.groupSubscriptionRepo.find({
-						where: {
-							groupId: String(groupId),
-							groupSubscriptionStatus: "active",
-						},
-						relations: { subscription: true },
-					});
-
-					const otherActive = activeTiers.filter(
-						(s) =>
-							s.id !== groupSubscription.id && (!s.endedAt || s.endedAt >= now),
-					);
-
-					const maxOtherLevel = otherActive.reduce((max, s) => {
-						const level = Number(s.subscription?.levelSubscription ?? 0);
-						return level > max ? level : max;
-					}, -Infinity);
-
-					if (purchasedLevel > maxOtherLevel) {
-						await Promise.all(
-							otherActive.map(async (s) => {
-								const isFreePlan = Number(s.subscription?.price ?? 0) <= 0;
-								const monthQty =
-									Number.isFinite(s.monthQuantity) &&
-									(s.monthQuantity ?? 0) >= 1
-										? s.monthQuantity
-										: 1;
-
-								const newStartedAt = anchor;
-								const patch: Partial<typeof s> = { startedAt: newStartedAt };
-								if (!isFreePlan) {
-									patch.endedAt = this.addMonths(newStartedAt, monthQty);
-								}
-								await this.groupSubscriptionRepo.update(s.id, patch);
-							}),
-						);
-					}
-				}
 			}
 		}
 

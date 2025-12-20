@@ -3,9 +3,10 @@ import { AiService } from "./ai.service";
 import { AiController } from "./ai.controller";
 import { DbModule } from "@db";
 import { AiUserSeeder } from "./ai.user-seeder";
+import { GroupModule } from "@modules/group";
 
 @Module({
-	imports: [DbModule],
+	imports: [DbModule, GroupModule],
 	controllers: [AiController],
 	providers: [AiService, AiUserSeeder],
 	exports: [AiService],

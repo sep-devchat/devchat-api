@@ -7,12 +7,52 @@ import {
 	OneToMany,
 	PrimaryGeneratedColumn,
 	UpdateDateColumn,
+	ValueTransformer,
 } from "typeorm";
 import { UserGroupEntity } from "./user-group.entity";
 import { UserLanguageCollectionEntity } from "./user-language-collection.entity";
 import { TransactionEntity } from "./transaction.entity";
 
 const { TableName, ColumnName, IndexName } = DbConstants;
+
+const stringArrayTransformer: ValueTransformer = {
+	to: (value: unknown) => {
+		if (value == null) return null;
+		if (Array.isArray(value)) return JSON.stringify(value.map(String));
+		if (typeof value === "string") {
+			const trimmed = value.trim();
+			if (!trimmed) return null;
+			// If caller already provides a JSON array string, store as-is.
+			if (trimmed.startsWith("[") && trimmed.endsWith("]")) return trimmed;
+			return JSON.stringify([trimmed]);
+		}
+		return JSON.stringify([String(value)]);
+	},
+	from: (value: unknown) => {
+		if (value == null) return null;
+		if (Array.isArray(value)) return value.map(String);
+		if (typeof value !== "string") return [String(value)];
+		const trimmed = value.trim();
+		if (!trimmed) return null;
+		try {
+			if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+				const parsed = JSON.parse(trimmed);
+				return Array.isArray(parsed) ? parsed.map(String) : [String(parsed)];
+			}
+		} catch {
+			// fall through
+		}
+		// Back-compat: comma-separated or single string.
+		if (trimmed.includes(",")) {
+			const parts = trimmed
+				.split(",")
+				.map((p) => p.trim())
+				.filter(Boolean);
+			return parts.length ? parts : null;
+		}
+		return [trimmed];
+	},
+};
 
 @Entity(TableName.User)
 export class UserEntity {
@@ -80,6 +120,14 @@ export class UserEntity {
 
 	@Column({ name: ColumnName.User.isBot, type: "boolean", default: false })
 	isBot: boolean;
+
+	@Column({
+		name: ColumnName.User.subscriptionRole,
+		type: "text",
+		nullable: true,
+		transformer: stringArrayTransformer,
+	})
+	subscriptionRole: string[] | null;
 
 	@OneToMany(() => UserGroupEntity, (userGroup) => userGroup.user, {
 		createForeignKeyConstraints: false,

@@ -55,6 +55,7 @@ export const DbConstants = {
 			adminRoleId: "admin_role_id",
 			isAdmin: "is_admin",
 			isBot: "is_bot",
+			subscriptionRole: "subscription_role",
 		},
 		Message: {
 			id: "message_id",
