@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, UnauthorizedException } from "@nestjs/common";
 import { CreateGroupRequest, UpdateGroupRequest } from "./dto";
 import { GroupMemberLimitReachedError, GroupNotExistedError } from "./errors";
 import { DevChatCls, InvitationStatus } from "@utils";
@@ -28,7 +28,10 @@ export class GroupService {
 
 	@Transactional()
 	async createOne(dto: CreateGroupRequest) {
-		const createdBy = this.cls.get("profile").id;
+		const createdBy = this.cls.get("profile")?.id;
+		if (!createdBy) {
+			throw new UnauthorizedException("Missing authenticated user context");
+		}
 		const group = this.groupRepo.create({
 			name: dto.name,
 			avatar: dto.avatar ?? null,
@@ -98,7 +101,10 @@ export class GroupService {
 	}
 
 	async findMany() {
-		const userId = this.cls.get("profile").id;
+		const userId = this.cls.get("profile")?.id;
+		if (!userId) {
+			throw new UnauthorizedException("Missing authenticated user context");
+		}
 		return await this.groupRepo.find({
 			where: [
 				{
@@ -114,7 +120,7 @@ export class GroupService {
 	}
 
 	async findOne(id: string) {
-		const userId = this.cls.get("profile").id;
+		const userId = this.cls.get("profile.id");
 		const group = await this.groupRepo.findOne({
 			where: [
 				{

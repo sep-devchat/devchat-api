@@ -44,6 +44,7 @@ import { ThreadMessageResponse } from "./dto";
 import { ChannelRepository, UserGroupRepository } from "@db/repositories";
 import { NotificationService } from "@modules/notification";
 import { CreateCodeBlockRequest } from "@modules/code-block/dto";
+import { GroupService } from "@modules/group";
 
 @Injectable()
 export class MessageService {
@@ -64,6 +65,7 @@ export class MessageService {
 		private readonly notificationService: NotificationService,
 		private readonly chatPresence: ChatPresenceService,
 		private readonly groupSubscriptionRepo: GroupSubscriptionRepository,
+		private readonly groupService: GroupService,
 	) {}
 
 	async getDirectMessagePeers() {
@@ -274,17 +276,28 @@ export class MessageService {
 				where: { id: message.channelId },
 			});
 			const groupId = channel?.groupId;
-			const groupSubscription = await this.groupSubscriptionRepo.findOne({
-				where: { groupId },
-				relations: { subscription: true },
-			});
-			if (!groupSubscription || !groupSubscription.subscription?.isAIActive) {
-				await this.messageRepo.insert({
+			const { currentSubscription } =
+				await this.groupService.findSubscriptionsInGroup(groupId);
+			if (
+				!currentSubscription ||
+				!currentSubscription.subscription?.isAIActive
+			) {
+				const aiInsert = await this.messageRepo.insert({
 					channelId: client.data.channel.id,
 					parentMessageId,
 					senderId: aiUserId,
 					content: "AI features are not enabled for this group.",
 				});
+				const aiMsg = await this.messageRepo.findOne({
+					where: { id: aiInsert.identifiers[0].id },
+					relations: {
+						sender: true,
+						channel: { group: true },
+						parentMessage: { sender: true },
+					},
+				});
+				const aiResp = MessageResponse.fromEntity(aiMsg!);
+				server.to(client.data.room).emit(SocketEvents.MESSAGE, aiResp);
 				return;
 			}
 
