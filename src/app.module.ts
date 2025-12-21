@@ -39,6 +39,7 @@ import { SubscriptionModule } from "@modules/subscription";
 import { GroupSubscriptionModule } from "@modules/group-subscription";
 import { TransactionModule } from "@modules/transaction";
 import { ShareFundModule } from "@modules/share-fund";
+import { GroupSupportedProgrammingLanguageModule } from "@modules/group-supported-programming-language";
 
 @Module({
 	imports: [
@@ -86,6 +87,7 @@ import { ShareFundModule } from "@modules/share-fund";
 		GroupSubscriptionModule,
 		TransactionModule,
 		ShareFundModule,
+		GroupSupportedProgrammingLanguageModule,
 	],
 	providers: [
 		{

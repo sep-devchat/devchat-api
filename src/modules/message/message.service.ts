@@ -7,6 +7,7 @@ import {
 	ThreadMessageRepository,
 	CodeBlockRepository,
 	RunCodeCacheRepostiroy,
+	GroupSubscriptionRepository,
 } from "@db/repositories";
 import {
 	SendMessageRequest,
@@ -62,6 +63,7 @@ export class MessageService {
 		private readonly runCodeCacheRepo: RunCodeCacheRepostiroy,
 		private readonly notificationService: NotificationService,
 		private readonly chatPresence: ChatPresenceService,
+		private readonly groupSubscriptionRepo: GroupSubscriptionRepository,
 	) {}
 
 	async getDirectMessagePeers() {
@@ -258,6 +260,33 @@ export class MessageService {
 				},
 			});
 			aiUserId = aiUser?.id || client.data.user.id;
+
+			//Valudate AI access for user/group
+			const message = await this.messageRepo.findOne({
+				where: { id: parentMessageId },
+			});
+
+			if (!message) {
+				throw new Error("Message not found for AI processing");
+			}
+
+			const channel = await this.channelRepo.findOne({
+				where: { id: message.channelId },
+			});
+			const groupId = channel?.groupId;
+			const groupSubscription = await this.groupSubscriptionRepo.findOne({
+				where: { groupId },
+				relations: { subscription: true },
+			});
+			if (!groupSubscription || !groupSubscription.subscription?.isAIActive) {
+				await this.messageRepo.insert({
+					channelId: client.data.channel.id,
+					parentMessageId,
+					senderId: aiUserId,
+					content: "AI features are not enabled for this group.",
+				});
+				return;
+			}
 
 			const { answer } = await this.aiService.ask({
 				messageId: parentMessageId,
