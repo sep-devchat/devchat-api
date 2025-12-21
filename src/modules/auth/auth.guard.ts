@@ -45,6 +45,8 @@ export class AuthGuard implements CanActivate {
 
 		if (!!adminRoute && !user.isAdmin) return false;
 
+		if (!user.isActive) throw new InvalidTokenError();
+
 		const profile = Profile.fromEntity(user);
 		this.cls.set("profile", profile);
 

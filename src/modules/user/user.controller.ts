@@ -1,13 +1,4 @@
-import {
-	Controller,
-	Delete,
-	Get,
-	Post,
-	Param,
-	Body,
-	Put,
-	Query,
-} from "@nestjs/common";
+import { Controller, Get, Post, Param, Body, Put, Query } from "@nestjs/common";
 import { UserService } from "./user.service";
 import {
 	ApiMessageResponseDto,
@@ -19,6 +10,7 @@ import {
 import { CreateUserRequest } from "./dto/create-user.request";
 import {
 	ApiBearerAuth,
+	ApiBody,
 	ApiOperation,
 	ApiParam,
 	ApiQuery,
@@ -34,6 +26,7 @@ import {
 	UserAnalyticsTrendResponse,
 	UserLoginStatsQuery,
 	UserLoginStatsResponse,
+	DeleteUserRequest,
 } from "./dto";
 import { UserResponse } from "./dto/user.response";
 import { TaskResponse } from "@modules/task/dto";
@@ -81,13 +74,17 @@ export class UserController {
 		return new ApiMessageResponseDto("User updated successfully");
 	}
 
-	@Delete(":id")
+	@Post(":id/delete")
 	@ApiBearerAuth()
 	@ApiOperation({ summary: "Delete user" })
 	@ApiParam({ name: "id", description: "User ID" })
+	@ApiBody({ type: DeleteUserRequest })
 	@SwaggerApiMessageResponse()
-	async deleteUser(@Param("id") id: string) {
-		await this.userService.delete(id);
+	async deleteUser(
+		@Param("id") id: string,
+		@Body() deleteRequest: DeleteUserRequest,
+	) {
+		await this.userService.delete(id, deleteRequest.banReason);
 		return new ApiMessageResponseDto("User deleted successfully");
 	}
 
