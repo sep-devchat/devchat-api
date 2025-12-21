@@ -8,6 +8,7 @@ import {
 	UpdateDateColumn,
 } from "typeorm";
 import { UserLanguageCollectionEntity } from "./user-language-collection.entity";
+import { GroupSupportedProgrammingLanguageEntity } from "./group-supported-programming-language.entity";
 
 const { TableName, ColumnName } = DbConstants;
 
@@ -86,4 +87,11 @@ export class SupportedProgrammingLanguageEntity {
 		{ createForeignKeyConstraints: false },
 	)
 	userLanguageCollections: UserLanguageCollectionEntity[];
+
+	@OneToMany(
+		() => GroupSupportedProgrammingLanguageEntity,
+		(groupLanguage) => groupLanguage.supportedProgrammingLanguage,
+		{ createForeignKeyConstraints: false },
+	)
+	groupSupportedProgrammingLanguages: GroupSupportedProgrammingLanguageEntity[];
 }

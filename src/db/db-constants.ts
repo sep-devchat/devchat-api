@@ -30,6 +30,7 @@ export const DbConstants = {
 		CodeCollaboration: "code_collaboration",
 		ThreadMessage: "thread_message",
 		SupportedProgrammingLanguage: "supported_programming_language",
+		GroupSupportedProgrammingLanguage: "group_supported_programming_language",
 		UserLanguageCollection: "user_language_collection",
 		ReportCategory: "report_category",
 		Report: "report",
@@ -267,6 +268,11 @@ export const DbConstants = {
 			isExecutable: "is_executable",
 			preset: "preset",
 			useAiCheck: "use_ai_check",
+		},
+		GroupSupportedProgrammingLanguage: {
+			id: "group_supported_programming_language_id",
+			groupId: "group_id",
+			supportedProgrammingLanguageId: "supported_programming_language_id",
 		},
 		UserLanguageCollection: {
 			id: "user_language_collection_id",
