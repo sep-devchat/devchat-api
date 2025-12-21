@@ -1,6 +1,6 @@
 import { AuthService } from "@modules/auth";
 import { InvalidTokenError } from "@modules/auth/errors";
-import { UserService } from "@modules/user";
+import { UserService } from "../user/user.service";
 import { Injectable } from "@nestjs/common";
 import { Server, Socket } from "socket.io";
 import {
@@ -21,8 +21,8 @@ import { WsException } from "@nestjs/websockets";
 export class SocketService {
 	server: Server;
 	constructor(
-		private readonly authService: AuthService,
 		private readonly userService: UserService,
+		private readonly authService: AuthService,
 		private readonly groupRepo: GroupRepository,
 		private readonly channelRepo: ChannelRepository,
 		private readonly chatPresence: ChatPresenceService,

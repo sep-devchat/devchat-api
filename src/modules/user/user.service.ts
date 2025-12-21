@@ -76,6 +76,10 @@ export class UserService implements OnModuleInit {
 	) {}
 
 	async onModuleInit() {
+		await this.initAdmin();
+	}
+
+	private async initAdmin() {
 		const admin = await this.userRepo.findOne({
 			where: { email: Env.EMAIL_USER },
 		});
@@ -576,11 +580,18 @@ export class UserService implements OnModuleInit {
 		];
 	}
 
-	async delete(id: string) {
+	async delete(id: string, banReason: string) {
 		const currentUser = this.cls.get("profile");
 		if (id != currentUser.id && !currentUser.isAdmin)
 			throw new ForbiddenException();
-		await this.userRepo.update(id, { isActive: false });
+		const normalizedReason = banReason?.trim();
+		if (!normalizedReason) {
+			throw new BadRequestException("Ban reason is required");
+		}
+		await this.userRepo.update(id, {
+			isActive: false,
+			banReason: normalizedReason,
+		});
 	}
 
 	async getSentFriendRequests(search?: string) {
