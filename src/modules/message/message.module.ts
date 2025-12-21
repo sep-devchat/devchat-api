@@ -9,6 +9,7 @@ import { AiModule } from "@modules/ai";
 import { AttachmentModule } from "@modules/attachment";
 import { NotificationModule } from "@modules/notification";
 import { CodeBlockModule } from "@modules/code-block";
+import { GroupModule } from "@modules/group";
 
 @Module({
 	imports: [
@@ -20,6 +21,7 @@ import { CodeBlockModule } from "@modules/code-block";
 		CodeBlockModule,
 		SocketModule,
 		NotificationModule,
+		GroupModule,
 	],
 	providers: [MessageService, MessageGateway],
 	controllers: [MessageController],
