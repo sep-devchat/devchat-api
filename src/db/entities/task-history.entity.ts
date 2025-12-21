@@ -58,7 +58,6 @@ export class TaskHistoryEntity {
 	@Column({
 		name: ColumnName.Audit.createdAt,
 		type: "timestamp",
-		default: () => "CURRENT_TIMESTAMP",
 	})
 	createdAt: Date;
 
