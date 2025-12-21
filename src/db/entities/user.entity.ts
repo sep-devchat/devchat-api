@@ -82,6 +82,9 @@ export class UserEntity {
 	@Column({ name: ColumnName.User.isActive, type: "boolean", default: true })
 	isActive: boolean;
 
+	@Column({ name: ColumnName.User.banReason, type: "text", nullable: true })
+	banReason: string | null = null;
+
 	@Column({
 		name: ColumnName.User.emailVerified,
 		type: "boolean",

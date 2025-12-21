@@ -47,6 +47,7 @@ export const DbConstants = {
 			lastName: "last_name",
 			avatarUrl: "avatar_url",
 			isActive: "is_active",
+			banReason: "ban_reason",
 			emailVerified: "email_verified",
 			emailVerificationToken: "email_verification_token",
 			emailVerifiedAt: "email_verified_at",

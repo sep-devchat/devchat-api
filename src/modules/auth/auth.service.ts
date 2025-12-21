@@ -183,7 +183,7 @@ export class AuthService {
 		const user = await this.userService.findByUniqueKey(usernameOrEmail);
 		if (!user) throw new WrongUsernameOrPasswordError();
 
-		if (!user.isActive) throw new AccountInactiveError();
+		if (!user.isActive) throw new AccountInactiveError(user.banReason);
 
 		const isPassValid = bcrypt.compareSync(password, user.password);
 		if (!isPassValid) throw new WrongUsernameOrPasswordError();
@@ -221,7 +221,7 @@ export class AuthService {
 			user = await this.userService.findById(data.identifiers[0].id);
 		}
 
-		if (!user.isActive) throw new AccountInactiveError();
+		if (!user.isActive) throw new AccountInactiveError(user.banReason);
 
 		return user;
 	}
@@ -257,7 +257,7 @@ export class AuthService {
 			user = await this.userService.findById(data.identifiers[0].id);
 		}
 
-		if (!user.isActive) throw new AccountInactiveError();
+		if (!user.isActive) throw new AccountInactiveError(user.banReason);
 
 		return user;
 	}
