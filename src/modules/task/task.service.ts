@@ -404,7 +404,7 @@ export class TaskService {
 		oldValues: any,
 		newValues: any,
 	) {
-		const changes = this.getChangedFields(oldValues, newValues);
+		const changes = await this.getChangedFields(oldValues, newValues);
 
 		// Save each field change as a separate history entry
 		for (const change of changes) {
@@ -415,36 +415,47 @@ export class TaskService {
 				fieldName: change.field,
 				oldValue: change.oldValue,
 				newValue: change.newValue,
+				createdAt: new Date(),
 			});
 
 			await this.taskHistoryRepo.insert(history);
 		}
 	}
 
-	private getChangedFields(
+	private async getChangedFields(
 		oldValues: any,
 		newValues: any,
-	): Array<{
-		field: string;
-		oldValue: string | null;
-		newValue: string | null;
-	}> {
+	): Promise<
+		Array<{
+			field: string;
+			oldValue: string | null;
+			newValue: string | null;
+		}>
+	> {
 		if (!oldValues && newValues) {
 			// Creation - all fields are new
-			return Object.entries(newValues).map(([field, value]) => ({
-				field,
-				oldValue: null,
-				newValue: this.formatValue(field, value),
-			}));
+			const result = [];
+			for (const [field, value] of Object.entries(newValues)) {
+				result.push({
+					field,
+					oldValue: null,
+					newValue: await this.formatValue(field, value),
+				});
+			}
+			return result;
 		}
 
 		if (oldValues && !newValues) {
 			// Deletion - all fields are removed
-			return Object.entries(oldValues).map(([field, value]) => ({
-				field,
-				oldValue: this.formatValue(field, value),
-				newValue: null,
-			}));
+			const result = [];
+			for (const [field, value] of Object.entries(oldValues)) {
+				result.push({
+					field,
+					oldValue: await this.formatValue(field, value),
+					newValue: null,
+				});
+			}
+			return result;
 		}
 
 		// Update - compare fields
@@ -465,8 +476,8 @@ export class TaskService {
 			if (oldValue !== newValue) {
 				changes.push({
 					field,
-					oldValue: this.formatValue(field, oldValue),
-					newValue: this.formatValue(field, newValue),
+					oldValue: await this.formatValue(field, oldValue),
+					newValue: await this.formatValue(field, newValue),
 				});
 			}
 		}
@@ -474,7 +485,7 @@ export class TaskService {
 		return changes;
 	}
 
-	private formatValue(field: string, value: any): string | null {
+	private async formatValue(field: string, value: any): Promise<string | null> {
 		if (value === null || value === undefined) return null;
 
 		// Format status
@@ -492,6 +503,17 @@ export class TaskService {
 		// Format dates
 		if (field === "startDate" || field === "dueDate") {
 			return value instanceof Date ? value.toISOString() : String(value);
+		}
+
+		// Format assigneeId to assignee name
+		if (field === "assigneeId") {
+			if (!value) return null;
+			try {
+				const assignee = await this.userService.findById(value);
+				return assignee.username || assignee.email || String(value);
+			} catch {
+				return String(value);
+			}
 		}
 
 		return String(value);
