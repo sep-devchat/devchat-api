@@ -13,6 +13,7 @@ import { UserGroupEntity } from "./user-group.entity";
 import { ShareFundEntity } from "./share-fund.entity";
 import { GroupSubscriptionEntity } from "./group-subscription.entity";
 import { TransactionEntity } from "./transaction.entity";
+import { GroupSupportedProgrammingLanguageEntity } from "./group-supported-programming-language.entity";
 
 const { TableName, ColumnName, IndexName } = DbConstants;
 
@@ -66,4 +67,11 @@ export class GroupEntity {
 		createForeignKeyConstraints: false,
 	})
 	transactions: TransactionEntity[];
+
+	@OneToMany(
+		() => GroupSupportedProgrammingLanguageEntity,
+		(groupLanguage) => groupLanguage.group,
+		{ createForeignKeyConstraints: false },
+	)
+	groupSupportedProgrammingLanguages: GroupSupportedProgrammingLanguageEntity[];
 }
