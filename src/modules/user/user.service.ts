@@ -205,6 +205,11 @@ export class UserService implements OnModuleInit {
 	async findByUniqueKey(uniqueKey: string, throwIfNotFound = true) {
 		const user = await this.userRepo.findOne({
 			where: [{ id: uniqueKey }, { email: uniqueKey }, { username: uniqueKey }],
+			relations: {
+				userLanguages: {
+					language: true,
+				},
+			},
 		});
 		if (!user && throwIfNotFound) {
 			throw new UserNotFoundError();
@@ -215,6 +220,11 @@ export class UserService implements OnModuleInit {
 	async findByEmailToken(token: string) {
 		const user = await this.userRepo.findOne({
 			where: { emailVerificationToken: token },
+			relations: {
+				userLanguages: {
+					language: true,
+				},
+			},
 		});
 
 		if (!user) {
@@ -297,7 +307,11 @@ export class UserService implements OnModuleInit {
 
 		const user = await this.userRepo.findOne({
 			where: { id },
-			relations: ["userLanguages"],
+			relations: {
+				userLanguages: {
+					language: true,
+				},
+			},
 		});
 		if (!user) throw new UserNotFoundError();
 
@@ -598,7 +612,18 @@ export class UserService implements OnModuleInit {
 
 		return this.friendRequestRepo.find({
 			where,
-			relations: ["fromUser", "toUser"],
+			relations: {
+				fromUser: {
+					userLanguages: {
+						language: true,
+					},
+				},
+				toUser: {
+					userLanguages: {
+						language: true,
+					},
+				},
+			},
 			order: { createdAt: "DESC" },
 		});
 	}
@@ -632,7 +657,18 @@ export class UserService implements OnModuleInit {
 
 		return this.friendRequestRepo.find({
 			where,
-			relations: ["fromUser", "toUser"],
+			relations: {
+				fromUser: {
+					userLanguages: {
+						language: true,
+					},
+				},
+				toUser: {
+					userLanguages: {
+						language: true,
+					},
+				},
+			},
 			order: { createdAt: "DESC" },
 		});
 	}
@@ -661,9 +697,22 @@ export class UserService implements OnModuleInit {
 				{ friendId: userId },
 			];
 
+			const friendRelations = {
+				user: {
+					userLanguages: {
+						language: true,
+					},
+				},
+				friend: {
+					userLanguages: {
+						language: true,
+					},
+				},
+			};
+
 			const findOptions = {
 				where,
-				relations: ["user", "friend"],
+				relations: friendRelations,
 				skip: (page - 1) * limit,
 				take: limit,
 				order: { createdAt: "DESC" as const },
@@ -922,7 +971,19 @@ export class UserService implements OnModuleInit {
 
 		return this.groupInvitationRepo.find({
 			where,
-			relations: ["fromUser", "toUser", "group"],
+			relations: {
+				fromUser: {
+					userLanguages: {
+						language: true,
+					},
+				},
+				toUser: {
+					userLanguages: {
+						language: true,
+					},
+				},
+				group: true,
+			},
 			order: { createdAt: "DESC" },
 		});
 	}
@@ -946,7 +1007,19 @@ export class UserService implements OnModuleInit {
 
 		return this.groupInvitationRepo.find({
 			where,
-			relations: ["fromUser", "toUser", "group"],
+			relations: {
+				fromUser: {
+					userLanguages: {
+						language: true,
+					},
+				},
+				toUser: {
+					userLanguages: {
+						language: true,
+					},
+				},
+				group: true,
+			},
 			order: { createdAt: "DESC" },
 		});
 	}
@@ -959,7 +1032,19 @@ export class UserService implements OnModuleInit {
 				assigneeId: userId,
 				groupId: groupId,
 			},
-			relations: ["assignee", "creator", "group"],
+			relations: {
+				assignee: {
+					userLanguages: {
+						language: true,
+					},
+				},
+				creator: {
+					userLanguages: {
+						language: true,
+					},
+				},
+				group: true,
+			},
 		});
 
 		return tasks;
@@ -1013,18 +1098,29 @@ export class UserService implements OnModuleInit {
 			targetFriendIds.has(id),
 		);
 
-		// Get mutual friends data
-		const mutualFriends = [];
-		for (const friendId of mutualFriendIds) {
-			const friend = await this.userRepo.findOne({ where: { id: friendId } });
-			if (friend) {
-				mutualFriends.push(friend);
-			}
+		if (!mutualFriendIds.length) {
+			return { mutualFriends: [], count: 0 };
 		}
 
+		const mutualFriends = await this.userRepo.find({
+			where: { id: In(mutualFriendIds) },
+			relations: {
+				userLanguages: {
+					language: true,
+				},
+			},
+		});
+
+		const mutualFriendMap = new Map(
+			mutualFriends.map((friend) => [friend.id, friend]),
+		);
+		const orderedMutualFriends = mutualFriendIds
+			.map((id) => mutualFriendMap.get(id))
+			.filter((friend): friend is UserEntity => Boolean(friend));
+
 		return {
-			mutualFriends,
-			count: mutualFriends.length,
+			mutualFriends: orderedMutualFriends,
+			count: orderedMutualFriends.length,
 		};
 	}
 
