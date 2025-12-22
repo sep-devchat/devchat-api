@@ -1,0 +1,21 @@
+#include <stdio.h>
+#include <string.h>
+
+void reverse(char *text) {
+    int left = 0;
+    int right = (int)strlen(text) - 1;
+    while (left < right) {
+        char tmp = text[left];
+        text[left] = text[right];
+        text[right] = tmp;
+        left++;
+        right--;
+    }
+}
+
+int main(void) {
+    char message[] = "hello world";
+    reverse(message);
+    printf("%s\n", message);
+    return 0;
+}

@@ -1,0 +1,12 @@
+#include <cctype>
+#include <iostream>
+#include <string>
+
+int main() {
+    std::string text = "Simple Preset";
+    for (char &ch : text) {
+        ch = static_cast<char>(std::toupper(static_cast<unsigned char>(ch)));
+    }
+    std::cout << text << '\n';
+    return 0;
+}

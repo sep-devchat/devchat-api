@@ -1,0 +1,15 @@
+#include <iostream>
+#include <queue>
+
+int main() {
+    std::queue<int> tasks;
+    tasks.push(10);
+    tasks.push(20);
+    tasks.push(30);
+
+    while (!tasks.empty()) {
+        std::cout << "Processing " << tasks.front() << '\n';
+        tasks.pop();
+    }
+    return 0;
+}

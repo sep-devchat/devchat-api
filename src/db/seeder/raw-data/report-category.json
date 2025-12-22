@@ -1,0 +1,62 @@
+[
+  {
+    "name": "Spam",
+    "description": "Unwanted or repetitive promotional messages,\nbots, or irrelevant content.",
+    "isRemoved": false
+  },
+  {
+    "name": "Copyright or IP Violation",
+    "description": "Sharing content that\ninfringes on copyrights or intellectual property rights.",
+    "isRemoved": false
+  },
+  {
+    "name": "Other",
+    "description": "Violations that do not fit the categories\nabove.",
+    "isRemoved": false
+  },
+  {
+    "name": "Sexual Content",
+    "description": "Explicit or inappropriate sexual\nmessages, especially when unsolicited.",
+    "isRemoved": false
+  },
+  {
+    "name": "Child Safety",
+    "description": "Harmful, exploitative, or inappropriate\ncontent involving minors.",
+    "isRemoved": false
+  },
+  {
+    "name": "Scams or Fraud",
+    "description": "Attempts to steal money, personal\ninformation, or trick users through deception.",
+    "isRemoved": false
+  },
+  {
+    "name": "Self-Harm or Suicide",
+    "description": "Messages expressing intent to\nself-harm or encouraging others to do so.",
+    "isRemoved": false
+  },
+  {
+    "name": "Misinformation",
+    "description": "False or misleading claims that may\ncause harm or confusion.",
+    "isRemoved": false
+  },
+  {
+    "name": "Privacy Violation",
+    "description": "Sharing or requesting personal information without consent.",
+    "isRemoved": false
+  },
+  {
+    "name": "Impersonation",
+    "description": "Pretending to be another person,\norganization, or official representative.",
+    "isRemoved": false
+  },
+  {
+    "name": "Harassment",
+    "description": "Abusive, insulting, or threatening\nmessages directed at a person or group.",
+    "isRemoved": false
+  },
+  {
+    "name": "Hate Speech",
+    "description": "Messages that promote, encourage,\nor threaten physical harm or dangerous acts.",
+    "isRemoved": false
+  }
+]

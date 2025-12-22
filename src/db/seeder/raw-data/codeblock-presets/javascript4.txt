@@ -1,0 +1,10 @@
+const tasks = [
+    { id: 1, done: false },
+    { id: 2, done: true },
+    { id: 3, done: false }
+];
+
+for (const task of tasks) {
+    const label = task.done ? "complete" : "pending";
+    console.log(`Task ${task.id}: ${label}`);
+}

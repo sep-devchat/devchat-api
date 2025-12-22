@@ -1,0 +1,12 @@
+public class Main {
+    public static void main(String[] args) {
+        String text = "seed snippet";
+        char[] letters = text.toCharArray();
+        for (int i = 0, j = letters.length - 1; i < j; i++, j--) {
+            char temp = letters[i];
+            letters[i] = letters[j];
+            letters[j] = temp;
+        }
+        System.out.println(new String(letters));
+    }
+}

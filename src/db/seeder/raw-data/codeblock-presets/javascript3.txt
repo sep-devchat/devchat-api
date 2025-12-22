@@ -1,0 +1,8 @@
+const text = "banana";
+const counts = {};
+
+for (const letter of text) {
+    counts[letter] = (counts[letter] || 0) + 1;
+}
+
+console.log(counts);

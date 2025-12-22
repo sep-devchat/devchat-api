@@ -1,0 +1,17 @@
+#include <stdio.h>
+
+int main(void) {
+    int count = 8;
+    int a = 0;
+    int b = 1;
+
+    printf("Fibonacci: ");
+    for (int i = 0; i < count; i++) {
+        printf("%d ", a);
+        int next = a + b;
+        a = b;
+        b = next;
+    }
+    printf("\n");
+    return 0;
+}

@@ -1,0 +1,14 @@
+#include <stdio.h>
+
+int main(void) {
+    int values[] = {4, 2, 7, 9, 3};
+    int total = 0;
+    int count = sizeof(values) / sizeof(values[0]);
+
+    for (int i = 0; i < count; i++) {
+        total += values[i];
+    }
+
+    printf("Total: %d\n", total);
+    return 0;
+}

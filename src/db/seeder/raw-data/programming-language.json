@@ -1,0 +1,82 @@
+[
+  {
+    "languageCode": "go",
+    "languageName": "Go Lang",
+    "isExecutable": false,
+    "useAiCheck": true,
+    "preset": "",
+    "isActive": true
+  },
+  {
+    "languageCode": "rust",
+    "languageName": "Rust",
+    "isExecutable": false,
+    "useAiCheck": true,
+    "preset": "",
+    "isActive": true
+  },
+  {
+    "languageCode": "csharp",
+    "languageName": "C#",
+    "isExecutable": false,
+    "useAiCheck": true,
+    "preset": "",
+    "isActive": true
+  },
+  {
+    "languageCode": "java",
+    "languageName": "Java",
+    "isExecutable": true,
+    "useAiCheck": true,
+    "preset": "// Please do not remove the Main class\npublic class Main {\n  public static void main(String[] args) {\n    System.out.println(\"Hello, World!\");\n  }\n}",
+    "isActive": true
+  },
+  {
+    "languageCode": "cpp",
+    "languageName": "C++",
+    "isExecutable": true,
+    "useAiCheck": true,
+    "preset": "#include <iostream>\n\nint main() {\n  std::cout << \"Hello, World!\" << std::endl;\n  return 0;\n}",
+    "isActive": true
+  },
+  {
+    "languageCode": "javascript",
+    "languageName": "Javascript",
+    "isExecutable": true,
+    "useAiCheck": false,
+    "preset": "console.log(\"Hello World\")",
+    "isActive": true
+  },
+  {
+    "languageCode": "tesst",
+    "languageName": "tesst",
+    "isExecutable": true,
+    "useAiCheck": true,
+    "preset": "",
+    "isActive": false
+  },
+  {
+    "languageCode": "php",
+    "languageName": "PHP",
+    "isExecutable": false,
+    "useAiCheck": true,
+    "preset": "",
+    "isActive": false
+  },
+  {
+    "languageCode": "python",
+    "languageName": "Python",
+    "isExecutable": false,
+    "useAiCheck": true,
+    "preset": "print(\"Hello, World!\")",
+    "isActive": true
+  },
+  {
+    "languageCode": "c",
+    "languageName": "C",
+    "isExecutable": true,
+    "useAiCheck": true,
+    "preset": "#include <stdio.h>\n\nint main() {\n  printf(\"Hello, World!\\n\");\n  return 0;\n}",
+    "isActive": true
+  }
+]

@@ -1,0 +1,10 @@
+public class Main {
+    public static void main(String[] args) {
+        int[] values = {2, 5, 7, 3};
+        int total = 0;
+        for (int value : values) {
+            total += value;
+        }
+        System.out.println("Total: " + total);
+    }
+}
