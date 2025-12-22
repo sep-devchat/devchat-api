@@ -1,0 +1,16 @@
+#include <stdio.h>
+
+int main(void) {
+    int values[] = {12, 44, 5, 19, 31};
+    int max = values[0];
+    int count = sizeof(values) / sizeof(values[0]);
+
+    for (int i = 1; i < count; i++) {
+        if (values[i] > max) {
+            max = values[i];
+        }
+    }
+
+    printf("Largest value: %d\n", max);
+    return 0;
+}

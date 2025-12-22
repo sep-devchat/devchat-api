@@ -1,0 +1,49 @@
+import { SupportedProgrammingLanguageRepository } from "@db/repositories";
+import { Injectable } from "@nestjs/common";
+import * as path from "path";
+import * as fs from "fs";
+
+@Injectable()
+export class ProgrammingLanguageSeederService {
+	private readonly rawDataPath: string = path.join(
+		__dirname,
+		"../raw-data/programming-language.json",
+	);
+	constructor(
+		private readonly supportedProgrammingLanguageRepo: SupportedProgrammingLanguageRepository,
+	) {}
+
+	async init() {
+		const programmingLanguages =
+			await this.supportedProgrammingLanguageRepo.find({
+				select: [
+					"languageCode",
+					"languageName",
+					"preset",
+					"isExecutable",
+					"useAiCheck",
+					"isActive",
+				],
+			});
+		fs.writeFileSync(
+			this.rawDataPath,
+			JSON.stringify(programmingLanguages, null, 2),
+			"utf-8",
+		);
+	}
+
+	async run() {
+		const rawData = JSON.parse(
+			fs.readFileSync(this.rawDataPath, "utf-8"),
+		) as any[];
+		const currentLanguages = await this.supportedProgrammingLanguageRepo.find();
+		const missingLanguages = rawData.filter(
+			(rd) =>
+				!currentLanguages.some((cl) => cl.languageCode === rd.languageCode),
+		);
+		console.log(`Seeding ${missingLanguages.length} programming languages...`);
+		const languages =
+			this.supportedProgrammingLanguageRepo.create(missingLanguages);
+		await this.supportedProgrammingLanguageRepo.save(languages);
+	}
+}

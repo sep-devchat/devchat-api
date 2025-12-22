@@ -11,7 +11,7 @@
 		"start:dev": "nest start --watch",
 		"start:debug": "nest start --debug --watch",
 		"start:prod": "node dist/main",
-		"seed": "ts-node -r tsconfig-paths/register src/modules/seeder/index.ts",
+		"seed": "ts-node -r tsconfig-paths/register src/db/seeder/main.ts",
 		"lint": "eslint --ext ts,tsx src/",
 		"lint:fix": "eslint --fix --ext ts,tsx src/",
 		"prettier": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",

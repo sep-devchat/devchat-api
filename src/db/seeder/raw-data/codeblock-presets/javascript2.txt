@@ -1,0 +1,7 @@
+function isPalindrome(text) {
+    const clean = text.toLowerCase();
+    return clean === clean.split("").reverse().join("");
+}
+
+console.log(isPalindrome("level"));
+console.log(isPalindrome("hello"));

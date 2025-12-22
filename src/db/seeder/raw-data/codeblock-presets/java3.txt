@@ -1,0 +1,12 @@
+public class Main {
+    public static void main(String[] args) {
+        int[] values = {8, 4, 6, 1, 9};
+        int min = values[0];
+        for (int value : values) {
+            if (value < min) {
+                min = value;
+            }
+        }
+        System.out.println("Smallest value: " + min);
+    }
+}

@@ -1,0 +1,6 @@
+values = [5, 1, 9, 4]
+smallest = values[0]
+for value in values[1:]:
+    if value < smallest:
+        smallest = value
+print(f"Smallest value: {smallest}")
