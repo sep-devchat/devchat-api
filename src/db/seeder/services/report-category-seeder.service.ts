@@ -1,7 +1,8 @@
-import { ReportCategoryRepository } from "@db/repositories";
+import { ReportCategoryRepository, UserRepository } from "@db/repositories";
 import { Injectable } from "@nestjs/common";
 import * as path from "path";
 import * as fs from "fs";
+import { Env } from "@utils";
 
 @Injectable()
 export class ReportCategorySeederService {
@@ -9,7 +10,29 @@ export class ReportCategorySeederService {
 		__dirname,
 		"../raw-data/report-category.json",
 	);
-	constructor(private readonly reportCategoryRepo: ReportCategoryRepository) {}
+	constructor(
+		private readonly reportCategoryRepo: ReportCategoryRepository,
+		private readonly userRepository: UserRepository,
+	) {}
+
+	private async resolveSeederUserId(): Promise<string> {
+		if (!Env.EMAIL_USER) {
+			throw new Error("EMAIL_USER is not configured in the environment");
+		}
+
+		const seederUser = await this.userRepository.findOne({
+			select: ["id"],
+			where: { email: Env.EMAIL_USER },
+		});
+
+		if (!seederUser) {
+			throw new Error(
+				`Cannot seed report categories because user ${Env.EMAIL_USER} was not found`,
+			);
+		}
+
+		return seederUser.id;
+	}
 
 	async init() {
 		const reportCategories = await this.reportCategoryRepo.find({
@@ -34,7 +57,17 @@ export class ReportCategorySeederService {
 			(rd) => !reportCategories.some((rc) => rc.name === rd.name),
 		);
 		console.log(`Seeding ${missingCategories.length} report categories...`);
-		const categories = this.reportCategoryRepo.create(missingCategories);
+		if (!missingCategories.length) {
+			return;
+		}
+
+		const seederUserId = await this.resolveSeederUserId();
+		const categories = this.reportCategoryRepo.create(
+			missingCategories.map((category) => ({
+				...category,
+				createdBy: seederUserId,
+			})),
+		);
 		await this.reportCategoryRepo.save(categories);
 	}
 }
