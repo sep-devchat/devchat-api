@@ -9,6 +9,7 @@ import {
 	UserRepository,
 } from "@db/repositories";
 import { Injectable } from "@nestjs/common";
+import { Env } from "@utils";
 import * as fs from "fs";
 import * as path from "path";
 import {
@@ -18,7 +19,7 @@ import {
 	UserEntity,
 	UserGroupEntity,
 } from "@db/entities";
-import { In } from "typeorm";
+import { FindOptionsWhere, In, Not } from "typeorm";
 
 @Injectable()
 export class GroupSeederService {
@@ -247,7 +248,9 @@ export class GroupSeederService {
 	}
 
 	async run() {
-		const users = await this.userRepo.find({ where: { isBot: false } });
+		const users = await this.userRepo.find({
+			where: this.buildUserFilter(),
+		});
 		if (users.length === 0) {
 			console.warn("No non-bot users available for group seeding.");
 			return;
@@ -345,5 +348,12 @@ export class GroupSeederService {
 
 	private isImportantEmail(email?: string | null) {
 		return email ? this.importantEmails.has(email.toLowerCase()) : false;
+	}
+
+	private buildUserFilter(): FindOptionsWhere<UserEntity> {
+		if (Env.EMAIL_USER) {
+			return { isBot: false, email: Not(Env.EMAIL_USER) };
+		}
+		return { isBot: false };
 	}
 }

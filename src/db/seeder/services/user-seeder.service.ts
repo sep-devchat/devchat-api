@@ -17,7 +17,8 @@ import {
 	UserLanguageCollectionEntity,
 	UserFriendEntity,
 } from "@db/entities";
-import { ProgrammingLanguageProficiencyLevel } from "@utils";
+import { ProgrammingLanguageProficiencyLevel, Env } from "@utils";
+import { FindOptionsWhere, Not } from "typeorm";
 
 @Injectable()
 export class UserSeederService {
@@ -36,7 +37,7 @@ export class UserSeederService {
 
 	async run() {
 		const existingUsersCount = await this.userRepo.count({
-			where: { isBot: false },
+			where: this.buildUserFilter(),
 		});
 		const usersToCreate = this.TOTAL_USERS - existingUsersCount;
 		let createdUsers: UserEntity[] = [];
@@ -63,7 +64,9 @@ export class UserSeederService {
 			);
 		}
 
-		const allUsers = await this.userRepo.find({ where: { isBot: false } });
+		const allUsers = await this.userRepo.find({
+			where: this.buildUserFilter(),
+		});
 		await this.seedConnections(allUsers);
 	}
 
@@ -365,5 +368,12 @@ export class UserSeederService {
 
 	private isImportantEmail(email?: string | null) {
 		return email ? this.importantEmails.has(email.toLowerCase()) : false;
+	}
+
+	private buildUserFilter(): FindOptionsWhere<UserEntity> {
+		if (Env.EMAIL_USER) {
+			return { isBot: false, email: Not(Env.EMAIL_USER) };
+		}
+		return { isBot: false };
 	}
 }

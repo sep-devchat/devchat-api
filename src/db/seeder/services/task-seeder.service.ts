@@ -7,8 +7,9 @@ import {
 	UserGroupRepository,
 	UserRepository,
 } from "@db/repositories";
-import { TaskPriorityEnum, TaskStatusEnum } from "@utils";
+import { TaskPriorityEnum, TaskStatusEnum, Env } from "@utils";
 import { Injectable } from "@nestjs/common";
+import { FindOptionsWhere, Not } from "typeorm";
 
 type GroupStub = Pick<GroupEntity, "id" | "createdBy">;
 type UserStub = Pick<UserEntity, "id">;
@@ -30,7 +31,10 @@ export class TaskSeederService {
 	async run() {
 		const [groups, users, memberships] = await Promise.all([
 			this.groupRepo.find({ select: ["id", "createdBy"] }),
-			this.userRepo.find({ where: { isBot: false }, select: ["id"] }),
+			this.userRepo.find({
+				where: this.buildUserFilter(),
+				select: ["id"],
+			}),
 			this.userGroupRepo.find({ select: ["groupId", "userId"] }),
 		]);
 
@@ -317,5 +321,12 @@ export class TaskSeederService {
 
 	private describePriority(priority: number) {
 		return TaskPriorityEnum[priority as TaskPriorityEnum] ?? `${priority}`;
+	}
+
+	private buildUserFilter(): FindOptionsWhere<UserEntity> {
+		if (Env.EMAIL_USER) {
+			return { isBot: false, email: Not(Env.EMAIL_USER) };
+		}
+		return { isBot: false };
 	}
 }

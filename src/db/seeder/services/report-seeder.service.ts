@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker";
-import { MessageTypeEnum } from "@utils";
+import { MessageTypeEnum, Env } from "@utils";
 import {
 	ChannelRepository,
 	DirectMessageRepository,
@@ -24,6 +24,7 @@ import {
 	ThreadEntity,
 	UserEntity,
 } from "@db/entities";
+import { FindOptionsWhere, Not } from "typeorm";
 
 type MessageStub = Pick<MessageEntity, "id" | "channelId" | "senderId">;
 type ThreadMessageStub = Pick<
@@ -59,7 +60,10 @@ export class ReportSeederService {
 
 	async run() {
 		const [users, categories, groupMemberships] = await Promise.all([
-			this.userRepo.find({ where: { isBot: false }, select: ["id"] }),
+			this.userRepo.find({
+				where: this.buildUserFilter(),
+				select: ["id"],
+			}),
 			this.reportCategoryRepo.find({ where: { isRemoved: false } }),
 			this.userGroupRepo.find({ select: ["groupId", "userId"] }),
 		]);
@@ -277,5 +281,12 @@ export class ReportSeederService {
 			}
 		}
 		return links;
+	}
+
+	private buildUserFilter(): FindOptionsWhere<UserEntity> {
+		if (Env.EMAIL_USER) {
+			return { isBot: false, email: Not(Env.EMAIL_USER) };
+		}
+		return { isBot: false };
 	}
 }
