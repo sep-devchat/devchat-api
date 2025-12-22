@@ -7,8 +7,11 @@ import {
 import { CodeExecutionResult, Docker, execMap } from "./code-execution";
 import { AiService } from "@modules/ai";
 import {
+	ChannelRepository,
 	CodeBlockRepository,
 	CodeCollaborationRepository,
+	GroupRepository,
+	GroupSupportedProgrammingLanguageRepository,
 	RunCodeCacheRepostiroy,
 	SupportedProgrammingLanguageRepository,
 } from "@db/repositories";
@@ -24,6 +27,9 @@ export class CodeService implements OnModuleInit {
 		private readonly codeBlockRepo: CodeBlockRepository,
 		private readonly codeCollaborationRepo: CodeCollaborationRepository,
 		private readonly runCodeCacheRepo: RunCodeCacheRepostiroy,
+		private readonly groupRepo: GroupRepository,
+		private readonly channelRepo: ChannelRepository,
+		private readonly groupLanguageRepo: GroupSupportedProgrammingLanguageRepository,
 	) {}
 
 	async onModuleInit() {
@@ -78,6 +84,44 @@ export class CodeService implements OnModuleInit {
 	}
 
 	async runCodeBlock(dto: RunCodeBlockRequest): Promise<CodeExecutionResult> {
+		const codeBlock = await this.codeBlockRepo.findOne({
+			where: { id: dto.codeBlockId },
+		});
+
+		if (!codeBlock) {
+			throw new NotFoundException("Code block not found");
+		}
+
+		// Verify that the code block's language is allowed in its group
+		const channel = await this.channelRepo.findOne({
+			where: { id: codeBlock.channelId },
+			relations: { group: true },
+		});
+
+		if (!channel) {
+			throw new NotFoundException("Channel not found for the code block");
+		}
+
+		const groupLanguage = await this.groupLanguageRepo.find({
+			where: {
+				groupId: channel.group.id,
+			},
+			relations: { supportedProgrammingLanguage: true },
+		});
+		console.log("Group supported languages:", groupLanguage);
+
+		const allowLanguage = groupLanguage.some(
+			(gl) =>
+				gl.isActive &&
+				gl.supportedProgrammingLanguage.languageCode === codeBlock.language,
+		);
+
+		if (!allowLanguage) {
+			throw new NotFoundException(
+				"Programming language is not supported in this group",
+			);
+		}
+
 		const cache = await this.runCodeCacheRepo.findOne({
 			where: {
 				targetId: dto.codeBlockId,
@@ -87,14 +131,6 @@ export class CodeService implements OnModuleInit {
 
 		if (cache) {
 			return Builder<CodeExecutionResult>().output(cache.result).build();
-		}
-
-		const codeBlock = await this.codeBlockRepo.findOne({
-			where: { id: dto.codeBlockId },
-		});
-
-		if (!codeBlock) {
-			throw new NotFoundException("Code block not found");
 		}
 
 		const language = await this.programmingLanguageRepo.findOne({
