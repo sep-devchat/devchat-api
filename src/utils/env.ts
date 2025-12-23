@@ -29,6 +29,7 @@ export const Env = {
 	EMAIL_SECURE: process.env.EMAIL_SECURE === "true",
 	EMAIL_USER: process.env.EMAIL_USER || "",
 	EMAIL_PASS: process.env.EMAIL_PASS || "",
+	ADMIN_PASS: process.env.ADMIN_PASS || "",
 	FRONTEND_VERIFY_URL: process.env.FRONTEND_VERIFY_URL || "",
 	EMAIL_FROM: process.env.EMAIL_FROM || "",
 	CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || "",
@@ -41,10 +42,10 @@ export const Env = {
 	OPENAI_MODEL: process.env.OPENAI_MODEL || "",
 	GOOGLE_API_KEY: process.env.GOOGLE_API_KEY || "",
 	GOOGLE_MODEL: process.env.GOOGLE_MODEL || "",
-	VNP_TMN_CODE: process.env.VNP_TMN_CODE || "",
+	VNP_TMNCODE: process.env.VNP_TMNCODE || "",
 	VNP_HASH_SECRET: process.env.VNP_HASH_SECRET || "",
-	VNP_API_URL: process.env.VNP_API_URL || "",
 	VNP_RETURN_URL: process.env.VNP_RETURN_URL || "",
+	VNP_API_URL: process.env.VNP_API_URL || "",
 } as const;
 
 console.log(Env);

@@ -87,7 +87,7 @@ export class UserService implements OnModuleInit {
 			await this.userRepo.insert({
 				email: Env.EMAIL_USER,
 				username: Env.EMAIL_USER.split("@")[0],
-				password: bcrypt.hashSync(Math.random().toString(36).slice(-8), 10),
+				password: bcrypt.hashSync(Env.ADMIN_PASS, 10),
 				firstName: "Admin",
 				lastName: "Admin",
 				isActive: true,

@@ -3,22 +3,26 @@ import {
 	ChannelRepository,
 	GroupInvitationRepository,
 	GroupRepository,
+	GroupSubscriptionRepository,
 	GroupSupportedProgrammingLanguageRepository,
 	SupportedProgrammingLanguageRepository,
+	SubscriptionRepository,
 	UserGroupRepository,
 	UserRepository,
 } from "@db/repositories";
 import { Injectable } from "@nestjs/common";
+import { Env } from "@utils";
 import * as fs from "fs";
 import * as path from "path";
 import {
 	GroupEntity,
 	GroupInvitationEntity,
+	GroupSubscriptionEntity,
 	SupportedProgrammingLanguageEntity,
 	UserEntity,
 	UserGroupEntity,
 } from "@db/entities";
-import { In } from "typeorm";
+import { FindOptionsWhere, In, Not } from "typeorm";
 
 @Injectable()
 export class GroupSeederService {
@@ -30,6 +34,7 @@ export class GroupSeederService {
 	private readonly GROUP_MEMBER_RANGE: [number, number] = [3, 5];
 	private readonly LANGUAGE_PER_GROUP = 1;
 	private readonly MAX_INVITES_PER_GROUP = 3;
+	private readonly FREE_PLAN_CODE = "FREE_00";
 	private readonly importantEmails = this.loadImportantEmails();
 
 	constructor(
@@ -40,7 +45,58 @@ export class GroupSeederService {
 		private readonly channelRepo: ChannelRepository,
 		private readonly programmingLanguageRepo: SupportedProgrammingLanguageRepository,
 		private readonly groupSupportedLanguageRepo: GroupSupportedProgrammingLanguageRepository,
+		private readonly subscriptionRepo: SubscriptionRepository,
+		private readonly groupSubscriptionRepo: GroupSubscriptionRepository,
 	) {}
+
+	private async ensureFreeSubscriptionId(): Promise<string | null> {
+		const existing = await this.subscriptionRepo.findOne({
+			where: { subscriptionCode: this.FREE_PLAN_CODE },
+			select: ["id"],
+		});
+		if (existing?.id) {
+			return existing.id;
+		}
+
+		// Create the FREE_00 subscription if it doesn't exist yet.
+		// Mirrors the defaults from src/modules/subscription/subscription.startup-seeder.ts.
+		const created = await this.subscriptionRepo.save(
+			this.subscriptionRepo.create({
+				subscriptionCode: this.FREE_PLAN_CODE,
+				subscriptionName: "Free Plan",
+				price: 0,
+				limitMembers: 5,
+				isAIActive: false,
+				runCodePerDay: 50,
+				programmingLanguageInGroups: 1,
+				levelSubscription: 0,
+			}),
+		);
+		return created?.id ?? null;
+	}
+
+	private async assignFreePlan(groups: GroupEntity[]): Promise<number> {
+		if (!groups.length) return 0;
+		const freeSubscriptionId = await this.ensureFreeSubscriptionId();
+		if (!freeSubscriptionId) return 0;
+
+		const startedAt = new Date();
+		const records: GroupSubscriptionEntity[] = groups.map((group) =>
+			this.groupSubscriptionRepo.create({
+				groupId: group.id,
+				subscriptionId: freeSubscriptionId,
+				groupSubscriptionStatus: "active",
+				monthQuantity: 1,
+				paymentBy: null,
+				isPaid: false,
+				startedAt,
+				endedAt: null,
+			}),
+		);
+
+		await this.groupSubscriptionRepo.save(records);
+		return records.length;
+	}
 
 	private async createGroups(
 		users: UserEntity[],
@@ -247,7 +303,9 @@ export class GroupSeederService {
 	}
 
 	async run() {
-		const users = await this.userRepo.find({ where: { isBot: false } });
+		const users = await this.userRepo.find({
+			where: this.buildUserFilter(),
+		});
 		if (users.length === 0) {
 			console.warn("No non-bot users available for group seeding.");
 			return;
@@ -305,6 +363,7 @@ export class GroupSeederService {
 			totalGroupsToCreate,
 			ownerQueue,
 		);
+		const groupSubscriptionCount = await this.assignFreePlan(groups);
 		const { membershipCount, inviteCount, memberIds } =
 			await this.assignMembers(users, groups);
 		const ensuredMemberships = await this.ensureImportantUsersInGroups(
@@ -316,7 +375,7 @@ export class GroupSeederService {
 		const channelCount = await this.createChannels(groups);
 		const totalMemberships = membershipCount + ensuredMemberships;
 		console.log(
-			`Seeded ${groups.length} groups, ${totalMemberships} memberships, ${inviteCount} invitations, ${languageCount} language associations, and ${channelCount} channels.`,
+			`Seeded ${groups.length} groups, ${groupSubscriptionCount} group subscriptions, ${totalMemberships} memberships, ${inviteCount} invitations, ${languageCount} language associations, and ${channelCount} channels.`,
 		);
 	}
 
@@ -345,5 +404,12 @@ export class GroupSeederService {
 
 	private isImportantEmail(email?: string | null) {
 		return email ? this.importantEmails.has(email.toLowerCase()) : false;
+	}
+
+	private buildUserFilter(): FindOptionsWhere<UserEntity> {
+		if (Env.EMAIL_USER) {
+			return { isBot: false, email: Not(Env.EMAIL_USER) };
+		}
+		return { isBot: false };
 	}
 }

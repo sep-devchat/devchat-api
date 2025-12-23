@@ -13,6 +13,7 @@ import {
 	UserRepository,
 } from "@db/repositories";
 import { Injectable } from "@nestjs/common";
+import { Env } from "@utils";
 import * as fs from "fs";
 import * as path from "path";
 import {
@@ -24,6 +25,7 @@ import {
 	ThreadMessageEntity,
 	UserEntity,
 } from "@db/entities";
+import { FindOptionsWhere, Not } from "typeorm";
 
 interface CodePreset {
 	language: string;
@@ -76,7 +78,10 @@ export class MessageSeederService {
 
 		const [users, channels, memberships, friendships, groupLanguages] =
 			await Promise.all([
-				this.userRepo.find({ where: { isBot: false }, select: ["id"] }),
+				this.userRepo.find({
+					where: this.buildUserFilter(),
+					select: ["id"],
+				}),
 				this.channelRepo.find({ select: ["id", "groupId"] }),
 				this.userGroupRepo.find({ select: ["userId", "groupId"] }),
 				this.userFriendRepo.find({ select: ["userId", "friendId"] }),
@@ -235,6 +240,13 @@ export class MessageSeederService {
 			friendMap.set(key, Array.from(set));
 		});
 		return friendMap;
+	}
+
+	private buildUserFilter(): FindOptionsWhere<UserEntity> {
+		if (Env.EMAIL_USER) {
+			return { isBot: false, email: Not(Env.EMAIL_USER) };
+		}
+		return { isBot: false };
 	}
 
 	private async seedGroupConversations(
