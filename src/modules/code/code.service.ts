@@ -92,34 +92,35 @@ export class CodeService implements OnModuleInit {
 			throw new NotFoundException("Code block not found");
 		}
 
-		// Verify that the code block's language is allowed in its group
-		const channel = await this.channelRepo.findOne({
-			where: { id: codeBlock.channelId },
-			relations: { group: true },
-		});
+		if (codeBlock.channelId) {
+			// Verify that the code block's language is allowed in its group
+			const channel = await this.channelRepo.findOne({
+				where: { id: codeBlock.channelId },
+				relations: { group: true },
+			});
 
-		if (!channel) {
-			throw new NotFoundException("Channel not found for the code block");
-		}
+			if (!channel) {
+				throw new NotFoundException("Channel not found for the code block");
+			}
 
-		const groupLanguage = await this.groupLanguageRepo.find({
-			where: {
-				groupId: channel.group.id,
-			},
-			relations: { supportedProgrammingLanguage: true },
-		});
-		console.log("Group supported languages:", groupLanguage);
+			const groupLanguage = await this.groupLanguageRepo.find({
+				where: {
+					groupId: channel.group.id,
+				},
+				relations: { supportedProgrammingLanguage: true },
+			});
 
-		const allowLanguage = groupLanguage.some(
-			(gl) =>
-				gl.isActive &&
-				gl.supportedProgrammingLanguage.languageCode === codeBlock.language,
-		);
-
-		if (!allowLanguage) {
-			throw new NotFoundException(
-				"Programming language is not supported in this group",
+			const allowLanguage = groupLanguage.some(
+				(gl) =>
+					gl.isActive &&
+					gl.supportedProgrammingLanguage.languageCode === codeBlock.language,
 			);
+
+			if (!allowLanguage) {
+				throw new NotFoundException(
+					"Programming language is not supported in this group",
+				);
+			}
 		}
 
 		const cache = await this.runCodeCacheRepo.findOne({
