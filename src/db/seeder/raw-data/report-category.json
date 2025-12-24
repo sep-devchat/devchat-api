@@ -40,11 +40,6 @@
     "isRemoved": false
   },
   {
-    "name": "Privacy Violation",
-    "description": "Sharing or requesting personal information without consent.",
-    "isRemoved": false
-  },
-  {
     "name": "Impersonation",
     "description": "Pretending to be another person,\norganization, or official representative.",
     "isRemoved": false

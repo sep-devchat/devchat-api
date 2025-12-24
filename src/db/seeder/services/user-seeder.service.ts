@@ -18,14 +18,31 @@ import {
 	UserFriendEntity,
 } from "@db/entities";
 import { ProgrammingLanguageProficiencyLevel, Env } from "@utils";
-import { FindOptionsWhere, Not } from "typeorm";
+import { FindOptionsWhere, In, Not } from "typeorm";
+import {
+	applySeedTimestamps,
+	randomDateAfter,
+	randomDateInSeedRange,
+} from "../utils/seed-date.util";
+
+interface RequiredUserConfig {
+	email: string;
+	username: string;
+	password?: string;
+	firstName?: string;
+	lastName?: string;
+	isVerified?: boolean;
+	isActive?: boolean;
+	avatar?: string;
+}
 
 @Injectable()
 export class UserSeederService {
-	private readonly TOTAL_USERS = 30;
+	private readonly TOTAL_USERS = 50;
 	private readonly MAX_CONNECTIONS_PER_USER = 4;
 	private readonly DEFAULT_PASSWORD = "Admin@123";
 	private readonly importantEmails = this.loadImportantEmails();
+	private readonly requiredUsersConfig = this.loadRequiredUsers();
 
 	constructor(
 		private readonly userRepo: UserRepository,
@@ -36,6 +53,8 @@ export class UserSeederService {
 	) {}
 
 	async run() {
+		const requiredUsers = await this.seedRequiredUsers();
+
 		const existingUsersCount = await this.userRepo.count({
 			where: this.buildUserFilter(),
 		});
@@ -68,6 +87,7 @@ export class UserSeederService {
 			where: this.buildUserFilter(),
 		});
 		await this.seedConnections(allUsers);
+		await this.ensureRequiredUserFriendships(requiredUsers);
 	}
 
 	private async createUsers(
@@ -112,38 +132,41 @@ export class UserSeederService {
 				}
 				const username = localPart;
 				const emailVerified = faker.helpers.arrayElement([true, true, false]);
-				const emailVerifiedAt = emailVerified
-					? faker.date.recent({ days: 120 })
-					: null;
+				const emailVerifiedAt = emailVerified ? randomDateInSeedRange() : null;
 				const timezone = faker.location.timeZone();
 				const lastLogin = emailVerified
-					? faker.date.recent({ days: 30 })
+					? randomDateAfter(emailVerifiedAt)
 					: null;
-				return this.userRepo.create({
-					username,
-					email,
-					password,
-					firstName,
-					lastName,
-					avatarUrl: faker.image.avatar(),
-					isActive: true,
-					banReason: null,
-					emailVerified,
-					emailVerifiedAt,
-					emailVerificationToken: emailVerified ? null : faker.string.uuid(),
-					lastLogin,
-					timezone: timezone.slice(0, 50),
-					isAdmin: false,
-					isBot: false,
-					subscriptionRole: faker.helpers.maybe(
-						() =>
-							faker.helpers.arrayElements(
-								["free", "pro", "beta"],
-								faker.number.int({ min: 1, max: 2 }),
-							),
-						{ probability: 0.4 },
-					) ?? ["free"],
-				});
+				return applySeedTimestamps(
+					this.userRepo.create({
+						username,
+						email,
+						password,
+						firstName,
+						lastName,
+						avatarUrl: faker.image.avatar(),
+						isActive: true,
+						banReason: null,
+						emailVerified,
+						emailVerifiedAt,
+						emailVerificationToken: emailVerified ? null : faker.string.uuid(),
+						lastLogin,
+						timezone: timezone.slice(0, 50),
+						isAdmin: false,
+						isBot: false,
+						subscriptionRole: faker.helpers.maybe(
+							() =>
+								faker.helpers.arrayElements(
+									["free", "pro", "beta"],
+									faker.number.int({ min: 1, max: 2 }),
+								),
+							{ probability: 0.4 },
+						) ?? ["free"],
+					}),
+					{
+						minCreatedAt: emailVerifiedAt,
+					},
+				);
 			},
 		);
 
@@ -174,15 +197,17 @@ export class UserSeederService {
 				.slice(0, languageCount);
 			selectedLanguages.forEach((language, orderIndex) => {
 				languageEntries.push(
-					this.userLanguageCollectionRepo.create({
-						userId: user.id,
-						languageId: language.id,
-						proficiencyLevel: faker.helpers.arrayElement(levels),
-						orderIndex,
-						createdBy: user.id,
-						updatedBy: user.id,
-						isActive: true,
-					}),
+					applySeedTimestamps(
+						this.userLanguageCollectionRepo.create({
+							userId: user.id,
+							languageId: language.id,
+							proficiencyLevel: faker.helpers.arrayElement(levels),
+							orderIndex,
+							createdBy: user.id,
+							updatedBy: user.id,
+							isActive: true,
+						}),
+					),
 				);
 			});
 		}
@@ -253,10 +278,12 @@ export class UserSeederService {
 				if (Math.random() < 0.6) {
 					friendPairs.add(pairKey);
 					friendEntities.push(
-						this.userFriendRepo.create({
-							userId: user.id,
-							friendId: candidate.id,
-						}),
+						applySeedTimestamps(
+							this.userFriendRepo.create({
+								userId: user.id,
+								friendId: candidate.id,
+							}),
+						),
 					);
 					friendCounts.set(user.id, (friendCounts.get(user.id) ?? 0) + 1);
 					friendCounts.set(
@@ -277,14 +304,16 @@ export class UserSeederService {
 
 				pendingRequests.add(requestKey);
 				requestEntities.push(
-					this.friendRequestRepo.create({
-						fromUserId: user.id,
-						toUserId: candidate.id,
-						message: faker.helpers.maybe(() => faker.lorem.sentence(), {
-							probability: 0.4,
+					applySeedTimestamps(
+						this.friendRequestRepo.create({
+							fromUserId: user.id,
+							toUserId: candidate.id,
+							message: faker.helpers.maybe(() => faker.lorem.sentence(), {
+								probability: 0.4,
+							}),
+							createdBy: user.id,
 						}),
-						createdBy: user.id,
-					}),
+					),
 				);
 			}
 		}
@@ -306,6 +335,195 @@ export class UserSeederService {
 		console.log(
 			`Seeded ${friendEntities.length} friendships and ${requestEntities.length} pending friend requests among ${users.length} users.`,
 		);
+	}
+
+	private async seedRequiredUsers(): Promise<UserEntity[]> {
+		if (!this.requiredUsersConfig.length) {
+			return [];
+		}
+
+		const ensuredUsers: UserEntity[] = [];
+		for (const config of this.requiredUsersConfig) {
+			const email = config.email?.trim().toLowerCase();
+			const username = config.username?.trim();
+			if (!email || !username) {
+				continue;
+			}
+
+			let user = await this.userRepo.findOne({ where: { email } });
+			const passwordHash = bcrypt.hashSync(
+				config.password ?? this.DEFAULT_PASSWORD,
+				10,
+			);
+			const firstName = config.firstName ?? "Dev";
+			const lastName = config.lastName ?? "User";
+			const isActive = config.isActive !== false;
+			const isVerified = config.isVerified ?? true;
+			const avatarUrl =
+				config.avatar ?? user?.avatarUrl ?? faker.image.avatar();
+			const subscriptionRole = user?.subscriptionRole?.length
+				? user.subscriptionRole
+				: ["free"];
+			const timezone = user?.timezone ?? "UTC";
+			const emailVerifiedAt = isVerified ? randomDateInSeedRange() : null;
+			const lastLogin = isActive ? randomDateAfter(emailVerifiedAt) : null;
+			const emailVerificationToken = isVerified
+				? null
+				: (user?.emailVerificationToken ?? faker.string.uuid());
+
+			if (user) {
+				user.username = username;
+				user.email = email;
+				user.password = passwordHash;
+				user.firstName = firstName;
+				user.lastName = lastName;
+				user.avatarUrl = avatarUrl;
+				user.isActive = isActive;
+				user.banReason = null;
+				user.emailVerified = isVerified;
+				user.emailVerificationToken = emailVerificationToken;
+				user.emailVerifiedAt = emailVerifiedAt;
+				user.lastLogin = lastLogin;
+				user.timezone = timezone;
+				user.isAdmin = false;
+				user.isBot = false;
+				user.subscriptionRole = subscriptionRole;
+			} else {
+				user = applySeedTimestamps(
+					this.userRepo.create({
+						username,
+						email,
+						password: passwordHash,
+						firstName,
+						lastName,
+						avatarUrl,
+						isActive,
+						banReason: null,
+						emailVerified: isVerified,
+						emailVerifiedAt: emailVerifiedAt,
+						emailVerificationToken,
+						lastLogin,
+						timezone,
+						isAdmin: false,
+						isBot: false,
+						subscriptionRole,
+					}),
+					{ minCreatedAt: emailVerifiedAt },
+				);
+			}
+
+			if (isVerified && !user.emailVerifiedAt) {
+				user.emailVerifiedAt = emailVerifiedAt ?? randomDateInSeedRange();
+			}
+			if (!isVerified) {
+				user.emailVerifiedAt = null;
+			}
+
+			const saved = await this.userRepo.save(user);
+			ensuredUsers.push(saved);
+		}
+
+		if (ensuredUsers.length) {
+			console.log(
+				`Ensured ${ensuredUsers.length} required users from configuration.`,
+			);
+		}
+
+		return ensuredUsers;
+	}
+
+	private async ensureRequiredUserFriendships(requiredUsers: UserEntity[]) {
+		if (!requiredUsers.length) {
+			return;
+		}
+
+		const ids = requiredUsers.map((user) => user.id);
+		if (ids.length < 2) {
+			return;
+		}
+
+		const existingFriendships = await this.userFriendRepo.find({
+			where: [{ userId: In(ids) }, { friendId: In(ids) }],
+			select: ["userId", "friendId"],
+		});
+		const existingPairs = new Set<string>();
+		existingFriendships.forEach((friendship) => {
+			existingPairs.add(
+				this.buildPairKey(friendship.userId, friendship.friendId),
+			);
+		});
+
+		const newFriendships: UserFriendEntity[] = [];
+		for (let i = 0; i < ids.length; i += 1) {
+			for (let j = i + 1; j < ids.length; j += 1) {
+				const key = this.buildPairKey(ids[i], ids[j]);
+				if (existingPairs.has(key)) {
+					continue;
+				}
+				newFriendships.push(
+					applySeedTimestamps(
+						this.userFriendRepo.create({
+							userId: ids[i],
+							friendId: ids[j],
+						}),
+					),
+				);
+			}
+		}
+
+		if (newFriendships.length) {
+			await this.userFriendRepo.save(newFriendships);
+			console.log(
+				`Added ${newFriendships.length} friendships to fully connect required users.`,
+			);
+		}
+	}
+
+	private loadRequiredUsers(): RequiredUserConfig[] {
+		const filePath = path.join(__dirname, "../raw-data/required-users.json");
+		try {
+			const raw = fs.readFileSync(filePath, "utf-8");
+			const parsed = JSON.parse(raw);
+			if (!Array.isArray(parsed)) {
+				return [];
+			}
+			return parsed
+				.map((entry) => {
+					const email =
+						typeof entry.email === "string"
+							? entry.email.trim().toLowerCase()
+							: "";
+					const username =
+						typeof entry.username === "string" ? entry.username.trim() : "";
+					if (!email || !username) {
+						return null;
+					}
+					return {
+						email,
+						username,
+						password:
+							typeof entry.password === "string" ? entry.password : undefined,
+						firstName:
+							typeof entry.firstName === "string" ? entry.firstName : undefined,
+						lastName:
+							typeof entry.lastName === "string" ? entry.lastName : undefined,
+						isVerified:
+							typeof entry.isVerified === "boolean"
+								? entry.isVerified
+								: undefined,
+						isActive:
+							typeof entry.isActive === "boolean" ? entry.isActive : undefined,
+						avatar:
+							typeof entry.avatar === "string" && entry.avatar.trim()
+								? entry.avatar.trim()
+								: undefined,
+					} as RequiredUserConfig;
+				})
+				.filter((entry): entry is RequiredUserConfig => Boolean(entry));
+		} catch (error) {
+			console.warn("Unable to load required users config:", error);
+			return [];
+		}
 	}
 
 	private buildPairKey(a: string, b: string) {
@@ -333,10 +551,12 @@ export class UserSeederService {
 			if (friendPairs.has(pairKey)) continue;
 			friendPairs.add(pairKey);
 			friendEntities.push(
-				this.userFriendRepo.create({
-					userId: important.id,
-					friendId: partner.id,
-				}),
+				applySeedTimestamps(
+					this.userFriendRepo.create({
+						userId: important.id,
+						friendId: partner.id,
+					}),
+				),
 			);
 			friendCounts.set(important.id, (friendCounts.get(important.id) ?? 0) + 1);
 			friendCounts.set(partner.id, (friendCounts.get(partner.id) ?? 0) + 1);

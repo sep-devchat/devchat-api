@@ -3,6 +3,7 @@ import { Injectable } from "@nestjs/common";
 import * as path from "path";
 import * as fs from "fs";
 import { Env } from "@utils";
+import { applySeedTimestampsBulk } from "../utils/seed-date.util";
 
 @Injectable()
 export class ReportCategorySeederService {
@@ -68,6 +69,7 @@ export class ReportCategorySeederService {
 				createdBy: seederUserId,
 			})),
 		);
+		applySeedTimestampsBulk(categories);
 		await this.reportCategoryRepo.save(categories);
 	}
 }

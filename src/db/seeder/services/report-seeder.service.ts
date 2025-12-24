@@ -25,6 +25,7 @@ import {
 	UserEntity,
 } from "@db/entities";
 import { FindOptionsWhere, Not } from "typeorm";
+import { applySeedTimestamps } from "../utils/seed-date.util";
 
 type MessageStub = Pick<MessageEntity, "id" | "channelId" | "senderId">;
 type ThreadMessageStub = Pick<
@@ -131,14 +132,16 @@ export class ReportSeederService {
 				continue;
 			}
 			reports.push(
-				this.reportRepo.create({
-					messageId: candidate.messageId,
-					messageType: candidate.type,
-					content: faker.helpers.maybe(() => faker.lorem.sentence(), {
-						probability: 0.5,
+				applySeedTimestamps(
+					this.reportRepo.create({
+						messageId: candidate.messageId,
+						messageType: candidate.type,
+						content: faker.helpers.maybe(() => faker.lorem.sentence(), {
+							probability: 0.5,
+						}),
+						createdById: reporterId,
 					}),
-					createdById: reporterId,
-				}),
+				),
 			);
 		}
 

@@ -26,6 +26,7 @@ import {
 	UserEntity,
 } from "@db/entities";
 import { FindOptionsWhere, Not } from "typeorm";
+import { applySeedTimestamps } from "../utils/seed-date.util";
 
 interface CodePreset {
 	language: string;
@@ -297,21 +298,23 @@ export class MessageSeederService {
 						continue;
 					}
 					groupMessages.push(
-						this.messageRepo.create({
-							channelId: channel.id,
-							senderId: user.id,
-							parentMessageId: null,
-							content: this.buildMessageContent(
-								preset.language,
-								preset.content,
-							),
-							codeBlock: this.createCodeBlock(
-								user.id,
-								preset.language,
-								preset.content,
-								channel.id,
-							),
-						}),
+						applySeedTimestamps(
+							this.messageRepo.create({
+								channelId: channel.id,
+								senderId: user.id,
+								parentMessageId: null,
+								content: this.buildMessageContent(
+									preset.language,
+									preset.content,
+								),
+								codeBlock: this.createCodeBlock(
+									user.id,
+									preset.language,
+									preset.content,
+									channel.id,
+								),
+							}),
+						),
 					);
 				}
 			});
@@ -336,12 +339,14 @@ export class MessageSeederService {
 				continue;
 			}
 			threadEntities.push(
-				this.threadRepo.create({
-					name: this.buildThreadName(),
-					messageId: baseMessage.id,
-					channelId: baseMessage.channelId,
-					createdById: baseMessage.senderId,
-				}),
+				applySeedTimestamps(
+					this.threadRepo.create({
+						name: this.buildThreadName(),
+						messageId: baseMessage.id,
+						channelId: baseMessage.channelId,
+						createdById: baseMessage.senderId,
+					}),
+				),
 			);
 		}
 
@@ -382,22 +387,24 @@ export class MessageSeederService {
 						continue;
 					}
 					threadMessages.push(
-						this.threadMessageRepo.create({
-							threadId: thread.id,
-							channelId: thread.channelId,
-							senderId: participantId,
-							parentMessageId: null,
-							content: this.buildMessageContent(
-								preset.language,
-								preset.content,
-							),
-							codeBlock: this.createCodeBlock(
-								participantId,
-								preset.language,
-								preset.content,
-								thread.channelId,
-							),
-						}),
+						applySeedTimestamps(
+							this.threadMessageRepo.create({
+								threadId: thread.id,
+								channelId: thread.channelId,
+								senderId: participantId,
+								parentMessageId: null,
+								content: this.buildMessageContent(
+									preset.language,
+									preset.content,
+								),
+								codeBlock: this.createCodeBlock(
+									participantId,
+									preset.language,
+									preset.content,
+									thread.channelId,
+								),
+							}),
+						),
 					);
 				}
 			}
@@ -516,13 +523,15 @@ export class MessageSeederService {
 		channelId?: string | null,
 		toUserId?: string | null,
 	) {
-		return this.codeBlockRepo.create({
-			userId,
-			toUserId: toUserId ?? null,
-			channelId: channelId ?? null,
-			language,
-			content: content.trim(),
-		});
+		return applySeedTimestamps(
+			this.codeBlockRepo.create({
+				userId,
+				toUserId: toUserId ?? null,
+				channelId: channelId ?? null,
+				language,
+				content: content.trim(),
+			}),
+		);
 	}
 
 	private randomCount(limit: number) {
@@ -554,19 +563,21 @@ export class MessageSeederService {
 				return;
 			}
 			bucket.push(
-				this.directMessageRepo.create({
-					fromUserId,
-					toUserId,
-					parentMessageId: null,
-					content: this.buildMessageContent(preset.language, preset.content),
-					codeBlock: this.createCodeBlock(
+				applySeedTimestamps(
+					this.directMessageRepo.create({
 						fromUserId,
-						preset.language,
-						preset.content,
-						null,
 						toUserId,
-					),
-				}),
+						parentMessageId: null,
+						content: this.buildMessageContent(preset.language, preset.content),
+						codeBlock: this.createCodeBlock(
+							fromUserId,
+							preset.language,
+							preset.content,
+							null,
+							toUserId,
+						),
+					}),
+				),
 			);
 		}
 	}
