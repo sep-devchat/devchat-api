@@ -1,0 +1,22 @@
+[
+    {
+        "email": "hahahjhjhehe123@gmail.com",
+        "username": "hahahjhjhehe123",
+        "password": "Admin@123",
+        "firstName": "Bảo",
+        "lastName": "Lê",
+        "isVerified": true,
+        "isActive": true,
+        "avatar": "https://tse2.mm.bing.net/th/id/OIP.YoTUWMoKovQT0gCYOYMwzwHaHa?cb=ucfimg2&ucfimg=1&rs=1&pid=ImgDetMain&o=7&rm=3"
+    },
+    {
+        "email": "longlt201203@gmail.com",
+        "username": "longlt201203",
+        "password": "Admin@123",
+        "firstName": "Thành Long",
+        "lastName": "Lê",
+        "isVerified": true,
+        "isActive": true,
+        "avatar": "https://static.vecteezy.com/system/resources/previews/024/183/535/original/male-avatar-portrait-of-a-young-man-with-glasses-illustration-of-male-character-in-modern-color-style-vector.jpg"
+    }
+]

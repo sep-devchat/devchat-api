@@ -6,6 +6,7 @@ import { Injectable } from "@nestjs/common";
 import * as path from "path";
 import * as fs from "fs";
 import { Env } from "@utils";
+import { applySeedTimestampsBulk } from "../utils/seed-date.util";
 
 @Injectable()
 export class ProgrammingLanguageSeederService {
@@ -78,6 +79,7 @@ export class ProgrammingLanguageSeederService {
 				updatedBy: seederUserId,
 			})),
 		);
+		applySeedTimestampsBulk(languages);
 		await this.supportedProgrammingLanguageRepo.save(languages);
 	}
 }

@@ -10,15 +10,30 @@ import {
 import { TaskPriorityEnum, TaskStatusEnum, Env } from "@utils";
 import { Injectable } from "@nestjs/common";
 import { FindOptionsWhere, Not } from "typeorm";
+import * as fs from "fs";
+import * as path from "path";
+import {
+	applySeedTimestamps,
+	randomDateAfter,
+	randomDateInSeedRange,
+} from "../utils/seed-date.util";
 
-type GroupStub = Pick<GroupEntity, "id" | "createdBy">;
+type GroupStub = Pick<GroupEntity, "id" | "createdBy" | "name">;
 type UserStub = Pick<UserEntity, "id">;
+type TestGroupConfig = { groupName: string; owner: string; avatar?: string };
 
 @Injectable()
 export class TaskSeederService {
 	private readonly TASKS_PER_GROUP = 20;
 	private readonly TASK_HISTORIES_PER_TASK = 5;
 	private readonly TASK_PER_USER_PER_GROUP_RANGE: [number, number] = [1, 5];
+	private readonly testGroupConfig = this.loadTestGroupConfig();
+	private readonly TEST_GROUP_SPECIAL_TASK_NAME =
+		"Subscription Readiness Checklist";
+	private readonly TEST_GROUP_FOLLOW_UP_NAME = "Subscription Health Sync";
+	private readonly TEST_GROUP_DONE_UPDATED_AT = new Date(
+		"2025-12-20T12:00:00.000Z",
+	);
 
 	constructor(
 		private readonly groupRepo: GroupRepository,
@@ -30,7 +45,7 @@ export class TaskSeederService {
 
 	async run() {
 		const [groups, users, memberships] = await Promise.all([
-			this.groupRepo.find({ select: ["id", "createdBy"] }),
+			this.groupRepo.find({ select: ["id", "createdBy", "name"] }),
 			this.userRepo.find({
 				where: this.buildUserFilter(),
 				select: ["id"],
@@ -59,15 +74,36 @@ export class TaskSeederService {
 		const touchedGroups = new Set<string>();
 
 		for (const group of groups) {
-			const remainingSlots = await this.calculateRemainingSlots(group.id);
-			if (!remainingSlots) {
-				continue;
-			}
+			let remainingSlots = await this.calculateRemainingSlots(group.id);
 			const members = membersByGroup.get(group.id) ?? [];
 			if (!members.length) {
 				console.warn(
 					`Skipping group ${group.id}; no members available for task assignments.`,
 				);
+				continue;
+			}
+
+			const isTestGroup =
+				Boolean(this.testGroupConfig?.groupName) &&
+				group.name === this.testGroupConfig?.groupName;
+
+			if (isTestGroup) {
+				const specialTasks = await this.buildTestGroupTasks(
+					group,
+					members,
+					users,
+					remainingSlots,
+				);
+				if (specialTasks.length) {
+					tasksToInsert.push(...specialTasks);
+					touchedGroups.add(group.id);
+					if (remainingSlots > 0) {
+						remainingSlots = Math.max(remainingSlots - specialTasks.length, 0);
+					}
+				}
+			}
+
+			if (!remainingSlots) {
 				continue;
 			}
 
@@ -164,18 +200,21 @@ export class TaskSeederService {
 		const priority = this.randomPriority();
 		const { startDate, dueDate } = this.buildSchedule();
 
-		return this.taskRepo.create({
-			groupId: group.id,
-			createdBy: creatorId,
-			assigneeId,
-			name: this.buildTaskTitle(),
-			description: faker.lorem.sentences({ min: 1, max: 3 }),
-			status,
-			priority,
-			startDate,
-			dueDate,
-			isActive: true,
-		});
+		return applySeedTimestamps(
+			this.taskRepo.create({
+				groupId: group.id,
+				createdBy: creatorId,
+				assigneeId,
+				name: this.buildTaskTitle(),
+				description: faker.lorem.sentences({ min: 1, max: 3 }),
+				status,
+				priority,
+				startDate,
+				dueDate,
+				isActive: true,
+			}),
+			{ minCreatedAt: startDate ?? null },
+		);
 	}
 
 	private pickCreator(group: GroupStub, members: string[], users: UserStub[]) {
@@ -206,25 +245,11 @@ export class TaskSeederService {
 	}
 
 	private buildSchedule() {
-		const startDate =
-			faker.helpers.maybe(() => faker.date.recent({ days: 30 }), {
-				probability: 0.7,
-			}) ?? null;
-
+		const startDate = Math.random() < 0.7 ? randomDateInSeedRange() : null;
 		if (!startDate) {
 			return { startDate: null, dueDate: null };
 		}
-
-		const dueDate =
-			faker.helpers.maybe(
-				() =>
-					faker.date.soon({
-						days: faker.number.int({ min: 2, max: 21 }),
-						refDate: startDate,
-					}),
-				{ probability: 0.8 },
-			) ?? null;
-
+		const dueDate = Math.random() < 0.8 ? randomDateAfter(startDate) : null;
 		return { startDate, dueDate };
 	}
 
@@ -248,15 +273,20 @@ export class TaskSeederService {
 			const limitedEvents = events.slice(0, this.TASK_HISTORIES_PER_TASK);
 			for (const event of limitedEvents) {
 				histories.push(
-					this.taskHistoryRepo.create({
-						taskId: task.id,
-						userId: faker.helpers.arrayElement(actorPool),
-						action: event.action,
-						fieldName: event.fieldName,
-						oldValue: event.oldValue,
-						newValue: event.newValue,
-						createdAt: faker.date.recent({ days: 45 }),
-					}),
+					applySeedTimestamps(
+						this.taskHistoryRepo.create({
+							taskId: task.id,
+							userId: faker.helpers.arrayElement(actorPool),
+							action: event.action,
+							fieldName: event.fieldName,
+							oldValue: event.oldValue,
+							newValue: event.newValue,
+							createdAt: randomDateInSeedRange({
+								min: task.createdAt ?? null,
+							}),
+						}),
+						{ minCreatedAt: task.createdAt ?? null },
+					),
 				);
 			}
 		}
@@ -321,6 +351,124 @@ export class TaskSeederService {
 
 	private describePriority(priority: number) {
 		return TaskPriorityEnum[priority as TaskPriorityEnum] ?? `${priority}`;
+	}
+
+	private async buildTestGroupTasks(
+		group: GroupStub,
+		members: string[],
+		users: UserStub[],
+		remainingSlots: number,
+	): Promise<TaskEntity[]> {
+		if (
+			!this.testGroupConfig ||
+			group.name !== this.testGroupConfig.groupName
+		) {
+			return [];
+		}
+
+		const existing = await this.taskRepo.findOne({
+			where: {
+				groupId: group.id,
+				name: this.TEST_GROUP_SPECIAL_TASK_NAME,
+			},
+			select: ["id"],
+		});
+		if (existing) {
+			return [];
+		}
+
+		const memberPool = members.length ? members : users.map((user) => user.id);
+		if (!memberPool.length) {
+			return [];
+		}
+
+		const templates = [
+			{
+				name: this.TEST_GROUP_SPECIAL_TASK_NAME,
+				description:
+					"Verify that the subscription group has the correct entitlements, billing settings, and AI quotas.",
+				status: TaskStatusEnum.DONE,
+				priority: TaskPriorityEnum.HIGH,
+				updatedAt: this.TEST_GROUP_DONE_UPDATED_AT,
+			},
+			{
+				name: this.TEST_GROUP_FOLLOW_UP_NAME,
+				description:
+					"Prepare a follow-up sync to review subscription usage trends with the owners.",
+				status: TaskStatusEnum.IN_PROGRESS,
+				priority: TaskPriorityEnum.MEDIUM,
+			},
+		];
+		const availableSlots = Math.max(remainingSlots, 1);
+		const plannedCount = Math.min(availableSlots, templates.length);
+		const tasks: TaskEntity[] = [];
+
+		for (let index = 0; index < plannedCount; index += 1) {
+			const template = templates[index];
+			const assigneeId = faker.helpers.arrayElement(memberPool);
+			const creatorId = this.pickCreator(group, members, users);
+			const startDate = randomDateInSeedRange({
+				max: template.updatedAt ?? null,
+			});
+			const dueDate =
+				template.status === TaskStatusEnum.DONE && template.updatedAt
+					? template.updatedAt
+					: randomDateAfter(startDate);
+			const task = applySeedTimestamps(
+				this.taskRepo.create({
+					groupId: group.id,
+					createdBy: creatorId,
+					assigneeId,
+					name: template.name,
+					description: template.description,
+					status: template.status,
+					priority: template.priority,
+					startDate,
+					dueDate,
+					isActive: true,
+					createdAt: startDate,
+					updatedAt: template.updatedAt,
+				}),
+				{ minCreatedAt: startDate },
+			);
+			tasks.push(task);
+		}
+
+		return tasks;
+	}
+
+	private loadTestGroupConfig(): TestGroupConfig | null {
+		const filePath = path.join(
+			__dirname,
+			"../raw-data/test-group-for-subscription.json",
+		);
+		try {
+			const raw = fs.readFileSync(filePath, "utf-8");
+			const parsed = JSON.parse(raw);
+			if (
+				parsed &&
+				typeof parsed.groupName === "string" &&
+				parsed.groupName.trim() &&
+				typeof parsed.owner === "string" &&
+				parsed.owner.trim()
+			) {
+				const avatar =
+					typeof parsed.avatar === "string" && parsed.avatar.trim()
+						? parsed.avatar.trim()
+						: undefined;
+				return {
+					groupName: parsed.groupName.trim(),
+					owner: parsed.owner.trim(),
+					...(avatar ? { avatar } : {}),
+				};
+			}
+		} catch (error) {
+			console.warn(
+				"Unable to load test subscription group config for task seeding:",
+				error,
+			);
+		}
+		return null;
 	}
 
 	private buildUserFilter(): FindOptionsWhere<UserEntity> {

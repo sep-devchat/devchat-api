@@ -66,7 +66,7 @@
   {
     "languageCode": "python",
     "languageName": "Python",
-    "isExecutable": false,
+    "isExecutable": true,
     "useAiCheck": true,
     "preset": "print(\"Hello, World!\")",
     "isActive": true
