@@ -80,8 +80,17 @@ export class ProgrammingLanguageService {
 	): Promise<SupportedProgrammingLanguageEntity> {
 		const entity = await this.repo.findOne({ where: { id } });
 		if (!entity) throw new NotFoundException("Programming language not found");
+		console.log(
+			"Updating language code from",
+			entity.languageCode,
+			"to",
+			dto.languageCode,
+		);
 
-		if (dto.languageCode && dto.languageCode !== entity.languageCode) {
+		if (
+			dto.languageCode &&
+			dto.languageCode.toUpperCase() !== entity.languageCode.toUpperCase()
+		) {
 			const duplicate = await this.repo.findOne({
 				where: {
 					languageCode: dto.languageCode,
