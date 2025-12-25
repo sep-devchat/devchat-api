@@ -321,15 +321,33 @@ export class TaskService {
 		}
 	}
 
-	async getStatistics() {
+	async getStatistics(startDate?: string, endDate?: string) {
 		const groupId = this.cls.get("group").id;
+
+		// Build where condition with date filters
+		const where: any = {
+			groupId,
+			isActive: true,
+		};
+
+		// Add date range filter if provided
+		if (startDate || endDate) {
+			where.startDate = {};
+			if (startDate) {
+				where.startDate = MoreThanOrEqual(new Date(startDate));
+			}
+			if (endDate) {
+				if (startDate) {
+					where.startDate = Between(new Date(startDate), new Date(endDate));
+				} else {
+					where.startDate = LessThanOrEqual(new Date(endDate));
+				}
+			}
+		}
 
 		// Get all active tasks for the group
 		const tasks = await this.repo.find({
-			where: {
-				groupId,
-				isActive: true,
-			},
+			where,
 		});
 
 		const totalTasks = tasks.length;
