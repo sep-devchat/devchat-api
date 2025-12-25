@@ -204,6 +204,7 @@ export class GroupSeederService {
 		}
 
 		await this.ensureTestGroupMemberships(group, owner, users);
+		await this.ensureTestGroupChannels(group);
 		await this.assignFreePlan([group]);
 	}
 
@@ -275,6 +276,33 @@ export class GroupSeederService {
 				`Ensured ${memberIds.size} members (target ${targetSize}) for test group ${group.name}.`,
 			);
 		}
+	}
+
+	private async ensureTestGroupChannels(group: GroupEntity) {
+		const existingChannels = await this.channelRepo.find({
+			where: { groupId: group.id },
+			select: ["name"],
+		});
+		const existingNames = new Set(
+			existingChannels.map((channel) => channel.name),
+		);
+		const missingNames = this.GROUP_CHANNELS.filter(
+			(name) => !existingNames.has(name),
+		);
+		if (!missingNames.length) {
+			return;
+		}
+
+		const channelsToCreate = missingNames.map((name) =>
+			this.channelRepo.create({
+				name,
+				groupId: group.id,
+				description: `${name} channel for ${group.name}`.slice(0, 255),
+				createdBy: group.createdBy,
+			}),
+		);
+		applySeedTimestampsBulk(channelsToCreate);
+		await this.channelRepo.save(channelsToCreate);
 	}
 
 	private async createGroups(
