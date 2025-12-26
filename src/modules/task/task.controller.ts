@@ -55,8 +55,11 @@ export class TaskController {
 	@Get("statistics")
 	@ApiOperation({ summary: "Get task statistics for the group" })
 	@SwaggerApiResponse(TaskStatisticsResponse)
-	async getStatistics() {
-		const data = await this.taskService.getStatistics();
+	async getStatistics(
+		@Query("startDate") startDate?: string,
+		@Query("endDate") endDate?: string,
+	) {
+		const data = await this.taskService.getStatistics(startDate, endDate);
 		return new ApiResponseDto(
 			data,
 			null,
