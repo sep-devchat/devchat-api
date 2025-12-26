@@ -43,17 +43,9 @@
     "languageCode": "javascript",
     "languageName": "Javascript",
     "isExecutable": true,
-    "useAiCheck": false,
+    "useAiCheck": true,
     "preset": "console.log(\"Hello World\")",
     "isActive": true
-  },
-  {
-    "languageCode": "tesst",
-    "languageName": "tesst",
-    "isExecutable": true,
-    "useAiCheck": true,
-    "preset": "",
-    "isActive": false
   },
   {
     "languageCode": "php",
@@ -75,7 +67,7 @@
     "languageCode": "c",
     "languageName": "C",
     "isExecutable": true,
-    "useAiCheck": true,
+    "useAiCheck": false,
     "preset": "#include <stdio.h>\n\nint main() {\n  printf(\"Hello, World!\\n\");\n  return 0;\n}",
     "isActive": true
   }

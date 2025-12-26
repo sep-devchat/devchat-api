@@ -81,12 +81,12 @@ export class UserService implements OnModuleInit {
 
 	private async initAdmin() {
 		const admin = await this.userRepo.findOne({
-			where: { email: Env.EMAIL_USER },
+			where: { email: Env.ADMIN_USER },
 		});
 		if (!admin) {
 			await this.userRepo.insert({
-				email: Env.EMAIL_USER,
-				username: Env.EMAIL_USER.split("@")[0],
+				email: Env.ADMIN_USER,
+				username: Env.ADMIN_USER.split("@")[0],
 				password: bcrypt.hashSync(Env.ADMIN_PASS, 10),
 				firstName: "Admin",
 				lastName: "Admin",

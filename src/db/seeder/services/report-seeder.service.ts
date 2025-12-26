@@ -287,8 +287,8 @@ export class ReportSeederService {
 	}
 
 	private buildUserFilter(): FindOptionsWhere<UserEntity> {
-		if (Env.EMAIL_USER) {
-			return { isBot: false, email: Not(Env.EMAIL_USER) };
+		if (Env.ADMIN_USER) {
+			return { isBot: false, email: Not(Env.ADMIN_USER) };
 		}
 		return { isBot: false };
 	}
