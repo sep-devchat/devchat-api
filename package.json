@@ -25,7 +25,8 @@
 		"test:e2e": "jest --config ./test/jest-e2e.json",
 		"migration:generate": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:generate -d src/db/datasource.ts src/db/migrations/migration",
 		"migration:run": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:run -d src/db/datasource.ts",
-		"schema:drop": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js schema:drop -d src/db/datasource.ts"
+		"schema:drop": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js schema:drop -d src/db/datasource.ts",
+		"codeblock:test": "k6 run src/load-test.ts"
 	},
 	"dependencies": {
 		"@langchain/core": "^1.1.0",
@@ -53,6 +54,7 @@
 		"google-auth-library": "^10.3.0",
 		"helmet": "^7.1.0",
 		"jsonwebtoken": "^9.0.2",
+		"k6": "^0.0.0",
 		"langchain": "^1.1.1",
 		"multer": "^1.4.5-lts.1",
 		"mysql2": "^3.14.4",
@@ -81,6 +83,7 @@
 		"@types/express": "^4.17.17",
 		"@types/jest": "^29.5.2",
 		"@types/jsonwebtoken": "^9.0.10",
+		"@types/k6": "^1.4.0",
 		"@types/multer": "^1.4.11",
 		"@types/node": "^20.3.1",
 		"@types/supertest": "^2.0.12",
