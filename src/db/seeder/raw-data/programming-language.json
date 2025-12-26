@@ -5,7 +5,8 @@
     "isExecutable": false,
     "useAiCheck": true,
     "preset": "",
-    "isActive": true
+    "isActive": true,
+    "languageIcon": "https://tse4.mm.bing.net/th/id/OIP.pS-k8X90ze9qlbB62uj4fQHaKF?rs=1&pid=ImgDetMain&o=7&rm=3"
   },
   {
     "languageCode": "rust",
@@ -13,7 +14,8 @@
     "isExecutable": false,
     "useAiCheck": true,
     "preset": "",
-    "isActive": true
+    "isActive": true,
+    "languageIcon": "https://tse1.mm.bing.net/th/id/OIP.N40cWTbVJ2--eKDQ7MBzDwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
   },
   {
     "languageCode": "csharp",
@@ -21,7 +23,8 @@
     "isExecutable": false,
     "useAiCheck": true,
     "preset": "",
-    "isActive": true
+    "isActive": true,
+    "languageIcon": "https://uxwing.com/wp-content/themes/uxwing/download/brands-and-social-media/c-sharp-programming-language-icon.png"
   },
   {
     "languageCode": "java",
@@ -29,7 +32,8 @@
     "isExecutable": true,
     "useAiCheck": true,
     "preset": "// Please do not remove the Main class\npublic class Main {\n  public static void main(String[] args) {\n    System.out.println(\"Hello, World!\");\n  }\n}",
-    "isActive": true
+    "isActive": true,
+    "languageIcon": "https://images.vexels.com/media/users/3/166401/isolated/preview/b82aa7ac3f736dd78570dd3fa3fa9e24-java-programming-language-icon-by-vexels.png"
   },
   {
     "languageCode": "cpp",
@@ -37,7 +41,8 @@
     "isExecutable": true,
     "useAiCheck": true,
     "preset": "#include <iostream>\n\nint main() {\n  std::cout << \"Hello, World!\" << std::endl;\n  return 0;\n}",
-    "isActive": true
+    "isActive": true,
+    "languageIcon": "https://cdn.imgbin.com/11/17/24/imgbin-the-c-programming-language-computer-programming-programming-bF2U1bxQ81JwkXRDhp441Wnuh.jpg"
   },
   {
     "languageCode": "javascript",
@@ -45,7 +50,8 @@
     "isExecutable": true,
     "useAiCheck": true,
     "preset": "console.log(\"Hello World\")",
-    "isActive": true
+    "isActive": true,
+    "languageIcon": "https://th.bing.com/th/id/R.4cb2d3028fa2487ea50620239536e26e?rik=aN3ikbDFHzbL6w&pid=ImgRaw&r=0"
   },
   {
     "languageCode": "php",
@@ -53,7 +59,8 @@
     "isExecutable": false,
     "useAiCheck": true,
     "preset": "",
-    "isActive": false
+    "isActive": false,
+    "languageIcon": "https://th.bing.com/th/id/R.0e73dde721de2ac9b51fadc9f70d9549?rik=k1vzLzFsmWdwng&pid=ImgRaw&r=0"
   },
   {
     "languageCode": "python",
@@ -61,7 +68,8 @@
     "isExecutable": true,
     "useAiCheck": true,
     "preset": "print(\"Hello, World!\")",
-    "isActive": true
+    "isActive": true,
+    "languageIcon": "https://images.vexels.com/media/users/3/166477/isolated/preview/9bb722f0e85ddbc1ce0f064534fd2311-python-programming-language-icon-by-vexels.png"
   },
   {
     "languageCode": "c",
@@ -69,6 +77,7 @@
     "isExecutable": true,
     "useAiCheck": false,
     "preset": "#include <stdio.h>\n\nint main() {\n  printf(\"Hello, World!\\n\");\n  return 0;\n}",
-    "isActive": true
+    "isActive": true,
+    "languageIcon": "https://cdn.imgbin.com/16/23/10/imgbin-c-programming-language-icon-letter-c-c-logo-pSZYQvFiAEG5PktYmf6HGWaR4.jpg"
   }
 ]

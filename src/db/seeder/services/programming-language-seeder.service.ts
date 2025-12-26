@@ -44,6 +44,7 @@ export class ProgrammingLanguageSeederService {
 				select: [
 					"languageCode",
 					"languageName",
+					"languageIcon",
 					"preset",
 					"isExecutable",
 					"useAiCheck",
