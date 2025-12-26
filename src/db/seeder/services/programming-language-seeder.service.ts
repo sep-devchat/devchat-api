@@ -20,18 +20,18 @@ export class ProgrammingLanguageSeederService {
 	) {}
 
 	private async resolveSeederUserId(): Promise<string> {
-		if (!Env.EMAIL_USER) {
-			throw new Error("EMAIL_USER is not configured in the environment");
+		if (!Env.ADMIN_USER) {
+			throw new Error("ADMIN_USER is not configured in the environment");
 		}
 
 		const seederUser = await this.userRepository.findOne({
 			select: ["id"],
-			where: { email: Env.EMAIL_USER },
+			where: { email: Env.ADMIN_USER },
 		});
 
 		if (!seederUser) {
 			throw new Error(
-				`Cannot seed programming languages because user ${Env.EMAIL_USER} was not found`,
+				`Cannot seed programming languages because user ${Env.ADMIN_USER} was not found`,
 			);
 		}
 
