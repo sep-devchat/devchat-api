@@ -33,3 +33,4 @@ export * from "./subscription.entity";
 export * from "./group-subscription.entity";
 export * from "./share-fund.entity";
 export * from "./transaction.entity";
+export * from "./order.entity";

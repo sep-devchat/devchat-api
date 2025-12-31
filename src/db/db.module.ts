@@ -38,6 +38,7 @@ import {
 	GroupSubscriptionRepository,
 	ShareFundRepository,
 	TransactionRepository,
+	OrderRepository,
 } from "./repositories";
 
 const repositories = [
@@ -76,6 +77,7 @@ const repositories = [
 	GroupSubscriptionRepository,
 	ShareFundRepository,
 	TransactionRepository,
+	OrderRepository,
 ];
 
 @Module({

@@ -36,6 +36,8 @@ export const DbConstants = {
 		Report: "report",
 		ReportReportCategory: "report_report_category",
 		RunCodeCache: "run_code_cache",
+		Order: "order",
+		OrderTransaction: "order_transaction",
 	},
 	ColumnName: {
 		User: {
@@ -320,7 +322,8 @@ export const DbConstants = {
 			subscriptionId: "subscription_id",
 			groupSubscriptionStatus: "group_subscription_status",
 			monthQuantity: "month_quantity",
-			payemntBy: "payment_by",
+			remainDays: "remain_days",
+			paymentBy: "payment_by",
 			isPaid: "is_paid",
 			startedAt: "started_at",
 			endedAt: "ended_at",
@@ -349,6 +352,21 @@ export const DbConstants = {
 			shareFundId: "share_fund_id",
 			groupId: "group_id",
 			subscriptionId: "subscription_id",
+			orderId: "order_id",
+		},
+		Order: {
+			id: "order_id",
+			orderStatus: "order_status",
+			orderCode: "order_code",
+			groupId: "group_id",
+			subscriptionId: "subscription_id",
+			paymentBy: "payment_by",
+			monthQuantity: "month_quantity",
+		},
+		OrderTransaction: {
+			id: "order_transaction_id",
+			orderId: "order_id",
+			transactionId: "transaction_id",
 		},
 	},
 	IndexName: {

@@ -34,3 +34,4 @@ export * from "./subscription.repository";
 export * from "./group-subscription.repository";
 export * from "./share-fund.repository";
 export * from "./transaction.repository";
+export * from "./order.repository";
