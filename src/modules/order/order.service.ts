@@ -1,9 +1,11 @@
-import { Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable } from "@nestjs/common";
 import {
 	CreateOrderRequest,
 	UpdateOrderRequest,
 	OrderQuery,
 	OrderResponse,
+	OrderReportOverviewQuery,
+	OrderReportOverviewResponse,
 } from "./dto";
 import {
 	GroupRepository,
@@ -101,5 +103,112 @@ export class OrderService {
 			throw new Error("Order not found");
 		}
 		return OrderResponse.fromEntity(order);
+	}
+
+	async getReportOverview(
+		query: OrderReportOverviewQuery,
+	): Promise<OrderReportOverviewResponse> {
+		const from = query?.from ? new Date(String(query.from)) : undefined;
+		const to = query?.to ? new Date(String(query.to)) : undefined;
+
+		if (from && Number.isNaN(from.getTime())) {
+			throw new BadRequestException("Invalid 'from' datetime");
+		}
+		if (to && Number.isNaN(to.getTime())) {
+			throw new BadRequestException("Invalid 'to' datetime");
+		}
+
+		// Revenue definition (current schema): sum(subscription.price * order.monthQuantity) for PAID orders.
+		// Note: We use the order's createdAt for date filtering because there is no paidAt field.
+		const base = this.orderRepository
+			.createQueryBuilder("o")
+			.leftJoin("o.subscription", "s")
+			.where("o.orderStatus = :paid", { paid: "PAID" });
+
+		if (from) {
+			base.andWhere("o.createdAt >= :from", { from });
+		}
+		if (to) {
+			base.andWhere("o.createdAt <= :to", { to });
+		}
+
+		const [totalsRaw, bySubscriptionRaw, byDayRaw] = await Promise.all([
+			base
+				.clone()
+				.select("COUNT(o.id)", "totalOrdersSold")
+				.addSelect(
+					"COALESCE(SUM(o.monthQuantity), 0)",
+					"totalSubscriptionsSold",
+				)
+				.addSelect(
+					"COALESCE(SUM(ROUND(s.price * o.monthQuantity)), 0)",
+					"totalRevenueVnd",
+				)
+				.getRawOne<{
+					totalOrdersSold: string | number | null;
+					totalSubscriptionsSold: string | number | null;
+					totalRevenueVnd: string | number | null;
+				}>(),
+			base
+				.clone()
+				.select("s.id", "subscriptionId")
+				.addSelect("s.subscriptionCode", "subscriptionCode")
+				.addSelect("s.subscriptionName", "subscriptionName")
+				.addSelect("COUNT(o.id)", "ordersSold")
+				.addSelect("COALESCE(SUM(o.monthQuantity), 0)", "subscriptionsSold")
+				.addSelect(
+					"COALESCE(SUM(ROUND(s.price * o.monthQuantity)), 0)",
+					"revenueVnd",
+				)
+				.groupBy("s.id")
+				.addGroupBy("s.subscriptionCode")
+				.addGroupBy("s.subscriptionName")
+				.orderBy("revenueVnd", "DESC")
+				.getRawMany<{
+					subscriptionId: string;
+					subscriptionCode: string;
+					subscriptionName: string;
+					ordersSold: string | number | null;
+					subscriptionsSold: string | number | null;
+					revenueVnd: string | number | null;
+				}>(),
+			base
+				.clone()
+				.select("DATE(o.createdAt)", "date")
+				.addSelect("COUNT(o.id)", "ordersSold")
+				.addSelect("COALESCE(SUM(o.monthQuantity), 0)", "subscriptionsSold")
+				.addSelect(
+					"COALESCE(SUM(ROUND(s.price * o.monthQuantity)), 0)",
+					"revenueVnd",
+				)
+				.groupBy("DATE(o.createdAt)")
+				.orderBy("date", "ASC")
+				.getRawMany<{
+					date: string;
+					ordersSold: string | number | null;
+					subscriptionsSold: string | number | null;
+					revenueVnd: string | number | null;
+				}>(),
+		]);
+
+		return {
+			totalOrdersSold: Number(totalsRaw?.totalOrdersSold ?? 0),
+			totalSubscriptionsSold: Number(totalsRaw?.totalSubscriptionsSold ?? 0),
+			totalRevenueVnd: String(totalsRaw?.totalRevenueVnd ?? "0"),
+			bySubscription: (bySubscriptionRaw ?? []).map((row) => ({
+				subscriptionId: String(row.subscriptionId ?? ""),
+				subscriptionCode: String(row.subscriptionCode ?? ""),
+				subscriptionName: String(row.subscriptionName ?? ""),
+				ordersSold: Number(row.ordersSold ?? 0),
+				subscriptionsSold: Number(row.subscriptionsSold ?? 0),
+				revenueVnd: String(row.revenueVnd ?? "0"),
+			})),
+			byDay: (byDayRaw ?? []).map((row) => ({
+				date: String(row.date ?? ""),
+				ordersSold: Number(row.ordersSold ?? 0),
+				subscriptionsSold: Number(row.subscriptionsSold ?? 0),
+				revenueVnd: String(row.revenueVnd ?? "0"),
+			})),
+		};
 	}
 }

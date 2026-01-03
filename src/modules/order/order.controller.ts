@@ -9,7 +9,12 @@ import {
 	Delete,
 } from "@nestjs/common";
 import { OrderService } from "./order.service";
-import { CreateOrderRequest, UpdateOrderRequest, OrderQuery } from "./dto";
+import {
+	CreateOrderRequest,
+	UpdateOrderRequest,
+	OrderQuery,
+	OrderReportOverviewQuery,
+} from "./dto";
 import { ApiResponseDto } from "@utils";
 
 @Controller("order")
@@ -26,6 +31,16 @@ export class OrderController {
 	async findMany(@Query() query: OrderQuery) {
 		const result = await this.orderService.findMany(query);
 		return new ApiResponseDto(result.data, result.pagination);
+	}
+
+	@Get("report/overview")
+	async getReportOverview(@Query() query: OrderReportOverviewQuery) {
+		const data = await this.orderService.getReportOverview(query);
+		return new ApiResponseDto(
+			data,
+			null,
+			"Order overview retrieved successfully",
+		);
 	}
 
 	@Get(":id")
