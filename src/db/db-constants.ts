@@ -1,6 +1,8 @@
 export const DbConstants = {
 	TableName: {
 		User: "user",
+		GroupEntitlement: "group_entitlement",
+		GroupUsage: "group_usage",
 		Subscription: "subscription",
 		GroupSubscription: "group_subscription",
 		ShareFund: "share_fund",
@@ -304,6 +306,30 @@ export const DbConstants = {
 			runCodeType: "run_code_type",
 			result: "result",
 		},
+		GroupEntitlement: {
+			id: "group_entitlement_id",
+			groupId: "group_id",
+			effectiveFrom: "effective_from",
+			effectiveTo: "effective_to",
+			source: "source",
+			subscriptionId: "subscription_id",
+			entitlements: "entitlements",
+			createdAt: "created_at",
+			createdBy: "created_by",
+		},
+		GroupUsage: {
+			id: "group_usage_id",
+			groupId: "group_id",
+			billingCycleKey: "billing_cycle_key",
+			periodStart: "period_start",
+			periodEnd: "period_end",
+			messagesSent: "messages_sent",
+			fileBytesUploaded: "file_bytes_uploaded",
+			runCodeExecutions: "run_code_executions",
+			aiTokensConsumed: "ai_tokens_consumed",
+			createdAt: "created_at",
+			updatedAt: "updated_at",
+		},
 		Subscription: {
 			id: "subscription_id",
 			subscriptionCode: "subscription_code",
@@ -315,6 +341,8 @@ export const DbConstants = {
 			programmingLanguageInGroups: "programming_language_in_groups",
 			allowUseAI: "allow_use_ai",
 			levelSubscription: "level_subscription",
+			isActive: "is_active",
+			version: "version",
 		},
 		GroupSubscription: {
 			id: "group_subscription_id",
@@ -415,6 +443,14 @@ export const DbConstants = {
 		},
 		RunCodeCache: {
 			typeAndTarget: "idx_run_code_cache_type_and_target",
+		},
+		GroupEntitlement: {
+			groupId: "idx_group_entitlement_group_id",
+			groupIdAndEffectiveFrom: "idx_group_entitlement_group_id_effective_from",
+		},
+		GroupUsage: {
+			groupId: "idx_group_usage_group_id",
+			groupIdAndBillingCycleKey: "idx_group_usage_group_id_billing_cycle_key",
 		},
 		GroupSubscription: {
 			groupId: "idx_group_subscription_group_id",

@@ -15,7 +15,7 @@ import {
 	UpdateSubscriptionRequest,
 	SubscriptionQuery,
 } from "./dto";
-import { ApiResponseDto } from "@utils";
+import { AdminRole, ApiResponseDto } from "@utils";
 
 @ApiTags("subscription")
 @Controller("subscription")
@@ -23,6 +23,7 @@ export class SubscriptionController {
 	constructor(private readonly subscriptionService: SubscriptionService) {}
 
 	@Post()
+	@AdminRole()
 	@ApiOperation({
 		summary: "Create subscription plan",
 		description: "Creates a subscription plan with limits and pricing",
@@ -53,6 +54,7 @@ export class SubscriptionController {
 	}
 
 	@Put(":id")
+	@AdminRole()
 	@ApiOperation({
 		summary: "Update subscription plan",
 		description: "Update fields of a subscription plan",
@@ -66,6 +68,7 @@ export class SubscriptionController {
 	}
 
 	@Delete(":id")
+	@AdminRole()
 	@ApiOperation({
 		summary: "Delete subscription plan",
 		description: "Remove a subscription plan by id",
