@@ -88,18 +88,7 @@ export class ShareFundInGroupResponse {
 			updatedAt: entity.updatedAt,
 			group: entity.group ? GroupResponse.fromEntity(entity.group) : null,
 			subscription: entity.subscription
-				? {
-						id: entity.subscription.id,
-						subscriptionCode: entity.subscription.subscriptionCode,
-						subscriptionName: entity.subscription.subscriptionName,
-						price: entity.subscription.price,
-						limitMembers: entity.subscription.limitMembers,
-						isAIActive: entity.subscription.isAIActive,
-						runCodePerDay: entity.subscription.runCodePerDay,
-						programmingLanguageInGroups:
-							entity.subscription.programmingLanguageInGroups,
-						levelSubscription: entity.subscription.levelSubscription,
-					}
+				? SubscriptionResponse.fromEntity(entity.subscription)
 				: null,
 		};
 	}

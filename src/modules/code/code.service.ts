@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, OnModuleInit } from "@nestjs/common";
+import {
+	ForbiddenException,
+	Injectable,
+	NotFoundException,
+	OnModuleInit,
+} from "@nestjs/common";
 import {
 	RunCodeBlockRequest,
 	RunCodeCollabRequest,
@@ -11,13 +16,32 @@ import {
 	CodeBlockRepository,
 	CodeCollaborationRepository,
 	GroupRepository,
+	GroupEntitlementRepository,
 	GroupSupportedProgrammingLanguageRepository,
+	GroupUsageRepository,
 	RunCodeCacheRepostiroy,
 	SupportedProgrammingLanguageRepository,
 } from "@db/repositories";
 import { Builder } from "builder-pattern";
 import { CheckCodeResponse } from "@modules/ai/dto";
 import { ProgrammingLanguageEnum, RunCodeTypeEnum } from "@utils";
+import { Brackets } from "typeorm";
+
+const billingCycleKeyOf = (d: Date) => {
+	const yyyy = d.getUTCFullYear();
+	const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+	return `${yyyy}-${mm}`;
+};
+
+const monthBoundsUtc = (d: Date) => {
+	const start = new Date(
+		Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1, 0, 0, 0),
+	);
+	const end = new Date(
+		Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1, 0, 0, 0),
+	);
+	return { start, end };
+};
 
 @Injectable()
 export class CodeService implements OnModuleInit {
@@ -30,7 +54,87 @@ export class CodeService implements OnModuleInit {
 		private readonly groupRepo: GroupRepository,
 		private readonly channelRepo: ChannelRepository,
 		private readonly groupLanguageRepo: GroupSupportedProgrammingLanguageRepository,
+		private readonly groupEntitlementRepo: GroupEntitlementRepository,
+		private readonly groupUsageRepo: GroupUsageRepository,
 	) {}
+
+	private async getCurrentGroupEntitlement(groupId: string, now: Date) {
+		return await this.groupEntitlementRepo
+			.createQueryBuilder("ge")
+			.where("ge.groupId = :groupId", { groupId })
+			.andWhere("ge.effectiveFrom <= :now", { now })
+			.andWhere(
+				new Brackets((qb) => {
+					qb.where("ge.effectiveTo IS NULL").orWhere("ge.effectiveTo > :now", {
+						now,
+					});
+				}),
+			)
+			.orderBy("ge.effectiveFrom", "DESC")
+			.getOne();
+	}
+
+	private async getOrCreateCurrentGroupUsage(groupId: string, now: Date) {
+		const billingCycleKey = billingCycleKeyOf(now);
+		let usage = await this.groupUsageRepo.findOneBy({
+			groupId,
+			billingCycleKey,
+		});
+		if (usage) return usage;
+
+		const { start: periodStart, end: periodEnd } = monthBoundsUtc(now);
+		try {
+			await this.groupUsageRepo.insert(
+				this.groupUsageRepo.create({
+					groupId,
+					billingCycleKey,
+					periodStart,
+					periodEnd,
+					messagesSent: 0,
+					fileBytesUploaded: "0",
+					runCodeExecutions: 0,
+					aiTokensConsumed: "0",
+				}),
+			);
+		} catch {
+			// Ignore race (unique index), will fetch below.
+		}
+		usage = await this.groupUsageRepo.findOneBy({ groupId, billingCycleKey });
+		if (!usage) {
+			throw new NotFoundException("Group usage not found");
+		}
+		return usage;
+	}
+
+	private async assertGroupCanRunCode(groupId: string, now: Date) {
+		const [entitlement, usage] = await Promise.all([
+			this.getCurrentGroupEntitlement(groupId, now),
+			this.getOrCreateCurrentGroupUsage(groupId, now),
+		]);
+
+		const runCodePerDay = Number(
+			(entitlement as any)?.entitlements?.limits?.runCodePerDay ?? 0,
+		);
+		const limit = Number.isFinite(runCodePerDay) ? runCodePerDay : 0;
+
+		// limit <= 0 means not allowed.
+		if (limit <= 0) {
+			throw new ForbiddenException("Run code is not allowed for this group");
+		}
+		if ((usage.runCodeExecutions ?? 0) >= limit) {
+			throw new ForbiddenException("Run code limit reached for this group");
+		}
+
+		return usage;
+	}
+
+	private async increaseRunCodeExecutions(usageId: string) {
+		await this.groupUsageRepo.increment(
+			{ id: usageId },
+			"runCodeExecutions",
+			1,
+		);
+	}
 
 	async onModuleInit() {
 		console.log("Preparing code execution containers...");
@@ -92,6 +196,7 @@ export class CodeService implements OnModuleInit {
 			throw new NotFoundException("Code block not found");
 		}
 
+		let usageIdToIncrement: string | null = null;
 		if (codeBlock.channelId) {
 			// Verify that the code block's language is allowed in its group
 			const channel = await this.channelRepo.findOne({
@@ -121,6 +226,11 @@ export class CodeService implements OnModuleInit {
 					"Programming language is not supported in this group",
 				);
 			}
+
+			// Check usage limit from current entitlement snapshot
+			const now = new Date();
+			const usage = await this.assertGroupCanRunCode(channel.group.id, now);
+			usageIdToIncrement = usage.id;
 		}
 
 		const cache = await this.runCodeCacheRepo.findOne({
@@ -131,6 +241,9 @@ export class CodeService implements OnModuleInit {
 		});
 
 		if (cache) {
+			if (usageIdToIncrement) {
+				await this.increaseRunCodeExecutions(usageIdToIncrement);
+			}
 			return Builder<CodeExecutionResult>().output(cache.result).build();
 		}
 
@@ -167,19 +280,28 @@ export class CodeService implements OnModuleInit {
 					result: output,
 				});
 
+				if (usageIdToIncrement) {
+					await this.increaseRunCodeExecutions(usageIdToIncrement);
+				}
 				return Builder<CodeExecutionResult>().output(output).build();
 			}
 		}
 
-		const result = await execMap[language.languageCode](codeBlock.content);
+		try {
+			const result = await execMap[language.languageCode](codeBlock.content);
 
-		await this.runCodeCacheRepo.insert({
-			targetId: dto.codeBlockId,
-			runCodeType: RunCodeTypeEnum.CODE_BLOCK,
-			result: result.output,
-		});
+			await this.runCodeCacheRepo.insert({
+				targetId: dto.codeBlockId,
+				runCodeType: RunCodeTypeEnum.CODE_BLOCK,
+				result: result.output,
+			});
 
-		return result;
+			return result;
+		} finally {
+			if (usageIdToIncrement) {
+				await this.increaseRunCodeExecutions(usageIdToIncrement);
+			}
+		}
 	}
 
 	async runCodeCollab(dto: RunCodeCollabRequest): Promise<CodeExecutionResult> {

@@ -14,6 +14,7 @@ import {
 	SubscriptionRepository,
 } from "@db/repositories";
 import { PaginationDto } from "@utils";
+import { In } from "typeorm";
 
 @Injectable()
 export class OrderService {
@@ -69,6 +70,9 @@ export class OrderService {
 		const skip = (page - 1) * limit;
 
 		const groupId = query?.groupId ? String(query.groupId) : undefined;
+		// Business rule: do not return PENDING orders in list views.
+		// Keep only completed/finalized statuses.
+		const allowedStatuses = ["PAID", "FAILED"] as const;
 
 		const allowedSortBy = new Set(["createdAt", "orderCode", "orderStatus"]);
 		const sortBy = allowedSortBy.has(String(query?.sortBy))
@@ -77,7 +81,9 @@ export class OrderService {
 		const sortOrder = query?.sortOrder === "ASC" ? "ASC" : "DESC";
 
 		const [orders, totalRecord] = await this.orderRepository.findAndCount({
-			where: groupId ? { groupId } : undefined,
+			where: groupId
+				? { groupId, orderStatus: In([...allowedStatuses]) }
+				: { orderStatus: In([...allowedStatuses]) },
 			relations: { group: true, subscription: true },
 			order: { [sortBy]: sortOrder } as any,
 			skip,
