@@ -13,6 +13,7 @@ import {
 import {
 	GroupRepository,
 	GroupSubscriptionRepository,
+	GroupEntitlementRepository,
 	OrderRepository,
 	ShareFundRepository,
 	SubscriptionRepository,
@@ -41,6 +42,7 @@ export class PaymentService {
 		private readonly shareFundRepo: ShareFundRepository,
 		private readonly subscriptionRepo: SubscriptionRepository,
 		private readonly groupSubscriptionRepo: GroupSubscriptionRepository,
+		private readonly groupEntitlementRepo: GroupEntitlementRepository,
 		private readonly transactionRepo: TransactionRepository,
 		private readonly userRepo: UserRepository,
 		private readonly orderRepo: OrderRepository,
@@ -67,13 +69,76 @@ export class PaymentService {
 		return d;
 	}
 
+	private async ensureEntitlementSnapshot(params: {
+		groupId: string;
+		subscriptionId: string;
+		effectiveFrom: Date;
+		effectiveTo: Date | null;
+		source:
+			| "trial"
+			| "purchase"
+			| "renewal"
+			| "change"
+			| "admin_override"
+			| "migration";
+		createdBy: string;
+	}) {
+		const {
+			groupId,
+			subscriptionId,
+			effectiveFrom,
+			effectiveTo,
+			source,
+			createdBy,
+		} = params;
+
+		const existing = await this.groupEntitlementRepo.findOne({
+			where: {
+				groupId: String(groupId),
+				subscriptionId: String(subscriptionId),
+				effectiveFrom,
+			},
+		});
+		if (existing) return;
+
+		const subscription = await this.subscriptionRepo.findOneBy({
+			id: String(subscriptionId),
+		});
+		if (!subscription) throw new BadRequestException("Subscription not found");
+
+		await this.groupEntitlementRepo.insert(
+			this.groupEntitlementRepo.create({
+				groupId: String(groupId),
+				effectiveFrom,
+				effectiveTo,
+				source,
+				subscriptionId: String(subscriptionId),
+				entitlements: {
+					features: {
+						ai: Boolean(subscription.isAIActive),
+					},
+					limits: {
+						members: Number(subscription.limitMembers ?? 0),
+						runCodePerDay: Number(subscription.runCodePerDay ?? 0),
+						programmingLanguagesInGroups: Number(
+							subscription.programmingLanguageInGroups ?? 0,
+						),
+					},
+				},
+				createdBy: String(createdBy),
+			}),
+		);
+	}
+
 	private async applyGroupSubscription(params: {
 		groupId: string;
 		subscriptionId: string;
 		monthQuantity: number;
 		paymentBy: string;
+		createdBy: string;
 	}) {
-		const { groupId, subscriptionId, monthQuantity, paymentBy } = params;
+		const { groupId, subscriptionId, monthQuantity, paymentBy, createdBy } =
+			params;
 		const purchasedSubscription = await this.subscriptionRepo.findOneBy({
 			id: String(subscriptionId),
 		});
@@ -96,6 +161,16 @@ export class PaymentService {
 				endedAt,
 			}),
 		);
+
+		// Create entitlement snapshot for this purchased tier.
+		await this.ensureEntitlementSnapshot({
+			groupId: String(groupId),
+			subscriptionId: String(subscriptionId),
+			effectiveFrom: startedAt,
+			effectiveTo: endedAt,
+			source: "purchase",
+			createdBy: String(createdBy),
+		});
 
 		// If the purchased plan is the highest level in the group, schedule other active tiers
 		// to start after this higher tier ends (free plan keeps its end date unchanged).
@@ -122,6 +197,7 @@ export class PaymentService {
 			}, -Infinity);
 
 			if (purchasedLevel > maxOtherLevel) {
+				const shiftedTierIds: string[] = [];
 				await Promise.all(
 					otherActive.map(async (s) => {
 						const isFreePlan = Number(s.subscription?.price ?? 0) <= 0;
@@ -136,8 +212,28 @@ export class PaymentService {
 							patch.endedAt = this.addMonths(newStartedAt, monthQty);
 						}
 						await this.groupSubscriptionRepo.update(s.id, patch);
+						shiftedTierIds.push(String(s.id));
 					}),
 				);
+
+				// Insert entitlement snapshots for shifted tiers so runtime reflects the schedule.
+				if (shiftedTierIds.length) {
+					const shifted = await this.groupSubscriptionRepo.find({
+						where: { id: In(shiftedTierIds) },
+					});
+					await Promise.all(
+						shifted.map((s) =>
+							this.ensureEntitlementSnapshot({
+								groupId: String(groupId),
+								subscriptionId: String(s.subscriptionId),
+								effectiveFrom: s.startedAt ?? anchor,
+								effectiveTo: s.endedAt ?? null,
+								source: "change",
+								createdBy: String(createdBy),
+							}),
+						),
+					);
+				}
 			}
 		}
 
@@ -406,6 +502,7 @@ export class PaymentService {
 								subscriptionId: String(shareFund.subscriptionId),
 								monthQuantity: monthQty,
 								paymentBy: currentUsername,
+								createdBy: String(payerUserId ?? ""),
 							});
 							// After successfully applying the subscription, delete the share fund.
 							await this.shareFundRepo.delete(shareFund.id);
@@ -424,6 +521,7 @@ export class PaymentService {
 					subscriptionId: String(subscriptionId),
 					monthQuantity: paidMonths,
 					paymentBy: currentUsername,
+					createdBy: String(payerUserId),
 				});
 			}
 		}

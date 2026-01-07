@@ -27,7 +27,7 @@ import { GroupInvitationModule } from "@modules/group-invitation";
 import { NotificationModule } from "@modules/notification";
 import { AiModule } from "@modules/ai/ai.module";
 import { CodeCollaborationModule } from "@modules/code-collaboration";
-import { UserScheduler } from "./schedulers";
+import { GroupUsageScheduler, UserScheduler } from "./schedulers";
 import { ScheduleModule } from "@nestjs/schedule";
 import { ProgrammingLanguageModule } from "@modules/programming-language";
 import { UserLanguageCollectionModule } from "@modules/user-language-collection";
@@ -109,6 +109,7 @@ import { OrderModule } from "@modules/order";
 			useClass: AuditLogInterceptor,
 		},
 		UserScheduler,
+		GroupUsageScheduler,
 	],
 	controllers: [AppController],
 })

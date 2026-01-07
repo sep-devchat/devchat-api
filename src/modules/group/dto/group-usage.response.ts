@@ -1,5 +1,5 @@
 import { GroupUsageEntity } from "@db/entities";
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 export class GroupUsageResponse {
 	@ApiProperty({ example: "550e8400-e29b-41d4-a716-446655440000" })
@@ -34,6 +34,19 @@ export class GroupUsageResponse {
 
 	@ApiProperty({ example: "2026-01-01T00:00:00.000Z" })
 	updatedAt: Date;
+
+	@ApiPropertyOptional({
+		description: "Current joined members in group (computed)",
+		example: 3,
+	})
+	currentMembers?: number;
+
+	@ApiPropertyOptional({
+		description:
+			"Current active programming languages configured for this group (computed)",
+		example: 1,
+	})
+	currentProgrammingLanguagesInGroups?: number;
 
 	static fromEntity(entity: GroupUsageEntity): GroupUsageResponse {
 		return {
