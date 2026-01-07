@@ -6,6 +6,7 @@ import { ClsService } from "nestjs-cls";
 import {
 	ChannelRepository,
 	GroupEntitlementRepository,
+	GroupSupportedProgrammingLanguageRepository,
 	GroupSubscriptionRepository,
 	GroupUsageRepository,
 	GroupRepository,
@@ -16,6 +17,7 @@ import { Transactional } from "typeorm-transactional";
 import { GroupSubscriptionResponse } from "@modules/group-subscription/dto";
 import { GroupEntitlementResponse, GroupUsageResponse } from "./dto";
 import { v } from "@faker-js/faker/dist/airline-DF6RqYmq";
+import { IsNull, Not } from "typeorm";
 
 const billingCycleKeyOf = (d: Date) => {
 	const yyyy = d.getUTCFullYear();
@@ -45,6 +47,7 @@ export class GroupService {
 		private readonly groupSubscriptionRepo: GroupSubscriptionRepository,
 		private readonly groupEntitlementRepo: GroupEntitlementRepository,
 		private readonly groupUsageRepo: GroupUsageRepository,
+		private readonly groupLanguageRepo: GroupSupportedProgrammingLanguageRepository,
 		private readonly cls: ClsService<DevChatCls>,
 	) {}
 
@@ -328,6 +331,29 @@ export class GroupService {
 			this.logger.warn(
 				`Failed loading group usage: ${err?.message ?? String(err)}`,
 			);
+		}
+
+		// Attach computed usage info (not stored in group_usage table).
+		if (usage) {
+			try {
+				const [currentMembers, currentProgrammingLanguagesInGroups] =
+					await Promise.all([
+						this.userGroupRepo.count({
+							where: { groupId, joinedAt: Not(IsNull()) },
+						}),
+						this.groupLanguageRepo.count({
+							where: { groupId, isActive: true },
+						}),
+					]);
+
+				usage.currentMembers = currentMembers;
+				usage.currentProgrammingLanguagesInGroups =
+					currentProgrammingLanguagesInGroups;
+			} catch (err: any) {
+				this.logger.warn(
+					`Failed loading computed usage info: ${err?.message ?? String(err)}`,
+				);
+			}
 		}
 
 		return {
