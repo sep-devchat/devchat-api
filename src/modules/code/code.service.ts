@@ -196,7 +196,14 @@ export class CodeService implements OnModuleInit {
 			throw new NotFoundException("Code block not found");
 		}
 
-		let usageIdToIncrement: string | null = null;
+		const cache = await this.runCodeCacheRepo.findOne({
+			where: {
+				targetId: dto.codeBlockId,
+				runCodeType: RunCodeTypeEnum.CODE_BLOCK,
+			},
+		});
+
+		let groupId: string | null = null;
 		if (codeBlock.channelId) {
 			// Verify that the code block's language is allowed in its group
 			const channel = await this.channelRepo.findOne({
@@ -227,24 +234,19 @@ export class CodeService implements OnModuleInit {
 				);
 			}
 
-			// Check usage limit from current entitlement snapshot
-			const now = new Date();
-			const usage = await this.assertGroupCanRunCode(channel.group.id, now);
-			usageIdToIncrement = usage.id;
+			groupId = channel.group.id;
 		}
 
-		const cache = await this.runCodeCacheRepo.findOne({
-			where: {
-				targetId: dto.codeBlockId,
-				runCodeType: RunCodeTypeEnum.CODE_BLOCK,
-			},
-		});
-
 		if (cache) {
-			if (usageIdToIncrement) {
-				await this.increaseRunCodeExecutions(usageIdToIncrement);
-			}
 			return Builder<CodeExecutionResult>().output(cache.result).build();
+		}
+
+		let usageIdToIncrement: string | null = null;
+		if (groupId) {
+			// Check usage limit from current entitlement snapshot
+			const now = new Date();
+			const usage = await this.assertGroupCanRunCode(groupId, now);
+			usageIdToIncrement = usage.id;
 		}
 
 		const language = await this.programmingLanguageRepo.findOne({
@@ -305,17 +307,6 @@ export class CodeService implements OnModuleInit {
 	}
 
 	async runCodeCollab(dto: RunCodeCollabRequest): Promise<CodeExecutionResult> {
-		const cache = await this.runCodeCacheRepo.findOne({
-			where: {
-				targetId: dto.codeCollabId,
-				runCodeType: RunCodeTypeEnum.CODE_COLLABORATION,
-			},
-		});
-
-		if (cache) {
-			return Builder<CodeExecutionResult>().output(cache.result).build();
-		}
-
 		const codeCollab = await this.codeCollaborationRepo.findOne({
 			where: { id: dto.codeCollabId },
 			relations: { codeBlock: true },
@@ -323,6 +314,60 @@ export class CodeService implements OnModuleInit {
 
 		if (!codeCollab) {
 			throw new NotFoundException("Code collaboration not found");
+		}
+
+		const cache = await this.runCodeCacheRepo.findOne({
+			where: {
+				targetId: dto.codeCollabId,
+				runCodeType: RunCodeTypeEnum.CODE_COLLABORATION,
+			},
+		});
+
+		let groupId: string | null = null;
+		if (codeCollab.codeBlock.channelId) {
+			// Verify that the code block's language is allowed in its group
+			const channel = await this.channelRepo.findOne({
+				where: { id: codeCollab.codeBlock.channelId },
+				relations: { group: true },
+			});
+
+			if (!channel) {
+				throw new NotFoundException("Channel not found for the code block");
+			}
+
+			const groupLanguage = await this.groupLanguageRepo.find({
+				where: {
+					groupId: channel.group.id,
+				},
+				relations: { supportedProgrammingLanguage: true },
+			});
+
+			const allowLanguage = groupLanguage.some(
+				(gl) =>
+					gl.isActive &&
+					gl.supportedProgrammingLanguage.languageCode ===
+						codeCollab.codeBlock.language,
+			);
+
+			if (!allowLanguage) {
+				throw new NotFoundException(
+					"Programming language is not supported in this group",
+				);
+			}
+
+			groupId = channel.group.id;
+		}
+
+		if (cache) {
+			return Builder<CodeExecutionResult>().output(cache.result).build();
+		}
+
+		let usageIdToIncrement: string | null = null;
+		if (groupId) {
+			// Check usage limit from current entitlement snapshot
+			const now = new Date();
+			const usage = await this.assertGroupCanRunCode(groupId, now);
+			usageIdToIncrement = usage.id;
 		}
 
 		const language = await this.programmingLanguageRepo.findOne({
@@ -357,18 +402,27 @@ export class CodeService implements OnModuleInit {
 					result: output,
 				});
 
+				if (usageIdToIncrement) {
+					await this.increaseRunCodeExecutions(usageIdToIncrement);
+				}
 				return Builder<CodeExecutionResult>().output(output).build();
 			}
 		}
 
-		const result = await execMap[language.languageCode](codeCollab.content);
+		try {
+			const result = await execMap[language.languageCode](codeCollab.content);
 
-		await this.runCodeCacheRepo.insert({
-			targetId: dto.codeCollabId,
-			runCodeType: RunCodeTypeEnum.CODE_COLLABORATION,
-			result: result.output,
-		});
+			await this.runCodeCacheRepo.insert({
+				targetId: dto.codeCollabId,
+				runCodeType: RunCodeTypeEnum.CODE_COLLABORATION,
+				result: result.output,
+			});
 
-		return result;
+			return result;
+		} finally {
+			if (usageIdToIncrement) {
+				await this.increaseRunCodeExecutions(usageIdToIncrement);
+			}
+		}
 	}
 }
