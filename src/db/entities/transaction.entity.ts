@@ -11,6 +11,7 @@ import { UserEntity } from "./user.entity";
 import { GroupEntity } from "./group.entity";
 import { ShareFundEntity } from "./share-fund.entity";
 import { SubscriptionEntity } from "./subscription.entity";
+import { OrderEntity } from "./order.entity";
 
 const { TableName, ColumnName, IndexName } = DbConstants;
 
@@ -83,6 +84,13 @@ export class TransactionEntity {
 	@ManyToOne(() => SubscriptionEntity, { createForeignKeyConstraints: false })
 	@JoinColumn({ name: ColumnName.Transaction.subscriptionId })
 	subscription: SubscriptionEntity;
+
+	@Column({ name: ColumnName.Transaction.orderId, nullable: true })
+	orderId: string | null;
+
+	@ManyToOne(() => OrderEntity, { createForeignKeyConstraints: false })
+	@JoinColumn({ name: ColumnName.Transaction.orderId })
+	order: OrderEntity;
 
 	@Column({
 		name: ColumnName.Audit.createdAt,

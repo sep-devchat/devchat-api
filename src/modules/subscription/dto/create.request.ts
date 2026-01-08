@@ -66,12 +66,13 @@ export class CreateSubscriptionRequest {
 	@ApiProperty({
 		example: true,
 		required: false,
-		default: false,
-		description: "Allow using AI features for this subscription plan",
+		default: true,
+		description:
+			"Whether the subscription is active and available for purchase",
 	})
 	@IsBoolean()
 	@IsOptional()
-	allowUseAI?: boolean;
+	isActive?: boolean;
 
 	@ApiProperty({
 		example: 1,

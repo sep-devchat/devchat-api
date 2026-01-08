@@ -14,6 +14,8 @@ import { ShareFundEntity } from "./share-fund.entity";
 import { GroupSubscriptionEntity } from "./group-subscription.entity";
 import { TransactionEntity } from "./transaction.entity";
 import { GroupSupportedProgrammingLanguageEntity } from "./group-supported-programming-language.entity";
+import { GroupEntitlementEntity } from "./group-entitlement.entity";
+import { GroupUsageEntity } from "./group-usage.entity";
 
 const { TableName, ColumnName, IndexName } = DbConstants;
 
@@ -74,4 +76,18 @@ export class GroupEntity {
 		{ createForeignKeyConstraints: false },
 	)
 	groupSupportedProgrammingLanguages: GroupSupportedProgrammingLanguageEntity[];
+
+	@OneToMany(
+		() => GroupEntitlementEntity,
+		(groupEntitlement) => groupEntitlement.group,
+		{
+			createForeignKeyConstraints: false,
+		},
+	)
+	groupEntitlements: GroupEntitlementEntity[];
+
+	@OneToMany(() => GroupUsageEntity, (groupUsage) => groupUsage.group, {
+		createForeignKeyConstraints: false,
+	})
+	groupUsages: GroupUsageEntity[];
 }

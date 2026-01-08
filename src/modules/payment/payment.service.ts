@@ -13,6 +13,8 @@ import {
 import {
 	GroupRepository,
 	GroupSubscriptionRepository,
+	GroupEntitlementRepository,
+	OrderRepository,
 	ShareFundRepository,
 	SubscriptionRepository,
 	TransactionRepository,
@@ -28,6 +30,7 @@ import {
 	toVndAmountFromVnpay,
 } from "./payment.helpers";
 import { UserGroupRepository } from "@db/repositories";
+import { In, IsNull, Not } from "typeorm";
 
 @Injectable()
 export class PaymentService {
@@ -39,8 +42,10 @@ export class PaymentService {
 		private readonly shareFundRepo: ShareFundRepository,
 		private readonly subscriptionRepo: SubscriptionRepository,
 		private readonly groupSubscriptionRepo: GroupSubscriptionRepository,
+		private readonly groupEntitlementRepo: GroupEntitlementRepository,
 		private readonly transactionRepo: TransactionRepository,
 		private readonly userRepo: UserRepository,
+		private readonly orderRepo: OrderRepository,
 	) {}
 
 	private async addUserSubscriptionRole(
@@ -64,13 +69,76 @@ export class PaymentService {
 		return d;
 	}
 
+	private async ensureEntitlementSnapshot(params: {
+		groupId: string;
+		subscriptionId: string;
+		effectiveFrom: Date;
+		effectiveTo: Date | null;
+		source:
+			| "trial"
+			| "purchase"
+			| "renewal"
+			| "change"
+			| "admin_override"
+			| "migration";
+		createdBy: string;
+	}) {
+		const {
+			groupId,
+			subscriptionId,
+			effectiveFrom,
+			effectiveTo,
+			source,
+			createdBy,
+		} = params;
+
+		const existing = await this.groupEntitlementRepo.findOne({
+			where: {
+				groupId: String(groupId),
+				subscriptionId: String(subscriptionId),
+				effectiveFrom,
+			},
+		});
+		if (existing) return;
+
+		const subscription = await this.subscriptionRepo.findOneBy({
+			id: String(subscriptionId),
+		});
+		if (!subscription) throw new BadRequestException("Subscription not found");
+
+		await this.groupEntitlementRepo.insert(
+			this.groupEntitlementRepo.create({
+				groupId: String(groupId),
+				effectiveFrom,
+				effectiveTo,
+				source,
+				subscriptionId: String(subscriptionId),
+				entitlements: {
+					features: {
+						ai: Boolean(subscription.isAIActive),
+					},
+					limits: {
+						members: Number(subscription.limitMembers ?? 0),
+						runCodePerDay: Number(subscription.runCodePerDay ?? 0),
+						programmingLanguagesInGroups: Number(
+							subscription.programmingLanguageInGroups ?? 0,
+						),
+					},
+				},
+				createdBy: String(createdBy),
+			}),
+		);
+	}
+
 	private async applyGroupSubscription(params: {
 		groupId: string;
 		subscriptionId: string;
 		monthQuantity: number;
 		paymentBy: string;
+		createdBy: string;
 	}) {
-		const { groupId, subscriptionId, monthQuantity, paymentBy } = params;
+		const { groupId, subscriptionId, monthQuantity, paymentBy, createdBy } =
+			params;
 		const purchasedSubscription = await this.subscriptionRepo.findOneBy({
 			id: String(subscriptionId),
 		});
@@ -86,12 +154,23 @@ export class PaymentService {
 				subscriptionId: String(subscriptionId),
 				groupSubscriptionStatus: "active",
 				monthQuantity,
+				remainDays: monthQuantity * 30,
 				paymentBy,
 				isPaid: true,
 				startedAt,
 				endedAt,
 			}),
 		);
+
+		// Create entitlement snapshot for this purchased tier.
+		await this.ensureEntitlementSnapshot({
+			groupId: String(groupId),
+			subscriptionId: String(subscriptionId),
+			effectiveFrom: startedAt,
+			effectiveTo: endedAt,
+			source: "purchase",
+			createdBy: String(createdBy),
+		});
 
 		// If the purchased plan is the highest level in the group, schedule other active tiers
 		// to start after this higher tier ends (free plan keeps its end date unchanged).
@@ -118,6 +197,7 @@ export class PaymentService {
 			}, -Infinity);
 
 			if (purchasedLevel > maxOtherLevel) {
+				const shiftedTierIds: string[] = [];
 				await Promise.all(
 					otherActive.map(async (s) => {
 						const isFreePlan = Number(s.subscription?.price ?? 0) <= 0;
@@ -132,8 +212,28 @@ export class PaymentService {
 							patch.endedAt = this.addMonths(newStartedAt, monthQty);
 						}
 						await this.groupSubscriptionRepo.update(s.id, patch);
+						shiftedTierIds.push(String(s.id));
 					}),
 				);
+
+				// Insert entitlement snapshots for shifted tiers so runtime reflects the schedule.
+				if (shiftedTierIds.length) {
+					const shifted = await this.groupSubscriptionRepo.find({
+						where: { id: In(shiftedTierIds) },
+					});
+					await Promise.all(
+						shifted.map((s) =>
+							this.ensureEntitlementSnapshot({
+								groupId: String(groupId),
+								subscriptionId: String(s.subscriptionId),
+								effectiveFrom: s.startedAt ?? anchor,
+								effectiveTo: s.endedAt ?? null,
+								source: "change",
+								createdBy: String(createdBy),
+							}),
+						),
+					);
+				}
 			}
 		}
 
@@ -156,12 +256,17 @@ export class PaymentService {
 
 	async createDepositUrl(dto: CreatePaymentRequest) {
 		const currentUserId = this.cls.get("profile.id");
+		const currentUsername = this.cls.get("profile.username") || "unknown";
 		if (!currentUserId)
 			throw new BadRequestException("Missing authenticated user");
 
 		await this.assertUserInGroup(String(dto.groupId), String(currentUserId));
 
 		const transactionType = String(dto.transactionType ?? "SUBSCRIPTION");
+
+		let resolvedMonthQuantity = Number.isFinite(dto.monthQuantity)
+			? dto.monthQuantity
+			: 1;
 
 		// If this is a share-fund donation, validate the fund and contribution limit upfront.
 		let resolvedSubscriptionId = String(dto.subscriptionId);
@@ -175,6 +280,11 @@ export class PaymentService {
 			if (!shareFund) throw new BadRequestException("Share fund not found");
 
 			resolvedSubscriptionId = String(shareFund.subscriptionId);
+			resolvedMonthQuantity =
+				Number.isFinite(shareFund.monthQuantity) &&
+				(shareFund.monthQuantity ?? 0) >= 1
+					? shareFund.monthQuantity
+					: 1;
 
 			if (shareFund.contributeTime != null) {
 				const maxTimes = Number(shareFund.contributeTime);
@@ -201,9 +311,7 @@ export class PaymentService {
 		if (!subscription) throw new BadRequestException("Subscription not found");
 
 		const txnRef = `${Date.now()}_${currentUserId}`;
-		const monthQuantity = Number.isFinite(dto.monthQuantity)
-			? dto.monthQuantity
-			: 1;
+		const monthQuantity = resolvedMonthQuantity;
 		const orderInfo = makeOrderInfo({
 			uid: String(currentUserId),
 			gid: String(dto.groupId),
@@ -213,6 +321,51 @@ export class PaymentService {
 
 		if (!Env.VNP_RETURN_URL) {
 			throw new BadRequestException("Missing VNP_RETURN_URL");
+		}
+
+		// Business rule:
+		// - Subscription payment: one transaction per order (create a new Order per payment).
+		// - Share-fund donation: many transactions per order (reuse a single Order per shareFundId).
+		let order = null as any;
+		if (transactionType === "DONATION") {
+			const shareFundId = dto.shareFundId ? String(dto.shareFundId) : "";
+			// Find an existing donation order via latest donation transaction that has an orderId.
+			const latestDonationTx = await this.transactionRepo.findOne({
+				where: {
+					shareFundId,
+					transactionType: "DONATION",
+					orderId: Not(IsNull()),
+				},
+				relations: { order: true },
+				order: { createdAt: "DESC" },
+			});
+			order = latestDonationTx?.order ?? null;
+			if (!order) {
+				order = await this.orderRepo.save(
+					this.orderRepo.create({
+						groupId: String(dto.groupId),
+						subscriptionId: String(resolvedSubscriptionId),
+						monthQuantity,
+						paymentBy: "Share funds",
+						orderStatus: "PENDING",
+						orderCode: `SF_${shareFundId}`,
+						createdBy: String(currentUserId),
+					}),
+				);
+			}
+		} else {
+			// Create pending order before redirecting to VNPay.
+			order = await this.orderRepo.save(
+				this.orderRepo.create({
+					groupId: String(dto.groupId),
+					subscriptionId: String(resolvedSubscriptionId),
+					monthQuantity,
+					paymentBy: currentUsername,
+					orderStatus: "PENDING",
+					orderCode: txnRef,
+					createdBy: String(currentUserId),
+				}),
+			);
 		}
 
 		// Create pending transaction before redirecting to VNPay.
@@ -228,6 +381,7 @@ export class PaymentService {
 				groupId: String(dto.groupId),
 				shareFundId: dto.shareFundId ? String(dto.shareFundId) : null,
 				subscriptionId: String(resolvedSubscriptionId),
+				orderId: order ? order.id : null,
 			}),
 		);
 
@@ -290,6 +444,7 @@ export class PaymentService {
 
 		const txType = existingTx?.transactionType ?? "SUBSCRIPTION";
 		const isDonationFlow = txType === "DONATION" && !!existingTx?.shareFundId;
+		let donationReachedTarget = false;
 
 		// Persist success (idempotent-ish).
 		if (verified.isSuccess && !alreadyProcessed) {
@@ -317,6 +472,8 @@ export class PaymentService {
 				// Share fund may have already been completed and deleted by another payment callback.
 				if (!shareFund) {
 					// Nothing to apply to the fund, but the payment itself is still valid.
+					// In this case, treat it as already reached so donation orders can be finalized.
+					donationReachedTarget = true;
 				} else {
 					// Apply donation amount to the share fund.
 					const currentAmount = BigInt(shareFund.currentVndAmount ?? "0");
@@ -345,9 +502,11 @@ export class PaymentService {
 								subscriptionId: String(shareFund.subscriptionId),
 								monthQuantity: monthQty,
 								paymentBy: currentUsername,
+								createdBy: String(payerUserId ?? ""),
 							});
 							// After successfully applying the subscription, delete the share fund.
 							await this.shareFundRepo.delete(shareFund.id);
+							donationReachedTarget = true;
 						}
 					}
 				}
@@ -362,6 +521,7 @@ export class PaymentService {
 					subscriptionId: String(subscriptionId),
 					monthQuantity: paidMonths,
 					paymentBy: currentUsername,
+					createdBy: String(payerUserId),
 				});
 			}
 		}
@@ -395,6 +555,99 @@ export class PaymentService {
 					subscriptionId: parsed.subscriptionId ?? null,
 				}),
 			);
+		}
+
+		// Order status update rules:
+		// - Subscription payments: one transaction per order; set order to PAID or FAILED.
+		// - Share-fund donations: many transactions share one order; keep order PENDING until the share-fund target is reached,
+		//   then set order to PAID. Donation failures should NOT set the shared order to FAILED.
+		if (verified.isVerified) {
+			const orderIdFromTx = existingTx?.orderId
+				? String(existingTx.orderId)
+				: null;
+			const orderId = orderIdFromTx
+				? orderIdFromTx
+				: txnRef
+					? ((await this.orderRepo.findOneBy({ orderCode: txnRef }))?.id ??
+						null)
+					: null;
+
+			if (orderId) {
+				if (isDonationFlow) {
+					// Donation payments should not flip the shared order to FAILED.
+					if (!verified.isSuccess) {
+						// keep PENDING
+					} else {
+						const shareFundId = existingTx?.shareFundId
+							? String(existingTx.shareFundId)
+							: null;
+
+						// If this callback didn't compute reaching target (e.g., alreadyProcessed), re-check current fund state.
+						if (!donationReachedTarget && shareFundId) {
+							const groupId = existingTx?.groupId ?? parsed.groupId;
+							if (groupId) {
+								const shareFund = await this.shareFundRepo.findOneBy({
+									id: shareFundId,
+									groupId: String(groupId),
+								});
+								if (!shareFund) {
+									donationReachedTarget = true;
+								} else {
+									const targetSubscription =
+										await this.subscriptionRepo.findOneBy({
+											id: String(shareFund.subscriptionId),
+										});
+									if (targetSubscription) {
+										const monthQty =
+											Number.isFinite(shareFund.monthQuantity) &&
+											(shareFund.monthQuantity ?? 0) >= 1
+												? shareFund.monthQuantity
+												: 1;
+										const price = Number(targetSubscription.price ?? 0);
+										const targetAmount = BigInt(
+											String(Math.round(price * monthQty)),
+										);
+										const currentAmount = BigInt(
+											shareFund.currentVndAmount ?? "0",
+										);
+										donationReachedTarget =
+											targetAmount > 0n && currentAmount >= targetAmount;
+									}
+								}
+							}
+						}
+
+						if (donationReachedTarget && shareFundId) {
+							const successfulDonations = await this.transactionRepo.find({
+								where: {
+									shareFundId,
+									transactionType: "DONATION",
+									transactionStatus: "SUCCESS",
+								},
+							});
+							const orderIds = successfulDonations
+								.map((t) => t.orderId)
+								.filter((id): id is string => !!id);
+							if (orderIds.length) {
+								await this.orderRepo.update(
+									{ id: In(orderIds) },
+									{ orderStatus: "PAID" },
+								);
+							} else {
+								// Fallback: at least mark the current order as PAID.
+								await this.orderRepo.update(orderId, { orderStatus: "PAID" });
+							}
+						}
+						// else: keep PENDING
+					}
+				} else {
+					if (!verified.isSuccess) {
+						await this.orderRepo.update(orderId, { orderStatus: "FAILED" });
+					} else {
+						await this.orderRepo.update(orderId, { orderStatus: "PAID" });
+					}
+				}
+			}
 		}
 
 		return {

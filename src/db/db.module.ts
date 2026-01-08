@@ -36,8 +36,11 @@ import {
 	RunCodeCacheRepostiroy,
 	SubscriptionRepository,
 	GroupSubscriptionRepository,
+	GroupEntitlementRepository,
+	GroupUsageRepository,
 	ShareFundRepository,
 	TransactionRepository,
+	OrderRepository,
 } from "./repositories";
 
 const repositories = [
@@ -74,8 +77,11 @@ const repositories = [
 	RunCodeCacheRepostiroy,
 	SubscriptionRepository,
 	GroupSubscriptionRepository,
+	GroupEntitlementRepository,
+	GroupUsageRepository,
 	ShareFundRepository,
 	TransactionRepository,
+	OrderRepository,
 ];
 
 @Module({

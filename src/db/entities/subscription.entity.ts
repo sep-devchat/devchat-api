@@ -8,6 +8,7 @@ import {
 } from "typeorm";
 import { ShareFundEntity } from "./share-fund.entity";
 import { GroupSubscriptionEntity } from "./group-subscription.entity";
+import { GroupEntitlementEntity } from "./group-entitlement.entity";
 const { TableName, ColumnName } = DbConstants;
 
 const numberFromUnknown = (value: unknown): number => {
@@ -86,6 +87,20 @@ export class SubscriptionEntity {
 	})
 	levelSubscription: number;
 
+	@Column({
+		name: ColumnName.Subscription.version,
+		type: "int",
+		default: 1,
+	})
+	version: number;
+
+	@Column({
+		name: ColumnName.Audit.isActive,
+		type: "tinyint",
+		default: 1,
+	})
+	isActive: boolean;
+
 	@OneToMany(() => ShareFundEntity, (shareFund) => shareFund.subscription, {
 		createForeignKeyConstraints: false,
 	})
@@ -97,4 +112,13 @@ export class SubscriptionEntity {
 		{ createForeignKeyConstraints: false },
 	)
 	groupSubscriptions: GroupSubscriptionEntity[];
+
+	@OneToMany(
+		() => GroupEntitlementEntity,
+		(groupEntitlement) => groupEntitlement.subscription,
+		{
+			createForeignKeyConstraints: false,
+		},
+	)
+	groupEntitlements: GroupEntitlementEntity[];
 }

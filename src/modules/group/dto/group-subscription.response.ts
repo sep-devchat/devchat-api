@@ -1,5 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { GroupSubscriptionResponse } from "@modules/group-subscription/dto";
+import { GroupEntitlementResponse } from "@modules/group/dto/group-entitlement.response";
+import { GroupUsageResponse } from "@modules/group/dto/group-usage.response";
 
 export class GroupSubscriptionsInGroupResponse {
 	@ApiProperty({
@@ -17,4 +19,20 @@ export class GroupSubscriptionsInGroupResponse {
 		description: "All subscriptions that this group has (history)",
 	})
 	subscriptions: GroupSubscriptionResponse[];
+
+	@ApiProperty({
+		required: false,
+		nullable: true,
+		type: () => GroupEntitlementResponse,
+		description: "Current effective entitlement snapshot for this group",
+	})
+	currentEntitlement: GroupEntitlementResponse | null;
+
+	@ApiProperty({
+		required: false,
+		nullable: true,
+		type: () => GroupUsageResponse,
+		description: "Current billing-cycle usage counters for this group",
+	})
+	usage: GroupUsageResponse | null;
 }

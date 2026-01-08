@@ -5,13 +5,35 @@ import { DevChatCls, InvitationStatus } from "@utils";
 import { ClsService } from "nestjs-cls";
 import {
 	ChannelRepository,
+	GroupEntitlementRepository,
+	GroupSupportedProgrammingLanguageRepository,
 	GroupSubscriptionRepository,
+	GroupUsageRepository,
 	GroupRepository,
 	SubscriptionRepository,
 	UserGroupRepository,
 } from "@db/repositories";
 import { Transactional } from "typeorm-transactional";
 import { GroupSubscriptionResponse } from "@modules/group-subscription/dto";
+import { GroupEntitlementResponse, GroupUsageResponse } from "./dto";
+import { v } from "@faker-js/faker/dist/airline-DF6RqYmq";
+import { IsNull, Not } from "typeorm";
+
+const billingCycleKeyOf = (d: Date) => {
+	const yyyy = d.getUTCFullYear();
+	const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+	return `${yyyy}-${mm}`;
+};
+
+const monthBoundsUtc = (d: Date) => {
+	const start = new Date(
+		Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1, 0, 0, 0),
+	);
+	const end = new Date(
+		Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1, 0, 0, 0),
+	);
+	return { start, end };
+};
 
 @Injectable()
 export class GroupService {
@@ -23,6 +45,9 @@ export class GroupService {
 		private readonly channelRepo: ChannelRepository,
 		private readonly subscriptionRepo: SubscriptionRepository,
 		private readonly groupSubscriptionRepo: GroupSubscriptionRepository,
+		private readonly groupEntitlementRepo: GroupEntitlementRepository,
+		private readonly groupUsageRepo: GroupUsageRepository,
+		private readonly groupLanguageRepo: GroupSupportedProgrammingLanguageRepository,
 		private readonly cls: ClsService<DevChatCls>,
 	) {}
 
@@ -60,24 +85,70 @@ export class GroupService {
 
 		// Attach default FREE plan to newly created group.
 		try {
-			const freeSubscription = await this.subscriptionRepo.findOneBy({
-				subscriptionCode: "FREE_00",
+			const freeSubscription = await this.subscriptionRepo.findOne({
+				where: { subscriptionCode: "FREE_00" },
+				order: {
+					isActive: "DESC",
+					version: "DESC",
+				},
 			});
 			if (!freeSubscription) {
 				this.logger.warn(
 					"Default free subscription (FREE_00) not found; skipping group subscription creation.",
 				);
 			} else {
+				const now = new Date();
+				const billingCycleKey = billingCycleKeyOf(now);
+				const { start: periodStart, end: periodEnd } = monthBoundsUtc(now);
+
 				await this.groupSubscriptionRepo.insert(
 					this.groupSubscriptionRepo.create({
 						groupId,
 						subscriptionId: freeSubscription.id,
 						groupSubscriptionStatus: "active",
-						monthQuantity: 1,
+						monthQuantity: -1,
 						paymentBy: "free",
 						isPaid: true,
-						startedAt: new Date(),
+						startedAt: now,
 						endedAt: null,
+					}),
+				);
+
+				// Create entitlement snapshot for runtime checks (immutable).
+				await this.groupEntitlementRepo.insert(
+					this.groupEntitlementRepo.create({
+						groupId,
+						effectiveFrom: now,
+						effectiveTo: null,
+						source: "migration",
+						subscriptionId: freeSubscription.id,
+						entitlements: {
+							features: {
+								ai: Boolean(freeSubscription.isAIActive),
+							},
+							limits: {
+								members: Number(freeSubscription.limitMembers ?? 0),
+								runCodePerDay: Number(freeSubscription.runCodePerDay ?? 0),
+								programmingLanguagesInGroups: Number(
+									freeSubscription.programmingLanguageInGroups ?? 0,
+								),
+							},
+						},
+						createdBy,
+					}),
+				);
+
+				// Create current-cycle usage row (starts at zero).
+				await this.groupUsageRepo.insert(
+					this.groupUsageRepo.create({
+						groupId,
+						billingCycleKey,
+						periodStart,
+						periodEnd,
+						messagesSent: 0,
+						fileBytesUploaded: "0",
+						runCodeExecutions: 0,
+						aiTokensConsumed: "0",
 					}),
 				);
 			}
@@ -215,11 +286,83 @@ export class GroupService {
 
 		const current = this.pickCurrentGroupSubscription(groupSubscriptions);
 
+		const now = new Date();
+		let currentEntitlement: GroupEntitlementResponse | null = null;
+		try {
+			const allEntitlements = await this.groupEntitlementRepo.find({
+				where: { groupId },
+				order: { effectiveFrom: "DESC" },
+			});
+			const active = allEntitlements.find(
+				(e) =>
+					e.effectiveFrom <= now &&
+					(e.effectiveTo == null || e.effectiveTo > now),
+			);
+
+			// If we have a current subscription, prefer the matching entitlement snapshot.
+			const bySubscription = current?.subscriptionId
+				? allEntitlements.find(
+						(e) =>
+							e.subscriptionId === current.subscriptionId &&
+							e.effectiveFrom <= now &&
+							(e.effectiveTo == null || e.effectiveTo > now),
+					)
+				: null;
+
+			const picked = bySubscription ?? active ?? allEntitlements[0] ?? null;
+			currentEntitlement = picked
+				? GroupEntitlementResponse.fromEntity(picked)
+				: null;
+		} catch (err: any) {
+			this.logger.warn(
+				`Failed loading group entitlement: ${err?.message ?? String(err)}`,
+			);
+		}
+
+		let usage: GroupUsageResponse | null = null;
+		try {
+			const billingCycleKey = billingCycleKeyOf(now);
+			const usageEntity = await this.groupUsageRepo.findOneBy({
+				groupId,
+				billingCycleKey,
+			});
+			usage = usageEntity ? GroupUsageResponse.fromEntity(usageEntity) : null;
+		} catch (err: any) {
+			this.logger.warn(
+				`Failed loading group usage: ${err?.message ?? String(err)}`,
+			);
+		}
+
+		// Attach computed usage info (not stored in group_usage table).
+		if (usage) {
+			try {
+				const [currentMembers, currentProgrammingLanguagesInGroups] =
+					await Promise.all([
+						this.userGroupRepo.count({
+							where: { groupId, joinedAt: Not(IsNull()) },
+						}),
+						this.groupLanguageRepo.count({
+							where: { groupId, isActive: true },
+						}),
+					]);
+
+				usage.currentMembers = currentMembers;
+				usage.currentProgrammingLanguagesInGroups =
+					currentProgrammingLanguagesInGroups;
+			} catch (err: any) {
+				this.logger.warn(
+					`Failed loading computed usage info: ${err?.message ?? String(err)}`,
+				);
+			}
+		}
+
 		return {
 			currentSubscription: current
 				? GroupSubscriptionResponse.fromEntity(current)
 				: null,
 			subscriptions: GroupSubscriptionResponse.fromEntities(groupSubscriptions),
+			currentEntitlement,
+			usage,
 		};
 	}
 
