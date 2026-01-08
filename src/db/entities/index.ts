@@ -31,5 +31,8 @@ export * from "./report-report-category.entity";
 export * from "./run-code-cache.entity";
 export * from "./subscription.entity";
 export * from "./group-subscription.entity";
+export * from "./group-entitlement.entity";
+export * from "./group-usage.entity";
 export * from "./share-fund.entity";
 export * from "./transaction.entity";
+export * from "./order.entity";

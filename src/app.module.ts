@@ -27,7 +27,7 @@ import { GroupInvitationModule } from "@modules/group-invitation";
 import { NotificationModule } from "@modules/notification";
 import { AiModule } from "@modules/ai/ai.module";
 import { CodeCollaborationModule } from "@modules/code-collaboration";
-import { UserScheduler } from "./schedulers";
+import { GroupUsageScheduler, UserScheduler } from "./schedulers";
 import { ScheduleModule } from "@nestjs/schedule";
 import { ProgrammingLanguageModule } from "@modules/programming-language";
 import { UserLanguageCollectionModule } from "@modules/user-language-collection";
@@ -40,6 +40,7 @@ import { GroupSubscriptionModule } from "@modules/group-subscription";
 import { TransactionModule } from "@modules/transaction";
 import { ShareFundModule } from "@modules/share-fund";
 import { GroupSupportedProgrammingLanguageModule } from "@modules/group-supported-programming-language";
+import { OrderModule } from "@modules/order";
 
 @Module({
 	imports: [
@@ -88,6 +89,7 @@ import { GroupSupportedProgrammingLanguageModule } from "@modules/group-supporte
 		TransactionModule,
 		ShareFundModule,
 		GroupSupportedProgrammingLanguageModule,
+		OrderModule,
 	],
 	providers: [
 		{
@@ -107,6 +109,7 @@ import { GroupSupportedProgrammingLanguageModule } from "@modules/group-supporte
 			useClass: AuditLogInterceptor,
 		},
 		UserScheduler,
+		GroupUsageScheduler,
 	],
 	controllers: [AppController],
 })

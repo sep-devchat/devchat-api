@@ -32,6 +32,12 @@ export class SubscriptionResponse {
 	@ApiProperty({ example: 1 })
 	levelSubscription: number;
 
+	@ApiProperty({ example: 1 })
+	version: number;
+
+	@ApiProperty({ example: true })
+	isActive: boolean;
+
 	static fromEntity(entity: SubscriptionEntity): SubscriptionResponse {
 		return {
 			id: entity.id,
@@ -43,6 +49,8 @@ export class SubscriptionResponse {
 			runCodePerDay: entity.runCodePerDay,
 			programmingLanguageInGroups: entity.programmingLanguageInGroups,
 			levelSubscription: entity.levelSubscription,
+			version: entity.version,
+			isActive: entity.isActive,
 		};
 	}
 }

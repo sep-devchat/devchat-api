@@ -52,7 +52,14 @@ export class GroupSubscriptionEntity {
 	monthQuantity: number;
 
 	@Column({
-		name: ColumnName.GroupSubscription.payemntBy,
+		name: ColumnName.GroupSubscription.remainDays,
+		type: "int",
+		default: 0,
+	})
+	remainDays: number;
+
+	@Column({
+		name: ColumnName.GroupSubscription.paymentBy,
 		length: 50,
 		nullable: true,
 	})

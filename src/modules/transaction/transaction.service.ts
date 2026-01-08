@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { TransactionRepository } from "@db/repositories";
 import { TransactionQuery } from "./dto";
 import { PaginationDto } from "@utils";
+import { In } from "typeorm";
 
 @Injectable()
 export class TransactionService {
@@ -12,6 +13,9 @@ export class TransactionService {
 		const take = Number.isFinite(query?.take) ? Number(query.take) : 20;
 		const skip = (page - 1) * take;
 		const groupId = query?.groupId;
+		// Business rule: do not return PENDING transactions in list views.
+		// Keep only completed/finalized statuses.
+		const allowedStatuses = ["SUCCESS", "FAILED"] as const;
 
 		const relations = {
 			user: true,
@@ -20,7 +24,9 @@ export class TransactionService {
 			subscription: true,
 		} as const;
 
-		const where = groupId ? { groupId } : undefined;
+		const where = groupId
+			? { groupId, transactionStatus: In([...allowedStatuses]) }
+			: { transactionStatus: In([...allowedStatuses]) };
 
 		const [data, totalRecord] = await this.repo.findAndCount({
 			relations,
