@@ -8,6 +8,7 @@ import { GroupSeederService } from "./services/group-seeder.service";
 import { MessageSeederService } from "./services/message-seeder.service";
 import { TaskSeederService } from "./services/task-seeder.service";
 import { ReportSeederService } from "./services/report-seeder.service";
+import { GroupSubscriptionSeederService } from "./services/group-subscription-seeder.service";
 
 @Module({
 	providers: [
@@ -16,6 +17,7 @@ import { ReportSeederService } from "./services/report-seeder.service";
 		ReportCategorySeederService,
 		UserSeederService,
 		GroupSeederService,
+		GroupSubscriptionSeederService,
 		MessageSeederService,
 		TaskSeederService,
 		ReportSeederService,
