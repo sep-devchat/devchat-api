@@ -18,6 +18,7 @@ import { GroupSubscriptionResponse } from "@modules/group-subscription/dto";
 import { GroupEntitlementResponse, GroupUsageResponse } from "./dto";
 import { v } from "@faker-js/faker/dist/airline-DF6RqYmq";
 import { IsNull, Not } from "typeorm";
+import { compareSubscriptions } from "@utils";
 
 const billingCycleKeyOf = (d: Date) => {
 	const yyyy = d.getUTCFullYear();
@@ -86,7 +87,7 @@ export class GroupService {
 		// Attach default FREE plan to newly created group.
 		try {
 			const freeSubscription = await this.subscriptionRepo.findOne({
-				where: { subscriptionCode: "FREE_00" },
+				where: { subscriptionCode: "FREE" },
 				order: {
 					isActive: "DESC",
 					version: "DESC",
@@ -94,7 +95,7 @@ export class GroupService {
 			});
 			if (!freeSubscription) {
 				this.logger.warn(
-					"Default free subscription (FREE_00) not found; skipping group subscription creation.",
+					"Default free subscription (FREE) not found; skipping group subscription creation.",
 				);
 			} else {
 				const now = new Date();
@@ -122,6 +123,7 @@ export class GroupService {
 						effectiveTo: null,
 						source: "migration",
 						subscriptionId: freeSubscription.id,
+						isCurrent: true,
 						entitlements: {
 							features: {
 								ai: Boolean(freeSubscription.isAIActive),
@@ -217,29 +219,39 @@ export class GroupService {
 			groupSubscriptionStatus: string;
 			startedAt: Date | null;
 			endedAt: Date | null;
-			subscription?: { levelSubscription?: number | null } | null;
+			subscription?: {
+				price?: number | string | null;
+				limitMembers?: number | string | null;
+				programmingLanguageInGroups?: number | string | null;
+				runCodePerDay?: number | string | null;
+			} | null;
 		},
 	>(items: T[]): T | null {
 		if (!items?.length) return null;
+		const now = new Date();
 
-		const levelOf = (s: T) => Number(s.subscription?.levelSubscription ?? 0);
 		const startedAtTimeOf = (s: T) => (s.startedAt ? s.startedAt.getTime() : 0);
+		const isActiveStatus = (s: T) => s.groupSubscriptionStatus === "active";
+		const isStarted = (s: T) => !s.startedAt || s.startedAt <= now;
+		const notEnded = (s: T) => !s.endedAt || s.endedAt >= now;
 
-		const active = items.filter((s) => s.groupSubscriptionStatus === "active");
+		const activeNow = items.filter(
+			(s) => isActiveStatus(s) && isStarted(s) && notEnded(s),
+		);
+		const activeAny = items.filter((s) => isActiveStatus(s));
 
-		const pickHighestLevel = (candidates: T[]) => {
+		const pickBest = (candidates: T[]) => {
 			if (!candidates.length) return null;
 			return candidates.reduce<T>((best, cur) => {
-				const bestLevel = levelOf(best);
-				const curLevel = levelOf(cur);
-				if (curLevel !== bestLevel) return curLevel > bestLevel ? cur : best;
+				const cmp = compareSubscriptions(cur.subscription, best.subscription);
+				if (cmp !== 0) return cmp > 0 ? cur : best;
 				// tie-breaker: most recent startedAt
 				return startedAtTimeOf(cur) > startedAtTimeOf(best) ? cur : best;
 			}, candidates[0]);
 		};
 
-		// Prefer subscriptions active right now; otherwise, pick the highest level among all active records.
-		return pickHighestLevel(active) ?? pickHighestLevel(items);
+		// Prefer subscriptions active right now; otherwise, pick the best among active records.
+		return pickBest(activeNow) ?? pickBest(activeAny) ?? pickBest(items);
 	}
 
 	private async getCurrentGroupSubscriptionEntityUnchecked(groupId: string) {
@@ -252,6 +264,24 @@ export class GroupService {
 			relations: { subscription: true },
 			order: { subscription: { levelSubscription: "DESC" } },
 		});
+
+		try {
+			const currentEntitlement = await this.groupEntitlementRepo.findOne({
+				where: { groupId, isCurrent: true },
+				order: { effectiveFrom: "DESC" },
+			});
+			if (currentEntitlement?.subscriptionId) {
+				const match = groupSubscriptions
+					.filter((s) => s.subscriptionId === currentEntitlement.subscriptionId)
+					.sort(
+						(a, b) =>
+							(b.startedAt?.getTime() ?? 0) - (a.startedAt?.getTime() ?? 0),
+					)[0];
+				if (match) return match;
+			}
+		} catch {
+			// ignore and fallback below
+		}
 
 		return this.pickCurrentGroupSubscription(groupSubscriptions);
 	}
@@ -284,40 +314,67 @@ export class GroupService {
 			order: { subscription: { levelSubscription: "DESC" } },
 		});
 
-		const current = this.pickCurrentGroupSubscription(groupSubscriptions);
-
 		const now = new Date();
-		let currentEntitlement: GroupEntitlementResponse | null = null;
+		let currentEntitlementEntity = null as any;
 		try {
-			const allEntitlements = await this.groupEntitlementRepo.find({
-				where: { groupId },
+			// Primary: trust isCurrent marker.
+			currentEntitlementEntity = await this.groupEntitlementRepo.findOne({
+				where: { groupId, isCurrent: true },
 				order: { effectiveFrom: "DESC" },
 			});
-			const active = allEntitlements.find(
-				(e) =>
-					e.effectiveFrom <= now &&
-					(e.effectiveTo == null || e.effectiveTo > now),
-			);
 
-			// If we have a current subscription, prefer the matching entitlement snapshot.
-			const bySubscription = current?.subscriptionId
-				? allEntitlements.find(
-						(e) =>
-							e.subscriptionId === current.subscriptionId &&
-							e.effectiveFrom <= now &&
-							(e.effectiveTo == null || e.effectiveTo > now),
-					)
-				: null;
-
-			const picked = bySubscription ?? active ?? allEntitlements[0] ?? null;
-			currentEntitlement = picked
-				? GroupEntitlementResponse.fromEntity(picked)
-				: null;
+			// Safety fallback: if missing or stale, compute by time window and (best-effort) repair isCurrent.
+			const isStale =
+				currentEntitlementEntity &&
+				(currentEntitlementEntity.effectiveFrom > now ||
+					(currentEntitlementEntity.effectiveTo != null &&
+						currentEntitlementEntity.effectiveTo <= now));
+			if (!currentEntitlementEntity || isStale) {
+				const allEntitlements = await this.groupEntitlementRepo.find({
+					where: { groupId },
+					order: { effectiveFrom: "DESC" },
+				});
+				const active = allEntitlements.find(
+					(e) =>
+						e.effectiveFrom <= now &&
+						(e.effectiveTo == null || e.effectiveTo > now),
+				);
+				currentEntitlementEntity = active ?? allEntitlements[0] ?? null;
+				if (currentEntitlementEntity) {
+					// Best-effort repair: ensure only one isCurrent=true.
+					await this.groupEntitlementRepo.update(
+						{ groupId, isCurrent: true },
+						{ isCurrent: false },
+					);
+					await this.groupEntitlementRepo.update(currentEntitlementEntity.id, {
+						isCurrent: true,
+					});
+				}
+			}
 		} catch (err: any) {
 			this.logger.warn(
 				`Failed loading group entitlement: ${err?.message ?? String(err)}`,
 			);
 		}
+
+		const currentEntitlement = currentEntitlementEntity
+			? GroupEntitlementResponse.fromEntity(currentEntitlementEntity)
+			: null;
+
+		// Prefer current subscription derived from the current entitlement snapshot.
+		const currentFromEntitlement = currentEntitlementEntity?.subscriptionId
+			? (groupSubscriptions
+					.filter(
+						(s) => s.subscriptionId === currentEntitlementEntity.subscriptionId,
+					)
+					.sort(
+						(a, b) =>
+							(b.startedAt?.getTime() ?? 0) - (a.startedAt?.getTime() ?? 0),
+					)[0] ?? null)
+			: null;
+		const current =
+			currentFromEntitlement ??
+			this.pickCurrentGroupSubscription(groupSubscriptions);
 
 		let usage: GroupUsageResponse | null = null;
 		try {

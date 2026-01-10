@@ -31,6 +31,7 @@ import {
 } from "./payment.helpers";
 import { UserGroupRepository } from "@db/repositories";
 import { In, IsNull, Not } from "typeorm";
+import { compareSubscriptions } from "@utils";
 
 @Injectable()
 export class PaymentService {
@@ -74,6 +75,7 @@ export class PaymentService {
 		subscriptionId: string;
 		effectiveFrom: Date;
 		effectiveTo: Date | null;
+		makeCurrent?: boolean;
 		source:
 			| "trial"
 			| "purchase"
@@ -88,6 +90,7 @@ export class PaymentService {
 			subscriptionId,
 			effectiveFrom,
 			effectiveTo,
+			makeCurrent,
 			source,
 			createdBy,
 		} = params;
@@ -99,12 +102,30 @@ export class PaymentService {
 				effectiveFrom,
 			},
 		});
-		if (existing) return;
+		if (existing) {
+			if (makeCurrent && !existing.isCurrent) {
+				await this.groupEntitlementRepo.update(
+					{ groupId: String(groupId), isCurrent: true },
+					{ isCurrent: false },
+				);
+				await this.groupEntitlementRepo.update(existing.id, {
+					isCurrent: true,
+				});
+			}
+			return;
+		}
 
 		const subscription = await this.subscriptionRepo.findOneBy({
 			id: String(subscriptionId),
 		});
 		if (!subscription) throw new BadRequestException("Subscription not found");
+
+		if (makeCurrent) {
+			await this.groupEntitlementRepo.update(
+				{ groupId: String(groupId), isCurrent: true },
+				{ isCurrent: false },
+			);
+		}
 
 		await this.groupEntitlementRepo.insert(
 			this.groupEntitlementRepo.create({
@@ -113,6 +134,7 @@ export class PaymentService {
 				effectiveTo,
 				source,
 				subscriptionId: String(subscriptionId),
+				isCurrent: Boolean(makeCurrent),
 				entitlements: {
 					features: {
 						ai: Boolean(subscription.isAIActive),
@@ -145,8 +167,47 @@ export class PaymentService {
 		if (!purchasedSubscription)
 			throw new BadRequestException("Subscription not found");
 
-		const startedAt = new Date();
-		const endedAt = this.addMonths(startedAt, monthQuantity);
+		const now = new Date();
+		const isFreePurchased = Number(purchasedSubscription.price ?? 0) <= 0;
+
+		// Find the current effective subscription in the group.
+		const activeTiers = await this.groupSubscriptionRepo.find({
+			where: {
+				groupId: String(groupId),
+				groupSubscriptionStatus: "active",
+			},
+			relations: { subscription: true },
+			order: { startedAt: "DESC" },
+		});
+		const activeNow = activeTiers.filter(
+			(s) =>
+				(!s.startedAt || s.startedAt <= now) &&
+				(!s.endedAt || s.endedAt >= now),
+		);
+		const current = (activeNow.length ? activeNow : activeTiers).reduce(
+			(best, cur) => {
+				if (!best) return cur;
+				const cmp = compareSubscriptions(cur.subscription, best.subscription);
+				if (cmp !== 0) return cmp > 0 ? cur : best;
+				const bestStarted = best.startedAt ? best.startedAt.getTime() : 0;
+				const curStarted = cur.startedAt ? cur.startedAt.getTime() : 0;
+				return curStarted > bestStarted ? cur : best;
+			},
+			null as any,
+		);
+
+		// Apply rule: only upgrade becomes effective immediately.
+		const isUpgrade =
+			!current ||
+			compareSubscriptions(purchasedSubscription, current.subscription) > 0;
+		const canScheduleAfterCurrent =
+			!!current?.endedAt && current.endedAt.getTime() > now.getTime();
+
+		const startedAt =
+			!isUpgrade && canScheduleAfterCurrent ? current.endedAt! : now;
+		const endedAt = isFreePurchased
+			? null
+			: this.addMonths(startedAt, monthQuantity);
 
 		const groupSubscription = await this.groupSubscriptionRepo.save(
 			this.groupSubscriptionRepo.create({
@@ -162,78 +223,64 @@ export class PaymentService {
 			}),
 		);
 
-		// Create entitlement snapshot for this purchased tier.
+		// Create entitlement snapshot for this purchased tier (effective at its startedAt).
 		await this.ensureEntitlementSnapshot({
 			groupId: String(groupId),
 			subscriptionId: String(subscriptionId),
 			effectiveFrom: startedAt,
 			effectiveTo: endedAt,
+			makeCurrent: isUpgrade && startedAt.getTime() === now.getTime(),
 			source: "purchase",
 			createdBy: String(createdBy),
 		});
 
-		// If the purchased plan is the highest level in the group, schedule other active tiers
-		// to start after this higher tier ends (free plan keeps its end date unchanged).
-		const purchasedLevel = Number(purchasedSubscription.levelSubscription ?? 0);
-		const anchor = groupSubscription.endedAt;
-		if (anchor) {
-			const now = new Date();
-			const activeTiers = await this.groupSubscriptionRepo.find({
-				where: {
-					groupId: String(groupId),
-					groupSubscriptionStatus: "active",
-				},
-				relations: { subscription: true },
-			});
-
-			const otherActive = activeTiers.filter(
+		// If this purchase is an upgrade applied now, postpone overlapping active tiers until after it ends.
+		const anchor = endedAt;
+		if (isUpgrade && anchor) {
+			const overlappingActive = activeTiers.filter(
 				(s) =>
-					s.id !== groupSubscription.id && (!s.endedAt || s.endedAt >= now),
+					s.id !== groupSubscription.id &&
+					(!s.startedAt || s.startedAt <= now) &&
+					(!s.endedAt || s.endedAt >= now),
 			);
 
-			const maxOtherLevel = otherActive.reduce((max, s) => {
-				const level = Number(s.subscription?.levelSubscription ?? 0);
-				return level > max ? level : max;
-			}, -Infinity);
+			const shiftedTierIds: string[] = [];
+			await Promise.all(
+				overlappingActive.map(async (s) => {
+					const isFreePlan = Number(s.subscription?.price ?? 0) <= 0;
+					const monthQty =
+						Number.isFinite(s.monthQuantity) && (s.monthQuantity ?? 0) >= 1
+							? s.monthQuantity
+							: 1;
 
-			if (purchasedLevel > maxOtherLevel) {
-				const shiftedTierIds: string[] = [];
+					const newStartedAt = anchor;
+					const patch: Partial<typeof s> = { startedAt: newStartedAt };
+					if (!isFreePlan) {
+						patch.endedAt = this.addMonths(newStartedAt, monthQty);
+					}
+					await this.groupSubscriptionRepo.update(s.id, patch);
+					shiftedTierIds.push(String(s.id));
+				}),
+			);
+
+			// Insert entitlement snapshots for shifted tiers so runtime reflects the schedule.
+			if (shiftedTierIds.length) {
+				const shifted = await this.groupSubscriptionRepo.find({
+					where: { id: In(shiftedTierIds) },
+				});
 				await Promise.all(
-					otherActive.map(async (s) => {
-						const isFreePlan = Number(s.subscription?.price ?? 0) <= 0;
-						const monthQty =
-							Number.isFinite(s.monthQuantity) && (s.monthQuantity ?? 0) >= 1
-								? s.monthQuantity
-								: 1;
-
-						const newStartedAt = anchor;
-						const patch: Partial<typeof s> = { startedAt: newStartedAt };
-						if (!isFreePlan) {
-							patch.endedAt = this.addMonths(newStartedAt, monthQty);
-						}
-						await this.groupSubscriptionRepo.update(s.id, patch);
-						shiftedTierIds.push(String(s.id));
-					}),
+					shifted.map((s) =>
+						this.ensureEntitlementSnapshot({
+							groupId: String(groupId),
+							subscriptionId: String(s.subscriptionId),
+							effectiveFrom: s.startedAt ?? anchor,
+							effectiveTo: s.endedAt ?? null,
+							makeCurrent: false,
+							source: "change",
+							createdBy: String(createdBy),
+						}),
+					),
 				);
-
-				// Insert entitlement snapshots for shifted tiers so runtime reflects the schedule.
-				if (shiftedTierIds.length) {
-					const shifted = await this.groupSubscriptionRepo.find({
-						where: { id: In(shiftedTierIds) },
-					});
-					await Promise.all(
-						shifted.map((s) =>
-							this.ensureEntitlementSnapshot({
-								groupId: String(groupId),
-								subscriptionId: String(s.subscriptionId),
-								effectiveFrom: s.startedAt ?? anchor,
-								effectiveTo: s.endedAt ?? null,
-								source: "change",
-								createdBy: String(createdBy),
-							}),
-						),
-					);
-				}
 			}
 		}
 
