@@ -59,6 +59,14 @@ export class CodeService implements OnModuleInit {
 	) {}
 
 	private async getCurrentGroupEntitlement(groupId: string, now: Date) {
+		// Primary path: trust isCurrent marker.
+		const current = await this.groupEntitlementRepo.findOne({
+			where: { groupId, isCurrent: true },
+			order: { effectiveFrom: "DESC" },
+		});
+		if (current) return current;
+
+		// Safety fallback: derive by time window if marker isn't set yet.
 		return await this.groupEntitlementRepo
 			.createQueryBuilder("ge")
 			.where("ge.groupId = :groupId", { groupId })
