@@ -3,6 +3,7 @@ import {
 	AiInteractionRepository,
 	AiSessionRepository,
 	ChannelRepository,
+	GroupEntitlementRepository,
 	GroupSubscriptionRepository,
 	MessageRepository,
 } from "@db/repositories";
@@ -25,6 +26,7 @@ import { buildPrompt, CHECK_CODE_SYSTEM_PROMPT } from "./ai.prompt";
 import z from "zod/v3";
 import { Builder } from "builder-pattern";
 import { GroupService } from "@modules/group";
+import { compareSubscriptions } from "@utils";
 
 type ModelProvider = AIProviderEnum;
 
@@ -36,6 +38,7 @@ export class AiService {
 		private readonly messages: MessageRepository,
 		private readonly channels: ChannelRepository,
 		private readonly groupSubscriptions: GroupSubscriptionRepository,
+		private readonly groupEntitlements: GroupEntitlementRepository,
 		private readonly groupService: GroupService,
 		private readonly cls: ClsService<DevChatCls>,
 	) {}
@@ -46,14 +49,16 @@ export class AiService {
 			startedAt: Date | null;
 			endedAt: Date | null;
 			subscription?: {
-				levelSubscription?: number | null;
+				price?: number | string | null;
+				limitMembers?: number | string | null;
+				programmingLanguageInGroups?: number | string | null;
+				runCodePerDay?: number | string | null;
 				isAIActive?: boolean;
 			} | null;
 		},
 	>(items: T[]): T | null {
 		if (!items?.length) return null;
 		const now = new Date();
-		const levelOf = (s: T) => Number(s.subscription?.levelSubscription ?? 0);
 		const startedAtTimeOf = (s: T) => (s.startedAt ? s.startedAt.getTime() : 0);
 
 		const isActiveStatus = (s: T) => s.groupSubscriptionStatus === "active";
@@ -65,21 +70,16 @@ export class AiService {
 		);
 		const activeAny = items.filter((s) => isActiveStatus(s));
 
-		const pickHighestLevel = (candidates: T[]) => {
+		const pickBest = (candidates: T[]) => {
 			if (!candidates.length) return null;
 			return candidates.reduce<T>((best, cur) => {
-				const bestLevel = levelOf(best);
-				const curLevel = levelOf(cur);
-				if (curLevel !== bestLevel) return curLevel > bestLevel ? cur : best;
+				const cmp = compareSubscriptions(cur.subscription, best.subscription);
+				if (cmp !== 0) return cmp > 0 ? cur : best;
 				return startedAtTimeOf(cur) > startedAtTimeOf(best) ? cur : best;
 			}, candidates[0]);
 		};
 
-		return (
-			pickHighestLevel(activeNow) ??
-			pickHighestLevel(activeAny) ??
-			pickHighestLevel(items)
-		);
+		return pickBest(activeNow) ?? pickBest(activeAny) ?? pickBest(items);
 	}
 
 	private async assertGroupCanUseAi(groupId: string) {
@@ -97,6 +97,19 @@ export class AiService {
 		}
 
 		// Fallback (no CLS context, e.g. socket-driven): do a direct check.
+		const entitlement = await this.groupEntitlements.findOne({
+			where: { groupId, isCurrent: true },
+			order: { effectiveFrom: "DESC" },
+		});
+		const aiEnabled = Boolean((entitlement as any)?.entitlements?.features?.ai);
+		if (entitlement) {
+			if (!aiEnabled) {
+				throw new AiNotEnabledForGroupError("ai_disabled");
+			}
+			return;
+		}
+
+		// Last-resort fallback for older data (no isCurrent set yet).
 		const records = await this.groupSubscriptions.find({
 			where: { groupId },
 			relations: { subscription: true },

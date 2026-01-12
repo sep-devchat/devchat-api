@@ -3,6 +3,7 @@ import { ProgrammingLanguageSeederService } from "./programming-language-seeder.
 import { ReportCategorySeederService } from "./report-category-seeder.service";
 import { UserSeederService } from "./user-seeder.service";
 import { GroupSeederService } from "./group-seeder.service";
+import { GroupSubscriptionSeederService } from "./group-subscription-seeder.service";
 import { MessageSeederService } from "./message-seeder.service";
 import { TaskSeederService } from "./task-seeder.service";
 import { ReportSeederService } from "./report-seeder.service";
@@ -14,6 +15,7 @@ export class SeederService {
 		private readonly reportCategorySeederService: ReportCategorySeederService,
 		private readonly userSeederService: UserSeederService,
 		private readonly groupSeederService: GroupSeederService,
+		private readonly groupSubscriptionSeederService: GroupSubscriptionSeederService,
 		private readonly messageSeederService: MessageSeederService,
 		private readonly taskSeederService: TaskSeederService,
 		private readonly reportSeederService: ReportSeederService,
@@ -36,6 +38,7 @@ export class SeederService {
 		await this.reportCategorySeederService.run();
 		await this.userSeederService.run();
 		await this.groupSeederService.run();
+		await this.groupSubscriptionSeederService.run();
 		await this.messageSeederService.run();
 		await this.taskSeederService.run();
 		await this.reportSeederService.run();

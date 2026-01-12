@@ -41,7 +41,7 @@ export class GroupSeederService {
 	private readonly GROUP_MEMBER_RANGE: [number, number] = [3, 5];
 	private readonly LANGUAGE_PER_GROUP = 1;
 	private readonly MAX_INVITES_PER_GROUP = 3;
-	private readonly FREE_PLAN_CODE = "FREE_00";
+	private readonly FREE_PLAN_CODE = "FREE";
 	private readonly TEST_GROUP_MEMBER_TARGET = 4;
 	private readonly importantEmails = this.loadImportantEmails();
 	private readonly testGroupConfig = this.loadTestGroupConfig();
@@ -67,7 +67,7 @@ export class GroupSeederService {
 			return existing.id;
 		}
 
-		// Create the FREE_00 subscription if it doesn't exist yet.
+		// Create the FREE subscription if it doesn't exist yet.
 		// Mirrors the defaults from src/modules/subscription/subscription.startup-seeder.ts.
 		const created = await this.subscriptionRepo.save(
 			this.subscriptionRepo.create({

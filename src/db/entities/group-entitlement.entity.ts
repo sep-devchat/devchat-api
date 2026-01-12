@@ -87,6 +87,13 @@ export class GroupEntitlementEntity {
 	})
 	entitlements: Record<string, any>;
 
+	@Column({
+		name: ColumnName.GroupEntitlement.isCurrent,
+		type: "boolean",
+		default: false,
+	})
+	isCurrent: boolean;
+
 	@CreateDateColumn({
 		name: ColumnName.GroupEntitlement.createdAt,
 		type: "timestamp",

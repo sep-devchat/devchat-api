@@ -38,7 +38,17 @@ export class SubscriptionResponse {
 	@ApiProperty({ example: true })
 	isActive: boolean;
 
-	static fromEntity(entity: SubscriptionEntity): SubscriptionResponse {
+	@ApiProperty({
+		example: true,
+		description:
+			"Whether this subscription can be deleted. False when any group has used it.",
+	})
+	isAllowDelete: boolean;
+
+	static fromEntity(
+		entity: SubscriptionEntity,
+		options?: { isAllowDelete?: boolean },
+	): SubscriptionResponse {
 		return {
 			id: entity.id,
 			subscriptionCode: entity.subscriptionCode,
@@ -51,6 +61,7 @@ export class SubscriptionResponse {
 			levelSubscription: entity.levelSubscription,
 			version: entity.version,
 			isActive: entity.isActive,
+			isAllowDelete: options?.isAllowDelete ?? true,
 		};
 	}
 }

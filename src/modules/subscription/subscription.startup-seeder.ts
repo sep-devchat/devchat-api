@@ -22,7 +22,7 @@ export class SubscriptionStartupSeeder implements OnApplicationBootstrap {
 	async onApplicationBootstrap() {
 		const seeds: SeedSubscription[] = [
 			{
-				subscriptionCode: "FREE_00",
+				subscriptionCode: "FREE",
 				subscriptionName: "Free Plan",
 				price: 0,
 				limitMembers: 5,
@@ -32,8 +32,8 @@ export class SubscriptionStartupSeeder implements OnApplicationBootstrap {
 				levelSubscription: 0,
 			},
 			{
-				subscriptionCode: "TIER_01",
-				subscriptionName: "Tier 1 Plan",
+				subscriptionCode: "BASIC",
+				subscriptionName: "Basic Plan",
 				price: 50000,
 				limitMembers: 50,
 				isAIActive: true,
@@ -42,8 +42,8 @@ export class SubscriptionStartupSeeder implements OnApplicationBootstrap {
 				levelSubscription: 1,
 			},
 			{
-				subscriptionCode: "TIER_02",
-				subscriptionName: "Tier 2 Plan",
+				subscriptionCode: "STANDARD",
+				subscriptionName: "Standard Plan",
 				price: 300000,
 				limitMembers: 300,
 				isAIActive: true,

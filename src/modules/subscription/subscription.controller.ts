@@ -53,6 +53,18 @@ export class SubscriptionController {
 		return new ApiResponseDto(data);
 	}
 
+	@Post(":id/duplicate")
+	@AdminRole()
+	@ApiOperation({
+		summary: "Duplicate subscription plan",
+		description:
+			"Creates a new subscription by copying the selected subscription and generating a unique code/name.",
+	})
+	async duplicateOne(@Param("id") id: string) {
+		const data = await this.subscriptionService.duplicateOne(id);
+		return new ApiResponseDto(data, null, "Duplicated successfully");
+	}
+
 	@Put(":id")
 	@AdminRole()
 	@ApiOperation({

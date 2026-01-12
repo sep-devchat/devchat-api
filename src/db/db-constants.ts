@@ -314,6 +314,7 @@ export const DbConstants = {
 			source: "source",
 			subscriptionId: "subscription_id",
 			entitlements: "entitlements",
+			isCurrent: "is_current",
 			createdAt: "created_at",
 			createdBy: "created_by",
 		},

@@ -120,6 +120,44 @@ export class SubscriptionService {
 		throw new ConflictException("Subscription code or name already exists");
 	}
 
+	private async generateDuplicateIdentity(input: {
+		subscriptionCode: string;
+		subscriptionName: string;
+	}): Promise<{ subscriptionCode: string; subscriptionName: string }> {
+		const codeBase = String(input.subscriptionCode ?? "").trim();
+		const nameBase = String(input.subscriptionName ?? "").trim();
+		if (!codeBase || !nameBase) {
+			throw new ConflictException(
+				"Cannot duplicate subscription without code/name",
+			);
+		}
+
+		for (let i = 1; i <= 50; i += 1) {
+			const subscriptionCode =
+				i === 1 ? `${codeBase}_COPY` : `${codeBase}_COPY_${i}`;
+			const subscriptionName =
+				i === 1 ? `${nameBase} (Copy)` : `${nameBase} (Copy ${i})`;
+
+			const existing = await this.repo
+				.createQueryBuilder("s")
+				.where("LOWER(s.subscriptionCode) = LOWER(:subscriptionCode)", {
+					subscriptionCode,
+				})
+				.orWhere("LOWER(s.subscriptionName) = LOWER(:subscriptionName)", {
+					subscriptionName,
+				})
+				.getOne();
+
+			if (!existing) {
+				return { subscriptionCode, subscriptionName };
+			}
+		}
+
+		throw new ConflictException(
+			"Cannot generate unique code/name for duplicated subscription",
+		);
+	}
+
 	async createOne(dto: CreateSubscriptionRequest) {
 		await this.assertUniqueCodeAndName({
 			subscriptionCode: dto.subscriptionCode,
@@ -142,18 +180,69 @@ export class SubscriptionService {
 	}
 
 	async findMany(query: SubscriptionQuery) {
+		const where: { isActive?: boolean; isAIActive?: boolean } = {};
+		if (query?.isActive !== undefined) where.isActive = query.isActive;
+		if (query?.isAIActive !== undefined) where.isAIActive = query.isAIActive;
+
 		const entities = await this.repo.find({
-			where:
-				query?.isActive === undefined
-					? undefined
-					: { isActive: query.isActive },
+			where: Object.keys(where).length ? where : undefined,
+			order: query?.sortBy
+				? ({
+						[query.sortBy]: (query.sortOrder ?? "ASC") as "ASC" | "DESC",
+					} as Record<string, "ASC" | "DESC">)
+				: undefined,
 		});
-		return entities.map(SubscriptionResponse.fromEntity);
+
+		if (entities.length === 0) return [];
+
+		const ids = entities.map((e) => e.id);
+		const usedRows = await this.groupSubscriptionRepo
+			.createQueryBuilder("gs")
+			.select("gs.subscriptionId", "subscriptionId")
+			.addSelect("COUNT(1)", "usedCount")
+			.where("gs.subscriptionId IN (:...ids)", { ids })
+			.groupBy("gs.subscriptionId")
+			.getRawMany<{ subscriptionId: string; usedCount: string }>();
+
+		const usedCountById = new Map<string, number>();
+		for (const row of usedRows) {
+			usedCountById.set(row.subscriptionId, Number(row.usedCount) || 0);
+		}
+
+		return entities.map((entity) =>
+			SubscriptionResponse.fromEntity(entity, {
+				isAllowDelete: (usedCountById.get(entity.id) ?? 0) === 0,
+			}),
+		);
 	}
 
 	async findOne(id: string) {
 		const entity = await this.repo.findOneByOrFail({ id });
 		return SubscriptionResponse.fromEntity(entity);
+	}
+
+	async duplicateOne(id: string) {
+		const current = await this.repo.findOneByOrFail({ id });
+		const identity = await this.generateDuplicateIdentity({
+			subscriptionCode: current.subscriptionCode,
+			subscriptionName: current.subscriptionName,
+		});
+
+		const entity = this.repo.create({
+			subscriptionCode: identity.subscriptionCode,
+			subscriptionName: identity.subscriptionName,
+			price: current.price,
+			limitMembers: current.limitMembers,
+			isAIActive: current.isAIActive,
+			runCodePerDay: current.runCodePerDay,
+			programmingLanguageInGroups: current.programmingLanguageInGroups,
+			levelSubscription: current.levelSubscription,
+			isActive: current.isActive,
+			version: 1,
+		});
+
+		const saved = await this.repo.save(entity);
+		return SubscriptionResponse.fromEntity(saved, { isAllowDelete: true });
 	}
 
 	async updateOne(id: string, dto: UpdateSubscriptionRequest) {
