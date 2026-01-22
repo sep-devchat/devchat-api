@@ -132,11 +132,58 @@ export class SubscriptionService {
 			);
 		}
 
-		for (let i = 1; i <= 50; i += 1) {
+		const normalizeCopyCode = (
+			raw: string,
+		): { prefix: string; start: number } => {
+			// Rules:
+			// - If code already ends with _COPY or _COPY_<n>, increment index: BASIC_COPY -> BASIC_COPY_2, BASIC_COPY_3...
+			// - If code contains COPY elsewhere, just append _2, _3...
+			// - Otherwise, append _COPY (then _COPY_2, _COPY_3...)
+			const trimmed = String(raw ?? "").trim();
+			const copySuffix = trimmed.match(/^(.*?_COPY)(?:_(\d+))?$/i);
+			if (copySuffix) {
+				const basePrefix = copySuffix[1];
+				const n = copySuffix[2] ? Number(copySuffix[2]) : undefined;
+				const start = Number.isFinite(n) && n ? n + 1 : 2;
+				return { prefix: basePrefix, start };
+			}
+			if (/copy/i.test(trimmed)) {
+				return { prefix: trimmed, start: 2 };
+			}
+			return { prefix: `${trimmed}_COPY`, start: 1 };
+		};
+
+		const normalizeCopyName = (
+			raw: string,
+		): { baseName: string; start: number; alreadyCopied: boolean } => {
+			// If name already ends with "(Copy)" or "(Copy n)", increment index.
+			const trimmed = String(raw ?? "").trim();
+			const copySuffix = trimmed.match(/^(.*)\s+\(Copy(?:\s+(\d+))?\)\s*$/i);
+			if (copySuffix) {
+				const baseName = String(copySuffix[1] ?? "").trim();
+				const n = copySuffix[2] ? Number(copySuffix[2]) : undefined;
+				const start = Number.isFinite(n) && n ? n + 1 : 2;
+				return { baseName, start, alreadyCopied: true };
+			}
+			return { baseName: trimmed, start: 1, alreadyCopied: false };
+		};
+
+		const codeRule = normalizeCopyCode(codeBase);
+		const nameRule = normalizeCopyName(nameBase);
+
+		for (let offset = 0; offset < 50; offset += 1) {
+			const codeIndex = codeRule.start + offset;
 			const subscriptionCode =
-				i === 1 ? `${codeBase}_COPY` : `${codeBase}_COPY_${i}`;
-			const subscriptionName =
-				i === 1 ? `${nameBase} (Copy)` : `${nameBase} (Copy ${i})`;
+				codeRule.start === 1 && codeIndex === 1
+					? codeRule.prefix
+					: `${codeRule.prefix}_${codeIndex}`;
+
+			const nameIndex = nameRule.start + offset;
+			const subscriptionName = nameRule.alreadyCopied
+				? `${nameRule.baseName} (Copy ${nameIndex})`
+				: nameIndex === 1
+					? `${nameRule.baseName} (Copy)`
+					: `${nameRule.baseName} (Copy ${nameIndex})`;
 
 			const existing = await this.repo
 				.createQueryBuilder("s")

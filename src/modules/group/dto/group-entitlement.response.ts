@@ -25,7 +25,7 @@ export class GroupEntitlementResponse {
 	effectiveTo: Date | null;
 
 	@ApiProperty({
-		type: "object",
+		type: Object,
 		additionalProperties: true,
 	})
 	entitlements: Record<string, any>;

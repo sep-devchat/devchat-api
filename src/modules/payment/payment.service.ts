@@ -136,6 +136,10 @@ export class PaymentService {
 				subscriptionId: String(subscriptionId),
 				isCurrent: Boolean(makeCurrent),
 				entitlements: {
+					subscription: {
+						code: subscription.subscriptionCode,
+						name: subscription.subscriptionName,
+					},
 					features: {
 						ai: Boolean(subscription.isAIActive),
 					},

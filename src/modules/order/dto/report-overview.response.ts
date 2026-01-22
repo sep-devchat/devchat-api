@@ -10,6 +10,9 @@ export class OrderReportOverviewSubscriptionStat {
 	@ApiProperty({ example: "Pro Plan" })
 	subscriptionName: string;
 
+	@ApiProperty({ description: "Subscription version", example: 1 })
+	subscriptionVersion: number;
+
 	@ApiProperty({ description: "Number of PAID orders for this subscription" })
 	ordersSold: number;
 

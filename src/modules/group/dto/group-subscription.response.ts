@@ -29,6 +29,25 @@ export class GroupSubscriptionsInGroupResponse {
 	currentEntitlement: GroupEntitlementResponse | null;
 
 	@ApiProperty({
+		required: true,
+		type: () => GroupEntitlementResponse,
+		isArray: true,
+		description:
+			"All entitlement snapshots for this group (history), ordered by effectiveFrom desc",
+	})
+	entitlementsHistory: GroupEntitlementResponse[];
+
+	@ApiProperty({
+		required: false,
+		nullable: true,
+		type: Object,
+		additionalProperties: true,
+		description:
+			"Current effective entitlements for this group (shortcut to currentEntitlement.entitlements)",
+	})
+	entitlements: Record<string, any> | null;
+
+	@ApiProperty({
 		required: false,
 		nullable: true,
 		type: () => GroupUsageResponse,
