@@ -21,6 +21,7 @@ import {
 	ShareFundNotFoundError,
 	SubscriptionNotFoundError,
 } from "./errors";
+import { Not } from "typeorm";
 
 @Injectable()
 export class ShareFundService {
@@ -168,12 +169,22 @@ export class ShareFundService {
 		if (!shareFund) throw new ShareFundNotFoundError();
 
 		const currentAmount = BigInt(shareFund.currentVndAmount ?? "0");
-		const txCount = await this.transactionRepo.count({
-			where: { shareFundId: shareFund.id },
+		const nonPendingTxCount = await this.transactionRepo.count({
+			where: {
+				shareFundId: shareFund.id,
+				transactionStatus: Not("PENDING"),
+			},
 		});
-		if (txCount > 0 || currentAmount > 0n) {
+		if (nonPendingTxCount > 0 || currentAmount > 0n) {
 			throw new ShareFundHasTransactionsError();
 		}
+
+		// If there are only PENDING contributions, allow delete. Clean them up first
+		// in case the database has FK constraints.
+		await this.transactionRepo.delete({
+			shareFundId: shareFund.id,
+			transactionStatus: "PENDING",
+		});
 
 		await this.repo.delete(shareFund.id);
 		return shareFund;

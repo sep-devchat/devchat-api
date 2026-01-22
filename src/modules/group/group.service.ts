@@ -17,7 +17,7 @@ import { Transactional } from "typeorm-transactional";
 import { GroupSubscriptionResponse } from "@modules/group-subscription/dto";
 import { GroupEntitlementResponse, GroupUsageResponse } from "./dto";
 import { v } from "@faker-js/faker/dist/airline-DF6RqYmq";
-import { IsNull, Not } from "typeorm";
+import { In, IsNull, Not } from "typeorm";
 import { compareSubscriptions } from "@utils";
 
 const billingCycleKeyOf = (d: Date) => {
@@ -125,6 +125,10 @@ export class GroupService {
 						subscriptionId: freeSubscription.id,
 						isCurrent: true,
 						entitlements: {
+							subscription: {
+								code: freeSubscription.subscriptionCode,
+								name: freeSubscription.subscriptionName,
+							},
 							features: {
 								ai: Boolean(freeSubscription.isAIActive),
 							},
@@ -376,6 +380,80 @@ export class GroupService {
 			currentFromEntitlement ??
 			this.pickCurrentGroupSubscription(groupSubscriptions);
 
+		const entitlements: Record<string, any> | null =
+			currentEntitlementEntity?.entitlements ??
+			(current?.subscription
+				? {
+						features: {
+							ai: Boolean(current.subscription.isAIActive),
+						},
+						limits: {
+							members: Number(current.subscription.limitMembers ?? 0),
+							runCodePerDay: Number(current.subscription.runCodePerDay ?? 0),
+							programmingLanguagesInGroups: Number(
+								current.subscription.programmingLanguageInGroups ?? 0,
+							),
+						},
+					}
+				: null);
+
+		let entitlementsHistory: GroupEntitlementResponse[] = [];
+		try {
+			const entitlementEntities = await this.groupEntitlementRepo.find({
+				where: { groupId },
+				order: { effectiveFrom: "DESC" },
+			});
+
+			const subscriptionIds = Array.from(
+				new Set(
+					entitlementEntities
+						.map((e) => e.subscriptionId)
+						.filter((id): id is string => Boolean(id)),
+				),
+			);
+			const codeBySubscriptionId = new Map<string, string>();
+			if (subscriptionIds.length) {
+				const subs = await this.subscriptionRepo.findBy({
+					id: In(subscriptionIds),
+				});
+				for (const s of subs) {
+					if (s?.id && s?.subscriptionCode) {
+						codeBySubscriptionId.set(s.id, s.subscriptionCode);
+					}
+				}
+			}
+
+			const normalizeKey = (value: unknown) =>
+				String(value ?? "")
+					.trim()
+					.toLowerCase();
+			const seen = new Set<string>();
+			const distinctEntities = entitlementEntities.filter((e) => {
+				const codeFromEntitlements = (e as any)?.entitlements?.subscription
+					?.code;
+				const codeFromSubscriptionId = e.subscriptionId
+					? codeBySubscriptionId.get(e.subscriptionId)
+					: undefined;
+				const code = codeFromEntitlements ?? codeFromSubscriptionId;
+				const key = code
+					? normalizeKey(code)
+					: e.subscriptionId
+						? `unknown:${normalizeKey(e.subscriptionId)}`
+						: `unknown-entity:${normalizeKey(e.id)}`;
+				if (seen.has(key)) return false;
+				seen.add(key);
+				return true;
+			});
+
+			entitlementsHistory = distinctEntities.map((e) =>
+				GroupEntitlementResponse.fromEntity(e),
+			);
+		} catch (err: any) {
+			this.logger.warn(
+				`Failed loading entitlement history: ${err?.message ?? String(err)}`,
+			);
+		}
+
 		let usage: GroupUsageResponse | null = null;
 		try {
 			const billingCycleKey = billingCycleKeyOf(now);
@@ -419,6 +497,8 @@ export class GroupService {
 				: null,
 			subscriptions: GroupSubscriptionResponse.fromEntities(groupSubscriptions),
 			currentEntitlement,
+			entitlementsHistory,
+			entitlements,
 			usage,
 		};
 	}
