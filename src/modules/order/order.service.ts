@@ -160,6 +160,7 @@ export class OrderService {
 				.select("s.id", "subscriptionId")
 				.addSelect("s.subscriptionCode", "subscriptionCode")
 				.addSelect("s.subscriptionName", "subscriptionName")
+				.addSelect("s.version", "subscriptionVersion")
 				.addSelect("COUNT(o.id)", "ordersSold")
 				.addSelect("COALESCE(SUM(o.monthQuantity), 0)", "subscriptionsSold")
 				.addSelect(
@@ -169,11 +170,13 @@ export class OrderService {
 				.groupBy("s.id")
 				.addGroupBy("s.subscriptionCode")
 				.addGroupBy("s.subscriptionName")
+				.addGroupBy("s.version")
 				.orderBy("revenueVnd", "DESC")
 				.getRawMany<{
 					subscriptionId: string;
 					subscriptionCode: string;
 					subscriptionName: string;
+					subscriptionVersion: string | number | null;
 					ordersSold: string | number | null;
 					subscriptionsSold: string | number | null;
 					revenueVnd: string | number | null;
@@ -205,6 +208,7 @@ export class OrderService {
 				subscriptionId: String(row.subscriptionId ?? ""),
 				subscriptionCode: String(row.subscriptionCode ?? ""),
 				subscriptionName: String(row.subscriptionName ?? ""),
+				subscriptionVersion: Number(row.subscriptionVersion ?? 0),
 				ordersSold: Number(row.ordersSold ?? 0),
 				subscriptionsSold: Number(row.subscriptionsSold ?? 0),
 				revenueVnd: String(row.revenueVnd ?? "0"),
