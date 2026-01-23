@@ -29,7 +29,7 @@ const monthBoundsUtc = (d: Date) => {
 
 @Injectable()
 export class GroupSubscriptionSeederService {
-	private readonly FREE_PLAN_CODE = "FREE_00";
+	private readonly FREE_PLAN_CODE = "FREE";
 
 	constructor(
 		private readonly userRepo: UserRepository,
@@ -104,7 +104,7 @@ export class GroupSubscriptionSeederService {
 
 		const groupIds = activeGroups.map((g) => g.id);
 
-		// 1) Ensure every active group has at least one group_subscription record (FREE_00).
+		// 1) Ensure every active group has at least one group_subscription record (FREE).
 		const existingForFree = await this.groupSubscriptionRepo.find({
 			select: ["groupId"],
 			where: { groupId: In(groupIds), subscriptionId: freeSubscriptionId },
@@ -130,12 +130,10 @@ export class GroupSubscriptionSeederService {
 				),
 			);
 			console.log(
-				`Inserted ${missingFreeGroupIds.length} missing FREE_00 group subscription records.`,
+				`Inserted ${missingFreeGroupIds.length} missing FREE group subscription records.`,
 			);
 		} else {
-			console.log(
-				"All active groups already have a FREE_00 subscription record.",
-			);
+			console.log("All active groups already have a FREE subscription record.");
 		}
 
 		// 2) Backfill entitlement snapshots for all existing group_subscription rows.
